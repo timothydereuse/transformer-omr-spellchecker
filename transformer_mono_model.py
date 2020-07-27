@@ -83,3 +83,72 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
+
+
+if __name__ == '__main__':
+    from itertools import product
+    seq_length = 20
+    num_seqs = 20
+    num_feats = 20
+    num_dur_vals = 10
+
+    data_r = torch.rand(seq_length, num_seqs, num_feats)
+    data = torch.zeros_like(data_r)
+
+    note_inds = torch.max(data_r[:, :, :-num_dur_vals], 2).indices
+    dur_inds = torch.max(data_r[:, :, -num_dur_vals:], 2).indices
+
+    # i have no idea how to vectorize this.
+    for i, j in product(range(seq_length), range(num_seqs)):
+        data[i][j][note_inds[i][j]] = 1
+    for i, j in product(range(seq_length), range(num_seqs)):
+        data[i][j][dur_inds[i][j] + num_feats - num_dur_vals] = 1
+
+    inputs = data[:-1]
+    targets = data[1:]
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_epochs = 300
+    nhid = 100         # the dimension of the feedforward network model in nn.TransformerEncoder
+    ninp = 100
+    nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nhead = 2          # the number of heads in the multiheadattention models
+    dropout = 0.1      # the dropout value
+    model = TransformerMonophonic(num_feats, num_dur_vals, nhead, ninp, nhid, nlayers, dropout).to(device)
+    print(sum(p.numel() for p in model.parameters()))
+
+    lr = 0.001
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    pitch_criterion = nn.CrossEntropyLoss(reduction='mean')
+    dur_criterion = nn.CrossEntropyLoss(reduction='mean')
+
+    def loss_func(pitches, durs, targets):
+
+        pitch_targets = targets[:, :, :-num_dur_vals]
+        dur_targets = targets[:, :, -num_dur_vals:]
+
+        pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
+        dur_targets_inds = dur_targets.reshape(-1, num_dur_vals).max(1).indices
+
+        pitch_loss = pitch_criterion(pitches.view(-1, pitches.shape[-1]), pitch_targets_inds)
+        dur_loss = dur_criterion(durs.view(-1, num_dur_vals), dur_targets_inds)
+        return pitch_loss + dur_loss
+
+    # TRAINING LOOP
+    model.train()
+    total_loss = 0.
+    for batch in range(num_epochs):
+        optimizer.zero_grad()
+        pitch_output, dur_output = model(inputs)
+        loss = loss_func(pitch_output, dur_output, targets)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        optimizer.step()
+
+        total_loss += loss.item()
+        log_interval = 5
+        if batch % log_interval == 0:
+            cur_loss = total_loss / log_interval
+            print(' batch {:3d} | loss {:5.2f}'.format(batch, cur_loss))
+            total_loss = 0
