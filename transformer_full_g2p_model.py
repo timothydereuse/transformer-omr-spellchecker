@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import time
 import math
+import numpy as np
 
 
 class PositionalEncoding(nn.Module):
@@ -68,8 +69,10 @@ class TransformerModel(nn.Module):
     def forward(self, src, trg):
         if self.trg_mask is None or self.trg_mask.size(0) != len(trg):
             self.trg_mask = self._generate_point_mask(len(trg)).to(trg.device)
+            # self.trg_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
         if self.src_mask is None or self.src_mask.size(0) != len(trg):
             self.src_mask = self._generate_point_mask(len(src)).to(src.device)
+            # self.trg_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
 
         # src_pad_mask = self.make_len_mask(src)
         # trg_pad_mask = self.make_len_mask(trg)
@@ -95,6 +98,7 @@ class TransformerModel(nn.Module):
 
     def _generate_point_mask(self, sz):
         mask = torch.diag(torch.ones(sz))
+        # mask = torch.zeros(sz, sz)
         # mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
@@ -103,7 +107,7 @@ if __name__ == '__main__':
     from itertools import product
     import matplotlib.pyplot as plt
     seq_length = 30
-    num_seqs = 30
+    num_seqs = 50
     num_feats = 30
     num_dur_vals = 10
 
@@ -115,10 +119,12 @@ if __name__ == '__main__':
 
     # i have no idea how to vectorize this.
     for i, j in product(range(seq_length), range(num_seqs)):
-        ind = (i * j) % (num_feats - num_dur_vals)
+        ss = np.sqrt(2)
+        ind = int((j + i * ss) % (num_feats - num_dur_vals))
         data[i][j][ind] = 1
     for i, j in product(range(seq_length), range(num_seqs)):
-        ind = (i + j) % (num_dur_vals) + (num_feats - num_dur_vals)
+        ss = np.sqrt(3)
+        ind = int((i + j * ss) % (num_dur_vals) + (num_feats - num_dur_vals))
         data[i][j][ind] = 1
 
     # inputs = torch.tensor(data[])
@@ -126,9 +132,9 @@ if __name__ == '__main__':
     targets = data
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_epochs = 300
-    hidden = 50
-    feedforward = 50
+    num_epochs = 500
+    hidden = 60
+    feedforward = 60
     nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 2          # the number of heads in the multiheadattention models
     dropout = 0.1      # the dropout value
@@ -139,6 +145,26 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     full_loss = nn.BCEWithLogitsLoss(reduction='mean')
 
+    pitch_criterion = nn.CrossEntropyLoss(reduction='mean')
+    dur_criterion = nn.CrossEntropyLoss(reduction='mean')
+
+    def loss_func(outputs, targets):
+
+        pitch_targets = targets[:, :, :-num_dur_vals]
+        dur_targets = targets[:, :, -num_dur_vals:]
+
+        pitches = outputs[:, :, :-num_dur_vals]
+        pitches = pitches.view(-1, pitches.shape[-1])
+        durs = outputs[:, :, -num_dur_vals:]
+        durs = durs.view(-1, durs.shape[-1])
+
+        pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
+        dur_targets_inds = dur_targets.reshape(-1, num_dur_vals).max(1).indices
+
+        pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
+        dur_loss = dur_criterion(durs.view(-1, num_dur_vals), dur_targets_inds)
+        return pitch_loss + dur_loss
+
     model.train()
     epoch_loss = 0
 
@@ -148,9 +174,14 @@ if __name__ == '__main__':
         output = model(inputs, targets)
         output_dim = output.shape[-1]
 
-        loss = full_loss(output.view(-1, output_dim), targets.view(-1, output_dim))
+        # loss = full_loss(output.view(-1, output_dim), targets.view(-1, output_dim))
+        loss = loss_func(output, targets)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         print(f"epoch: {i} | loss: {loss.item()}")
+
+    x = (output).detach().cpu().numpy().T
+    plt.imshow(x[:, 10])
+    plt.show()

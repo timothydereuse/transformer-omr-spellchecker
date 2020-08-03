@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 from importlib import reload
 
+
 def get_pr(inp, ind=0):
     slice = torch.transpose(inp, 1, 0)[ind]
     maxinds = slice.max(1).indices
@@ -29,6 +30,6 @@ def plot(pitch_out, dur_out, pitch_in, dur_in, ind):
     fig.show()
 
 
-pitch_data = data[:, :, :-num_dur_vals]
-dur_data = data[:, :, -num_dur_vals:]
-plot(pitch_output, dur_output, pitch_data, dur_data,  7)
+# pitch_data = data[:, :, :-num_dur_vals]
+# dur_data = data[:, :, -num_dur_vals:]
+# plot(pitch_output, dur_output, pitch_data, dur_data,  7)

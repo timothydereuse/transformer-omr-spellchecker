@@ -87,6 +87,7 @@ class PositionalEncoding(nn.Module):
 
 if __name__ == '__main__':
     from itertools import product
+    import plot_outputs as po
     seq_length = 20
     num_seqs = 20
     num_feats = 20
