@@ -1,9 +1,9 @@
 import json
+from torch.utils.data import IterableDataset, DataLoader
 import pretty_midi as pm
 import factorizations as fcts
 from importlib import reload
-from matplotlib import pyplot as plt
-from itertools import product
+from collections import Counter
 from mido import KeySignatureError
 import os
 import torch
@@ -14,6 +14,43 @@ reload(fcts)
 
 json_key = r"D:\Documents\lakh_midi_dataset\md5_to_paths.json"
 lmd_root = r"D:\Documents\lakh_midi_dataset\lmd_full"
+
+
+def get_tick_deltas_for_runlength(mids_path, num_dur_vals=16, proportion=0.2):
+    midi_fnames = os.listdir(mids_path)
+    num_choice = int(proportion * len(midi_fnames))
+    midi_fnames = np.random.choice(midi_fnames, num_choice, replace=False)
+
+    c = Counter()
+
+    min_pitches = []
+    max_pitches = []
+
+    for i, fname in enumerate(midi_fnames):
+        pm_file = pm.PrettyMIDI(f"{mids_path}/{fname}")
+        all_notes = []
+        for voice in pm_file.instruments:
+            if voice.is_drum:
+                continue
+            all_starts = [pm_file.time_to_tick(n.start) for n in voice.notes]
+            all_notes += all_starts
+
+            min_pitches.append(min([n.pitch for n in voice.notes]))
+            max_pitches.append(max([n.pitch for n in voice.notes]))
+
+        diffs = np.diff(all_starts)
+        c.update(diffs)
+
+        if not i % 200:
+            print(f"processing tick deltas: {i} of {len(midi_fnames)}")
+
+    most = [x[0] for x in c.most_common(num_dur_vals)]
+    most = np.sort(most)
+    res_dict = {v: i for i, v in enumerate(most)}
+
+    pitch_range = (min(min_pitches), max(max_pitches))
+
+    return res_dict, pitch_range
 
 
 def get_midi_from_md5(md5):
@@ -162,30 +199,61 @@ def get_class_weights(inp):
     return weights
 
 
+class MTCDataset(IterableDataset):
+    """meertens_tune_collection dataset."""
+
+    def __init__(self, root_dir, seq_length, num_dur_vals=17, proportion=0.2, shuffle_files=True):
+        """
+        Args:
+            csv_file (string): Path to the csv file with annotations.
+            root_dir (string): Directory with all the images.
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+        """
+        super(MTCDataset).__init__()
+        self.root_dir = root_dir
+        self.midi_fnames = os.listdir(self.root_dir)
+        self.seq_length = seq_length
+
+        if shuffle_files:
+            np.random.shuffle(self.midi_fnames)
+
+        dmap, prange = get_tick_deltas_for_runlength(
+            self.root_dir, num_dur_vals, proportion)
+        self.delta_mapping = dmap
+        self.pitch_range = prange
+        self.num_dur_vals = num_dur_vals
+
+        self.num_feats = self.pitch_range[1] - self.pitch_range[0] + self.num_dur_vals + 1
+        padding_element = np.zeros(self.num_feats)
+        padding_element[-1] = 1
+        padding_element[0] = 1
+        self.padding_seq = np.stack(
+            [padding_element for _ in range(self.seq_length + 1)],
+            0)
+
+    def __iter__(self):
+        for fname in self.midi_fnames:
+            x = pm.PrettyMIDI(f"{self.root_dir}/{fname}")
+            runlength = fcts.pm_to_runlength(
+                x, self.delta_mapping, self.pitch_range, monophonic=True)
+            num_seqs = np.ceil(runlength.shape[0] / self.seq_length)
+
+            pad_rl = np.concatenate([runlength, self.padding_seq])
+            for i in range(int(num_seqs)):
+                slice = pad_rl[i * self.seq_length:(i+1) * self.seq_length]
+                yield slice
+
 
 if __name__ == '__main__':
-    def compare_piano_roll_tokens(ta, tb):
-        anded = np.dot(ta, tb)
-        return anded
+    root_dir = r"D:\Desktop\meertens_tune_collection\mtc-fs-1.0.tar\midi"
+    num_dur_vals = 17
+    seq_len = 30
+    proportion = 0.2
+    dset = MTCDataset(root_dir, seq_len, num_dur_vals, proportion)
 
-    # mids = load_lmd_runlength
-    #
-    # pr = mid.get_piano_roll(1 / mid.tick_to_time(12))
-    # pr = np.clip(pr, 0, 1)
-    # # ssm = np.zeros((pr.shape[1], pr.shape[1]))
-    # # for x, y in product(range(ssm.shape[0]), range(ssm.shape[1])):
-    # #     if y > x:
-    # #         continue
-    # #     ssm[x, y] = compare_piano_roll_tokens(pr[:, x], pr[:, y])
-    #
-    # ssm2 = np.matmul(pr.T, pr)
-    #
-    # ssm_rl = np.matmul(runlength[:, :-1], runlength[:, :-1].T)
-    #
-    # plt.clf()
-    # plt.imshow(ssm_rl)
-    # plt.show()
-    #
-    # plt.clf()
-    # plt.imshow(ssm2)
-    # plt.show()
+    dload = DataLoader(dset, batch_size=20)
+    for i, x in enumerate(dload):
+        print(i, x.shape)
+        if i > 2:
+            break

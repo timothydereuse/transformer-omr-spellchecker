@@ -61,6 +61,7 @@ def loss_func(pitches, durs, targets):
 
 # TRAINING LOOP
 model.train()
+
 total_loss = 0.
 start_time = time.time()
 for epoch in range(num_epochs):
@@ -86,73 +87,3 @@ for epoch in range(num_epochs):
             total_loss = 0
             start_time = time.time()
     scheduler.step()
-
-def get_rolls(pitches, durs, delta_mapping=delta_mapping, pitch_range=pitch_range):
-    import music21 as m21
-
-    # reverse delta mapping
-    rev_map = {v: k for k, v in delta_mapping.items()}
-
-    pitches = torch.transpose(pitches, 1, 0)
-    pitch_inds = pitches.max(2).indices.numpy()
-    durs = torch.transpose(durs, 1, 0)
-    dur_inds = durs.max(2).indices.numpy()
-
-    # pair durations with pitches
-    seqs = []
-    for s in range(pitches.shape[0]):
-        seq = [(pitch_inds[s][i], rev_map[dur_inds[s][i]]) for i in range(pitches.shape[1])]
-        seqs.append(seq)
-
-        str = m21.stream.Stream()
-
-
-#
-# def evaluate(eval_model, data_source):
-#     eval_model.eval() # Turn on the evaluation mode
-#     total_loss = 0.
-#     ntokens = len(TEXT.vocab.stoi)
-#     with torch.no_grad():
-#         for i in range(0, data_source.size(0) - 1, bptt):
-#             data, targets = get_batch(data_source, i)
-#             output = eval_model(data)
-#             output_flat = output.view(-1, ntokens)
-#             total_loss += len(data) * criterion(output_flat, targets).item()
-#     return total_loss / (len(data_source) - 1)
-#
-# ######################################################################
-# # Loop over epochs. Save the model if the validation loss is the best
-# # we've seen so far. Adjust the learning rate after each epoch.
-#
-# best_val_loss = float("inf")
-# epochs = 3 # The number of epochs
-# best_model = None
-#
-# for epoch in range(1, epochs + 1):
-#     epoch_start_time = time.time()
-#     train()
-#     val_loss = evaluate(model, val_data)
-#     print('-' * 89)
-#     print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-#           'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-#                                      val_loss, math.exp(val_loss)))
-#     print('-' * 89)
-#
-#     if val_loss < best_val_loss:
-#         best_val_loss = val_loss
-#         best_model = model
-#
-#     scheduler.step()
-#
-#
-# ######################################################################
-# # Evaluate the model with the test dataset
-# # -------------------------------------
-# #
-# # Apply the best model to check the result with the test dataset.
-#
-# test_loss = evaluate(best_model, test_data)
-# print('=' * 89)
-# print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-#     test_loss, math.exp(test_loss)))
-# print('=' * 89)

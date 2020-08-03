@@ -4,41 +4,6 @@ from collections import namedtuple, Counter
 import os
 
 
-def get_tick_deltas_for_runlength(mids_path, num_dur_vals=16):
-    midi_fnames = os.listdir(mids_path)
-
-    c = Counter()
-
-    min_pitches = []
-    max_pitches = []
-
-    for i, fname in enumerate(midi_fnames):
-        pm_file = pm.PrettyMIDI(f"{mids_path}/{fname}")
-        all_notes = []
-        for voice in pm_file.instruments:
-            if voice.is_drum:
-                continue
-            all_starts = [pm_file.time_to_tick(n.start) for n in voice.notes]
-            all_notes += all_starts
-
-            min_pitches.append(min([n.pitch for n in voice.notes]))
-            max_pitches.append(max([n.pitch for n in voice.notes]))
-
-        diffs = np.diff(all_starts)
-        c.update(diffs)
-
-        if not i % 200:
-            print(f"processing tick deltas: {i} of {len(midi_fnames)}")
-
-    most = [x[0] for x in c.most_common(num_dur_vals)]
-    most = np.sort(most)
-    res_dict = {v: i for i, v in enumerate(most)}
-
-    pitch_range = (min(min_pitches), max(max_pitches))
-
-    return res_dict, pitch_range
-
-
 def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False):
     '''
     takes in a single prettymidi object and turns it into a run-length encoding. for now, it
@@ -53,6 +18,9 @@ def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False)
         else:
             dict[event.tick] = [event]
 
+    def clp(inp):
+        return int(np.clip(inp, pitch_range[0], pitch_range[1]))
+
     events = {}
     for i, voice in enumerate(pm_file.instruments):
 
@@ -62,9 +30,11 @@ def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False)
         for n in voice.notes:
 
             start_ticks = pm_file.time_to_tick(n.start)
-            start_event = MIDIEvent(type='start', voice=i, note=n.pitch, tick=start_ticks)
+            start_event = MIDIEvent(
+                type='start', voice=i, note=clp(n.pitch), tick=start_ticks)
             end_ticks = pm_file.time_to_tick(n.end)
-            end_event = MIDIEvent(type='end', voice=i, note=n.pitch, tick=end_ticks)
+            end_event = MIDIEvent(
+                type='end', voice=i, note=clp(n.pitch), tick=end_ticks)
 
             dict_add(events, start_event)
             dict_add(events, end_event)
@@ -139,8 +109,8 @@ def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False)
         note_holds_rl = np.expand_dims(new_note_holds, 1)
 
     run_length = np.concatenate([
-        np.stack(note_ons_rl),
         np.stack(note_holds_rl),
+        np.stack(note_ons_rl),
         np.stack(note_deltas_rl)], 1)
 
     return run_length
