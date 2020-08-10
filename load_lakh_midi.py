@@ -18,7 +18,6 @@ lmd_root = r"D:\Documents\lakh_midi_dataset\lmd_full"
 def get_midi_from_md5(md5):
     return pm.PrettyMIDI(rf'{lmd_root}/{md5[0]}/{md5}.mid')
 
-
 def load_lmd_random(num=10):
     with open(json_key) as f:
         j = json.load(f)

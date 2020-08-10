@@ -14,20 +14,23 @@ def get_pr(inp, ind=0):
     return pr
 
 
-def plot(pitch_out, dur_out, pitch_in, dur_in, ind):
-    fig, axs = plt.subplots(1, 2, figsize=(4, 8))
+def plot(outputs, targets, ind, num_dur_vals):
+    fig, axs = plt.subplots(1, 3, figsize=(8, 4))
 
+    full_out = outputs[:, ind].cpu().detach().numpy()
+    axs[0].imshow(full_out.T)
+
+    pitch_out = outputs[:, :, :-num_dur_vals]
+    dur_out = outputs[:, :, -num_dur_vals:]
     do_pr = get_pr(dur_out, ind)
     po_pr = get_pr(pitch_out, ind)
     pro = np.concatenate([po_pr, do_pr], 1)
-    axs[0].imshow(pro.T)
+    axs[1].imshow(pro.T)
 
-    di_pr = get_pr(dur_in, ind)
-    pi_pr = get_pr(pitch_in, ind)
-    pri = np.concatenate([pi_pr, di_pr], 1)
-    axs[1].imshow(pri.T)
+    targets = targets[:, ind].cpu().detach().numpy()
+    axs[2].imshow(targets.T)
 
-    fig.show()
+    return fig, axs
 
 
 # pitch_data = data[:, :, :-num_dur_vals]

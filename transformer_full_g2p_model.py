@@ -52,10 +52,12 @@ class TransformerModel(nn.Module):
             activation='relu'
             )
 
-        self.fc_out = nn.Linear(hidden, num_feats)
+        self.fc_out = nn.Sequential(
+            nn.Linear(hidden, num_feats),
+        )
 
         self.src_mask = None
-        self.trg_mask = None
+        self.tgt_mask = None
         self.memory_mask = None
 
     def generate_square_subsequent_mask(self, sz):
@@ -64,18 +66,20 @@ class TransformerModel(nn.Module):
         return mask
 
     def make_len_mask(self, inp):
-        return (inp == 0).transpose(0, 1)
+        # data points are padding iff the first and last elements of the feature vector are 1
+        res = inp[:, :, 0] * inp[:, :, -1]
+        return res.transpose(0, 1).to(torch.bool)
 
     def forward(self, src, trg):
-        if self.trg_mask is None or self.trg_mask.size(0) != len(trg):
-            self.trg_mask = self._generate_point_mask(len(trg)).to(trg.device)
-            # self.trg_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
+        if self.tgt_mask is None or self.tgt_mask.size(0) != len(trg):
+            self.tgt_mask = self._generate_point_mask(len(trg)).to(trg.device)
+            # self.tgt_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
         if self.src_mask is None or self.src_mask.size(0) != len(trg):
             self.src_mask = self._generate_point_mask(len(src)).to(src.device)
-            # self.trg_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
+            # self.tgt_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
 
-        # src_pad_mask = self.make_len_mask(src)
-        # trg_pad_mask = self.make_len_mask(trg)
+        src_pad_mask = self.make_len_mask(src)
+        trg_pad_mask = self.make_len_mask(trg)
 
         src = self.encoder(src)
         src = self.pos_encoder(src)
@@ -86,11 +90,11 @@ class TransformerModel(nn.Module):
         output = self.transformer(
             src, trg,
             src_mask=self.src_mask,
-            tgt_mask=self.trg_mask,
+            tgt_mask=self.tgt_mask,
             memory_mask=self.memory_mask,
-            # src_key_padding_mask=src_pad_mask,
-            # tgt_key_padding_mask=trg_pad_mask,
-            # memory_key_padding_mask=src_pad_mask
+            src_key_padding_mask=src_pad_mask,
+            tgt_key_padding_mask=trg_pad_mask,
+            memory_key_padding_mask=src_pad_mask
         )
         output = self.fc_out(output)
 
@@ -106,9 +110,9 @@ class TransformerModel(nn.Module):
 if __name__ == '__main__':
     from itertools import product
     import matplotlib.pyplot as plt
-    seq_length = 30
-    num_seqs = 50
-    num_feats = 30
+    seq_length = 60
+    num_seqs = 30
+    num_feats = 40
     num_dur_vals = 10
 
     data_r = torch.rand(seq_length, num_seqs, num_feats)
@@ -119,11 +123,11 @@ if __name__ == '__main__':
 
     # i have no idea how to vectorize this.
     for i, j in product(range(seq_length), range(num_seqs)):
-        ss = np.sqrt(2)
-        ind = int((j + i * ss) % (num_feats - num_dur_vals))
+        ss = np.sqrt(3)
+        ind = int((j * i * ss) % (num_feats - num_dur_vals))
         data[i][j][ind] = 1
     for i, j in product(range(seq_length), range(num_seqs)):
-        ss = np.sqrt(3)
+        ss = np.sqrt(10)
         ind = int((i + j * ss) % (num_dur_vals) + (num_feats - num_dur_vals))
         data[i][j][ind] = 1
 
@@ -133,8 +137,8 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_epochs = 500
-    hidden = 60
-    feedforward = 60
+    hidden = 100
+    feedforward = 100
     nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 2          # the number of heads in the multiheadattention models
     dropout = 0.1      # the dropout value
@@ -178,10 +182,10 @@ if __name__ == '__main__':
         loss = loss_func(output, targets)
         loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
         print(f"epoch: {i} | loss: {loss.item()}")
 
     x = (output).detach().cpu().numpy().T
-    plt.imshow(x[:, 10])
+    plt.imshow(x[:, 15])
     plt.show()
