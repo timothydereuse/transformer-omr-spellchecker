@@ -6,36 +6,31 @@ from collections import Counter
 import os
 import torch
 import numpy as np
+import h5py
 reload(fcts)
 
 
-def get_tick_deltas_for_runlength(mids_path, midi_fnames=None, num_dur_vals=16, proportion=0.2):
+def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.2):
 
-    if midi_fnames is None:
-        midi_fnames = os.listdir(mids_path)
-    num_choice = int(proportion * len(midi_fnames))
-    midi_fnames = np.random.choice(midi_fnames, num_choice, replace=False)
+    num_choice = int(proportion * len(fnames))
+    fnames = np.random.choice(fnames, num_choice, replace=False)
 
     c = Counter()
     pitch_c = Counter()
 
-    for i, fname in enumerate(midi_fnames):
-        pm_file = pm.PrettyMIDI(f"{mids_path}/{fname}")
-        all_notes = []
-        for voice in pm_file.instruments:
-            if voice.is_drum:
-                continue
-            all_starts = [pm_file.time_to_tick(n.start) for n in voice.notes]
-            all_notes += all_starts
+    for i, fname in enumerate(fnames):
+        arr = dset[fname]
+        all_starts = arr[:, 1]
+        # all_offs = arr[:, 2]
 
-            all_pitches = [n.pitch for n in voice.notes]
-            pitch_c.update(all_pitches)
+        all_pitches = [x for x in arr[:, 0] if x > 0]
+        pitch_c.update(all_pitches)
 
         diffs = np.diff(all_starts)
         c.update(diffs)
 
         if not i % 200:
-            print(f"processing tick deltas: {i} of {len(midi_fnames)}")
+            print(f"processing tick deltas: {i} of {len(fnames)}")
 
     top_durs = c.most_common(num_dur_vals)
 
@@ -108,30 +103,34 @@ def get_class_weights(inp):
 class MTCDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
-    def __init__(self, root_dir, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None, proportion_for_stats=0.3, shuffle_files=True):
+    def __init__(self, dset_fname, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None,
+                 proportion_for_stats=0.1, shuffle_files=True):
         """
         Args:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
+
         """
         super(MTCDataset).__init__()
-        self.root_dir = root_dir
+        self.dset_fname = dset_fname
+        self.f = h5py.File('essen_meertens_songs.hdf5', 'r')
         self.seq_length = seq_length
 
-        if fnames is None:
-            self.midi_fnames = os.listdir(self.root_dir)
-        else:
-            self.midi_fnames = fnames
+        # if fnames is None:
+        #     self.midi_fnames = os.listdir(self.root_dir)
+        # else:
+        #     self.midi_fnames = fnames
+
+        self.fnames = []
+        for k in self.f.keys():
+            for n in self.f[k].keys():
+                self.fnames.append(rf'{k}/{n}')
 
         if shuffle_files:
-            np.random.shuffle(self.midi_fnames)
+            np.random.shuffle(self.fnames)
 
         if use_stats_from is None:
             assert num_dur_vals is not None, "one of num_dur_vals OR use_stats_from must be supplied"
             dmap, prange = get_tick_deltas_for_runlength(
-                self.root_dir, fnames, num_dur_vals, proportion_for_stats)
+                self.f, self.fnames, num_dur_vals, proportion_for_stats)
             self.delta_mapping = dmap
             self.pitch_range = prange
             self.num_dur_vals = num_dur_vals
@@ -149,16 +148,16 @@ class MTCDataset(IterableDataset):
             [padding_element for _ in range(self.seq_length + 1)],
             0)
 
-        self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
+        # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
 
     def __iter__(self, fnames=None):
 
         if fnames is None:
-            fnames = self.midi_fnames
+            fnames = self.fnames
 
-        for fname in self.midi_fnames:
-            x = pm.PrettyMIDI(f"{self.root_dir}/{fname}")
-            runlength = fcts.pm_to_runlength(
+        for fname in self.fnames:
+            x = self.f[fname]
+            runlength = fcts.arr_to_runlength(
                 x, self.delta_mapping, self.pitch_range, monophonic=True)
             num_seqs = np.round(runlength.shape[0] / self.seq_length)
 
@@ -179,12 +178,14 @@ class MTCDataset(IterableDataset):
         dur = sums[-self.num_dur_vals:].float()
         return pitch, dur
 
+
 if __name__ == '__main__':
-    root_dir = r"D:\Desktop\meertens_tune_collection\mtc-fs-1.0.tar\midi"
+    fname = 'essen_meertens_songs.hdf5'
     num_dur_vals = 17
     seq_len = 30
-    proportion = 0.2
-    dset = MTCDataset(root_dir, seq_len, num_dur_vals, proportion)
+    proportion = 0.1
+    dset = MTCDataset(fname, seq_len, num_dur_vals=num_dur_vals,
+                      proportion_for_stats=proportion)
 
     dload = DataLoader(dset, batch_size=20)
     for i, x in enumerate(dload):

@@ -4,7 +4,7 @@ from collections import namedtuple, Counter
 import os
 
 
-def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False):
+def arr_to_runlength(arr, tick_deltas_mapping, pitch_range, monophonic=False):
     '''
     takes in a single prettymidi object and turns it into a run-length encoding. for now, it
     collapses all non-drum channels down into a single piano roll.
@@ -18,26 +18,21 @@ def pm_to_runlength(pm_file, tick_deltas_mapping, pitch_range, monophonic=False)
         else:
             dict[event.tick] = [event]
 
-    def clp(inp):
-        return int(np.clip(inp, pitch_range[0], pitch_range[1]))
-
     events = {}
-    for i, voice in enumerate(pm_file.instruments):
 
-        if voice.is_drum:
-            continue
+    # for i, voice in enumerate(pm_file.instruments):
+    #     if voice.is_drum:
+    #         continue
 
-        for n in voice.notes:
+    for n in arr:
+        clp_pitch = int(np.clip(n[0], pitch_range[0], pitch_range[1]))
+        start_event = MIDIEvent(
+            type='start', voice=0, note=clp_pitch, tick=n[1])
+        end_event = MIDIEvent(
+            type='end', voice=0, note=clp_pitch, tick=n[2])
 
-            start_ticks = pm_file.time_to_tick(n.start)
-            start_event = MIDIEvent(
-                type='start', voice=i, note=clp(n.pitch), tick=start_ticks)
-            end_ticks = pm_file.time_to_tick(n.end)
-            end_event = MIDIEvent(
-                type='end', voice=i, note=clp(n.pitch), tick=end_ticks)
-
-            dict_add(events, start_event)
-            dict_add(events, end_event)
+        dict_add(events, start_event)
+        dict_add(events, end_event)
 
     # structure of a change point:
     # [1] absolute tick time of event in natural numbers
