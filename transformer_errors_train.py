@@ -14,10 +14,10 @@ reload(lmm)
 reload(fcts)
 reload(tfgm)
 
-mids_path = r"D:\Desktop\meertens_tune_collection\mtc-fs-1.0.tar\midi"
+dset_path = r"D:\Documents\MIDI_errors_testing\essen_meertens_songs.hdf5"
 val_set_size = 0.1
 
-num_dur_vals = 16
+num_dur_vals = 18
 seq_length = 30
 batch_size = 500
 
@@ -30,14 +30,14 @@ dropout = 0.1      # the dropout value
 
 lr = 0.002
 
-midi_fnames = os.listdir(mids_path)
+midi_fnames = lmm.get_all_hdf5_fnames(dset_path)
 np.random.shuffle(midi_fnames)
 split_pt = int(len(midi_fnames) * val_set_size)
 val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
-dset_tr = lmm.MTCDataset(mids_path, seq_length, train_fnames, num_dur_vals)
-dset_vl = lmm.MTCDataset(mids_path, seq_length, val_fnames, use_stats_from=dset_tr)
+dset_tr = lmm.MTCDataset(dset_path, seq_length, train_fnames, num_dur_vals)
+dset_vl = lmm.MTCDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, batch_size)
 dloader_val = DataLoader(dset_vl, batch_size)
 num_feats = dset_tr.num_feats
@@ -47,16 +47,14 @@ model = tfgm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device
 # sum(p.numel() for p in model.parameters())
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)
 
 # full_loss = nn.BCEWithLogitsLoss(reduction='mean')
-
 pitch_criterion = nn.CrossEntropyLoss(reduction='mean')
 dur_criterion = nn.CrossEntropyLoss(reduction='mean')
 
 
 def loss_func(outputs, targets):
-
     pitch_targets = targets[:, :, :-num_dur_vals]
     dur_targets = targets[:, :, -num_dur_vals:]
 
@@ -74,7 +72,6 @@ def loss_func(outputs, targets):
 
 
 print('beginning training')
-
 total_loss = 0.
 start_time = time.time()
 for epoch in range(num_epochs):

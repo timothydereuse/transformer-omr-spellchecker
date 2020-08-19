@@ -100,18 +100,33 @@ def get_class_weights(inp):
     return weights
 
 
+def get_all_hdf5_fnames(inp):
+    fnames = []
+    f = h5py.File(inp, 'r')
+    for k in f.keys():
+        for n in f[k].keys():
+            fnames.append(rf'{k}/{n}')
+    return fnames
+
 class MTCDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
     def __init__(self, dset_fname, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None,
                  proportion_for_stats=0.1, shuffle_files=True):
         """
-        Args:
-
+        @dset_fname - path to hdf5 file created by make_hdf5.py
+        @seq_length - number of units to chop sequences into
+        @fnames - a subset of the path names within the hdf5 file (optional)
+        @num_dur_vals - the number of most common duration values to calculate (optional)
+        @use_stats_from - input another MTCDataset into this argument to use its calculated stats
+                          for generating training batches (optional)
+        @proportion_for_stats - in (0, 1]. calculates stats on a random subset of the dataset
+            in the hdf5 file (optional)
+        @shuffle_files - randomizes order of loading songs from hdf5 file (optional)
         """
         super(MTCDataset).__init__()
         self.dset_fname = dset_fname
-        self.f = h5py.File('essen_meertens_songs.hdf5', 'r')
+        self.f = h5py.File(self.dset_fname, 'r')
         self.seq_length = seq_length
 
         # if fnames is None:
@@ -183,7 +198,7 @@ if __name__ == '__main__':
     fname = 'essen_meertens_songs.hdf5'
     num_dur_vals = 17
     seq_len = 30
-    proportion = 0.1
+    proportion = 0.2
     dset = MTCDataset(fname, seq_len, num_dur_vals=num_dur_vals,
                       proportion_for_stats=proportion)
 
