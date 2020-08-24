@@ -9,3 +9,5 @@ Experiments in training a transformer network to identify "errors" (defined as a
 `data_loaders.py` contains a functionality for creating batches and extracting statistics from the data for training.
 
 The main model is `transformer_full_g2p_model.py`. Variants of this model can be found in `/old_models`.
+
+There is an older, simplified version of the transformer model with detailed annotations available as a notebook on [Google Colab](https://colab.research.google.com/drive/1Vzd3v-8HOTdQPmVC6gr0qzIwTSLJEb_6?usp=sharing).
