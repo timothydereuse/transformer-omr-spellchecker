@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-import load_meertens_midis as lmm
+import data_loaders as lmm
 import factorizations as fcts
 import transformer_full_g2p_model as tfgm
 import matplotlib.pyplot as plt
