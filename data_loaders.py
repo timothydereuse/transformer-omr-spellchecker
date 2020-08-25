@@ -21,8 +21,6 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.2)
     for i, fname in enumerate(fnames):
         arr = dset[fname]
         all_starts = arr[:, 1]
-        # all_offs = arr[:, 2]
-
         all_pitches = [x for x in arr[:, 0] if x > 0]
         pitch_c.update(all_pitches)
 
@@ -40,21 +38,6 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.2)
     pitch_range = (min(pitch_c.keys()), max(pitch_c.keys()))
 
     return res_dict, pitch_range
-
-
-def load_mtc_notetuple(num=10, seq_length=20):
-    mids_path = r"D:\Desktop\meertens_tune_collection\mtc-fs-1.0.tar\midi"
-    midi_fnames = os.listdir(mids_path)
-
-    choose_fnames = np.random.choice(midi_fnames, num, False)
-    notetuples = []
-    for mid_name in choose_fnames:
-        x = pm.PrettyMIDI(f"{mids_path}/{mid_name}")
-        notetuples.append(fcts.pm_to_note_tuple(x))
-
-    x = chunk_seqs(notetuples, seq_length)
-
-    return torch.transpose(torch.tensor(x), 0, 1)
 
 
 def load_mtc_runlength(delta_mapping, pitch_range, num=10, seq_length=20):
