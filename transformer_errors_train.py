@@ -1,5 +1,4 @@
 import time
-import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -49,9 +48,8 @@ model = tfgm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)
 
-# full_loss = nn.BCEWithLogitsLoss(reduction='mean')
-pitch_criterion = nn.CrossEntropyLoss(reduction='mean')
-dur_criterion = nn.CrossEntropyLoss(reduction='mean')
+pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
+dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
 
 def loss_func(outputs, targets):
@@ -71,12 +69,9 @@ def loss_func(outputs, targets):
     return pitch_loss + dur_loss
 
 
-print('beginning training')
-total_loss = 0.
-start_time = time.time()
-for epoch in range(num_epochs):
-    model.train()
+def train_epoch(model, dloader):
     num_seqs_used = 0
+    total_loss = 0.
     for i, batch in enumerate(dloader):
         batch = torch.transpose(batch, 0, 1).float().to(device)
         input, target = (batch, batch)
@@ -89,21 +84,21 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         total_loss += loss.item()
-        log_interval = 2
         num_seqs_used += input.shape[1]
-        if i % log_interval == 0:  # and i > 0:
-            cur_loss = (total_loss / num_seqs_used)
-            elapsed = time.time() - start_time
-            # last_lr = scheduler.get_last_lr()[0]
-            print(
-                f'epoch {epoch:3d} | '
-                f'{i:5d} batches | '
-                # f'lr {last_lr:02.6f} | '
-                f'ms/batch {elapsed * 1000 / log_interval:5.2f} | '
-                f'loss {cur_loss:3.5f}')
-            total_loss = 0
-            num_seqs_used = 0
-            start_time = time.time()
+
+        print(f'batch {i}')
+
+    mean_loss = total_loss / num_seqs_used
+    return mean_loss
+
+
+print('beginning training')
+start_time = time.time()
+for epoch in range(num_epochs):
+    model.train()
+
+    # perform training epoch
+    cur_loss = train_epoch(model, dloader)
 
     # test on validation set
     model.eval()
@@ -118,14 +113,30 @@ for epoch in range(num_epochs):
             num_entries += batch.shape[1]
     val_loss /= num_entries
 
+    elapsed = time.time() - start_time
     print(
-        f'end of epoch {epoch:3d} | '
-        f'val_loss {val_loss:3.5f}')
+        f'epoch {epoch:3d} | '
+        f'ms/epoch {elapsed * 1000:5.2f} | '
+        f'train_loss {cur_loss:3.5f} | '
+        f'val_loss {val_loss:3.5f} ')
+    start_time = time.time()
 
     scheduler.step(val_loss)
 
-    ind_rand = np.random.choice(output.shape[1])
-    fig, axs = po.plot(output, target, ind_rand, num_dur_vals)
-    fig.savefig(f'./out_imgs/epoch_{epoch}.png')
-    plt.clf()
-    plt.close(fig)
+    save_every = 10
+    if not epoch % save_every and epoch > 0:
+        ind_rand = np.random.choice(output.shape[1])
+        fig, axs = po.plot(output, target, ind_rand, num_dur_vals)
+        fig.savefig(f'./out_imgs/epoch_{epoch}.png')
+        plt.clf()
+        plt.close(fig)
+
+        m_name = f'transformer_epoch-{epoch}_{nhid}.{ninp}.{nlayers}.{nhead}.pt'
+        torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'loss': loss,
+                ...
+                }, PATH)
