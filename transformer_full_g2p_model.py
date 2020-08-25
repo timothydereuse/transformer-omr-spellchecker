@@ -8,7 +8,7 @@ import numpy as np
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=100):
+    def __init__(self, d_model, dropout=0.1, max_len=150):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -109,9 +109,9 @@ class TransformerModel(nn.Module):
 
 if __name__ == '__main__':
     from itertools import product
-    import matplotlib.pyplot as plt
-    seq_length = 60
-    num_seqs = 30
+    # import matplotlib.pyplot as plt
+    seq_length = 100
+    num_seqs = 200
     num_feats = 40
     num_dur_vals = 10
 
@@ -132,11 +132,11 @@ if __name__ == '__main__':
         data[i][j][ind] = 1
 
     # inputs = torch.tensor(data[])
-    inputs = data
-    targets = data
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_epochs = 500
+    inputs = data.to(device)
+    targets = data.to(device)
+
+    num_epochs = 100
     hidden = 100
     feedforward = 100
     nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
@@ -149,8 +149,8 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     full_loss = nn.BCEWithLogitsLoss(reduction='mean')
 
-    pitch_criterion = nn.CrossEntropyLoss(reduction='mean')
-    dur_criterion = nn.CrossEntropyLoss(reduction='mean')
+    pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
+    dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
     def loss_func(outputs, targets):
 
@@ -186,6 +186,6 @@ if __name__ == '__main__':
         optimizer.step()
         print(f"epoch: {i} | loss: {loss.item()}")
 
-    x = (output).detach().cpu().numpy().T
-    plt.imshow(x[:, 15])
-    plt.show()
+    # x = (output).detach().cpu().numpy().T
+    # plt.imshow(x[:, 15])
+    # plt.show()

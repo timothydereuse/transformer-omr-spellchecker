@@ -3,14 +3,14 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-import data_loaders as lmm
+import data_loaders as dl
 import factorizations as fcts
 import transformer_full_g2p_model as tfgm
 import matplotlib.pyplot as plt
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
-reload(lmm)
+reload(dl)
 reload(fcts)
 reload(tfgm)
 
@@ -30,14 +30,14 @@ dropout = 0.1      # the dropout value
 
 lr = 0.002
 
-midi_fnames = lmm.get_all_hdf5_fnames(dset_path)
+midi_fnames = dl.get_all_hdf5_fnames(dset_path)
 np.random.shuffle(midi_fnames)
 split_pt = int(len(midi_fnames) * val_set_size)
 val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
-dset_tr = lmm.MTCDataset(dset_path, seq_length, train_fnames, num_dur_vals)
-dset_vl = lmm.MTCDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
+dset_tr = dl.MonoFolkSongDataset(dset_path, seq_length, train_fnames, num_dur_vals)
+dset_vl = dl.MonoFolkSongDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, batch_size)
 dloader_val = DataLoader(dset_vl, batch_size)
 num_feats = dset_tr.num_feats
