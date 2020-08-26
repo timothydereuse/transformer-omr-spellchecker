@@ -17,15 +17,15 @@ dset_path = r"D:\Documents\MIDI_errors_testing\essen_meertens_songs.hdf5"
 val_set_size = 0.1
 
 num_dur_vals = 18
-seq_length = 30
-batch_size = 500
+seq_length = 20
+batch_size = 700
 
-num_epochs = 200
-nhid = 256         # the dimension of the feedforward network
-ninp = 256
-nlayers = 2        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+num_epochs = 150
+nhid = 50         # the dimension of the feedforward network
+ninp = 50
+nlayers = 1        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 2          # the number of heads in the multiheadattention models
-dropout = 0.1      # the dropout value
+dropout = 0.2      # the dropout value
 
 lr = 0.002
 
@@ -37,13 +37,15 @@ train_fnames = midi_fnames[split_pt:]
 
 dset_tr = dl.MonoFolkSongDataset(dset_path, seq_length, train_fnames, num_dur_vals)
 dset_vl = dl.MonoFolkSongDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
-dloader = DataLoader(dset_tr, batch_size)
-dloader_val = DataLoader(dset_vl, batch_size)
+dloader = DataLoader(dset_tr, batch_size, pin_memory=True)
+dloader_val = DataLoader(dset_vl, batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'device selected: {device}')
 model = tfgm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
-# sum(p.numel() for p in model.parameters())
+model_size = sum(p.numel() for p in model.parameters())
+print(f'instantiated model with nparams={model_size}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)
@@ -137,6 +139,5 @@ for epoch in range(num_epochs):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
-                'loss': loss,
-                ...
-                }, PATH)
+                # 'loss': loss,
+                }, m_name)

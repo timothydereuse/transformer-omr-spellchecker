@@ -1,16 +1,14 @@
 from torch.utils.data import IterableDataset, DataLoader
-import pretty_midi as pm
 import factorizations as fcts
 from importlib import reload
 from collections import Counter
-import os
 import torch
 import numpy as np
 import h5py
 reload(fcts)
 
 
-def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.2):
+def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.5):
 
     num_choice = int(proportion * len(fnames))
     fnames = np.random.choice(fnames, num_choice, replace=False)
@@ -31,8 +29,15 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.2)
             print(f"processing tick deltas: {i} of {len(fnames)}")
 
     top_durs = c.most_common(num_dur_vals)
-
     most = np.sort([x[0] for x in top_durs])
+
+    if len(most) < num_dur_vals:
+        print(f'WARNING: requested number of duration values {num_dur_vals} is too large for actual '
+              f'number of duration values found: {len(most)}. the resulting encoding of this input '
+              f'will have one or more features that are always set to zero.')
+        filler = np.arange(0, num_dur_vals - len(most)) + max(most) + 1
+        most = np.concatenate([most, filler])
+
     res_dict = {v: i for i, v in enumerate(most)}
 
     pitch_range = (min(pitch_c.keys()), max(pitch_c.keys()))
@@ -60,7 +65,7 @@ class MonoFolkSongDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
     def __init__(self, dset_fname, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None,
-                 proportion_for_stats=0.1, shuffle_files=True):
+                 proportion_for_stats=0.5, shuffle_files=True):
         """
         @dset_fname - path to hdf5 file created by make_hdf5.py
         @seq_length - number of units to chop sequences into

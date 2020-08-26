@@ -103,6 +103,10 @@ def arr_to_runlength(arr, tick_deltas_mapping, pitch_range, monophonic=False):
         np.stack(note_ons_rl),
         np.stack(note_deltas_rl)], 1)
 
+    if monophonic:
+        assert run_length.shape[-1] == pitch_range[1] - pitch_range[0] \
+                                       + len(tick_deltas_mapping) + 1
+
     return run_length
 
 

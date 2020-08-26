@@ -1,0 +1,9 @@
+(these are notes for my own benefit)
+
+runlength encoding vs. piano roll encoding vs. note-tuple encoding
+
+training using masks (diagonally) vs. training on introduced errors
+
+need:
+
+generalizable way of comparing results between different methods.
