@@ -8,18 +8,19 @@ import transformer_full_seq_model as tfsm
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
+import logging
 
-print('matplotlib...')
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-print('reloads...')
 reload(dl)
 reload(fcts)
 reload(tfsm)
 
-print('definitions...')
+logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler())
+
 dset_path = r"essen_meertens_songs.hdf5"
 val_set_size = 0.1
 
@@ -36,25 +37,24 @@ dropout = 0.1      # the dropout value
 
 lr = 0.003
 
-print('reading hdf5...')
+logging.info('reading hdf5...')
 midi_fnames = dl.get_all_hdf5_fnames(dset_path)
 np.random.shuffle(midi_fnames)
 split_pt = int(len(midi_fnames) * val_set_size)
 val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
-print('defining datasets...')
+logging.info('defining datasets...')
 dset_tr = dl.MonoFolkSongDataset(dset_path, seq_length, train_fnames, num_dur_vals)
 dset_vl = dl.MonoFolkSongDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-print('creating model...')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = tfsm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
 model_size = sum(p.numel() for p in model.parameters())
-print(f'created model with n_params={model_size} on device {device}')
+logging.info(f'created model with n_params={model_size} on device {device}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)
@@ -97,13 +97,11 @@ def train_epoch(model, dloader):
         total_loss += loss.item()
         num_seqs_used += input.shape[1]
 
-        print(f'batch {i}')
-
     mean_loss = total_loss / num_seqs_used
     return mean_loss
 
 
-print('beginning training')
+logging.info('beginning training')
 start_time = time.time()
 for epoch in range(num_epochs):
     model.train()
@@ -125,7 +123,7 @@ for epoch in range(num_epochs):
     val_loss /= num_entries
 
     elapsed = time.time() - start_time
-    print(
+    logging.info(
         f'epoch {epoch:3d} | '
         f'ms/epoch {elapsed * 1000:5.2f} | '
         f'train_loss {cur_loss:3.5f} | '

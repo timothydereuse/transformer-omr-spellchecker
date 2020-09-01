@@ -5,6 +5,7 @@ from collections import Counter
 import torch
 import numpy as np
 import h5py
+import logging
 reload(fcts)
 
 
@@ -25,16 +26,16 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.5)
         diffs = np.diff(all_starts)
         c.update(diffs)
 
-        if not i % 200:
-            print(f"processing tick deltas: {i} of {len(fnames)}")
+        if not i % 2000:
+            logging.info(f"processing tick deltas: {i} of {len(fnames)}")
 
     top_durs = c.most_common(num_dur_vals)
     most = np.sort([x[0] for x in top_durs])
 
     if len(most) < num_dur_vals:
-        print(f'WARNING: requested number of duration values {num_dur_vals} is too large for actual '
-              f'number of duration values found: {len(most)}. the resulting encoding of this input '
-              f'will have one or more features that are always set to zero.')
+        logging.warn(f'requested number of duration values {num_dur_vals} is too large for actual '
+                     f'number of duration values found: {len(most)}. the resulting encoding of this input '
+                     f'will have one or more features that are always set to zero.')
         filler = np.arange(0, num_dur_vals - len(most)) + max(most) + 1
         most = np.concatenate([most, filler])
 
