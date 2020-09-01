@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
-import transformer_full_seq_model as tfgm
+import transformer_full_seq_model as tfsm
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 print('reloads...')
 reload(dl)
 reload(fcts)
-reload(tfgm)
+reload(tfsm)
 
 print('definitions...')
 dset_path = r"essen_meertens_songs.hdf5"
@@ -52,10 +52,9 @@ num_feats = dset_tr.num_feats
 
 print('creating model...')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f'device selected: {device}')
-model = tfgm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
+model = tfsm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
 model_size = sum(p.numel() for p in model.parameters())
-print(f'instantiated model with nparams={model_size}')
+print(f'created model with n_params={model_size} on device {device}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)

@@ -5,7 +5,7 @@ import os
 
 beat_multiplier = 48
 
-f = h5py.File('essen_meertens_songs.hdf5', 'a')
+f = h5py.File('essen_meertens_songs_durs.hdf5', 'a')
 f.attrs['beat_multiplier'] = beat_multiplier
 
 paths = {
@@ -31,7 +31,7 @@ for p in paths.keys():
         arr = np.array([[
             n.pitch.midi if n.isNote else 0,
             int(n.offset * beat_multiplier),
-            int((n.offset + n.duration.quarterLength) * beat_multiplier)
+            int(n.duration.quarterLength * beat_multiplier)
         ] for n in krn.flat.notesAndRests])
 
         dset = grp.create_dataset(

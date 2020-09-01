@@ -1,10 +1,8 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 import time
 import math
 import numpy as np
+import torch
+import torch.nn as nn
 
 
 class PositionalEncoding(nn.Module):
@@ -109,12 +107,13 @@ class TransformerModel(nn.Module):
 
 if __name__ == '__main__':
     from itertools import product
+    import plot_outputs
 
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    seq_length = 100
+    seq_length = 50
     num_seqs = 1000
     num_feats = 50
     num_dur_vals = 10
@@ -138,7 +137,7 @@ if __name__ == '__main__':
         ind = int((j * i * ss) % (num_feats - num_dur_vals))
         data[i][j][ind] = 1
     for i, j in product(range(seq_length), range(num_seqs)):
-        ss = np.sqrt(10)
+        ss = np.sqrt(2)
         ind = int((i + j * ss) % (num_dur_vals) + (num_feats - num_dur_vals))
         data[i][j][ind] = 1
 
@@ -148,7 +147,8 @@ if __name__ == '__main__':
     targets = data.to(device)
 
     model = TransformerModel(num_feats, hidden, feedforward, nlayers, dropout).to(device)
-    print(sum(p.numel() for p in model.parameters()))
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f'created model with n_params={n_params} on device {device}')
 
     lr = 0.001
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -177,7 +177,10 @@ if __name__ == '__main__':
     model.train()
     epoch_loss = 0
 
+
     for i in range(num_epochs):
+
+        start_time = time.time()
         optimizer.zero_grad()
 
         output = model(inputs, targets)
@@ -189,10 +192,12 @@ if __name__ == '__main__':
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
-        print(f"epoch: {i} | loss: {loss.item()}")
+        elapsed = time.time() - start_time
+        print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
         if not i % 25:
             x = (output).detach().cpu().numpy().T
-            plt.imshow(x[:, 15])
-            plt.savefig(f'model_test_epoch_{i}.png')
+            fig, axs = plot_outputs.plot(output, targets, 3, num_dur_vals)
+            fig.savefig(f'model_test_epoch_{i}.png')
             plt.clf()
+            plt.close(fig)

@@ -24,7 +24,7 @@ def arr_to_runlength(arr, tick_deltas_mapping, pitch_range, monophonic=False):
         start_event = MIDIEvent(
             type='start', voice=0, note=clp_pitch, tick=n[1])
         end_event = MIDIEvent(
-            type='end', voice=0, note=clp_pitch, tick=n[2])
+            type='end', voice=0, note=clp_pitch, tick=n[2] + n[1])
 
         dict_add(events, start_event)
         dict_add(events, end_event)
@@ -124,5 +124,5 @@ def arr_to_note_tuple(arr):
         last_onset_time = n[1]
 
         # duration
-        res[i, 2] = n[2] - n[1]
+        res[i, 2] = n[2]
     return res
