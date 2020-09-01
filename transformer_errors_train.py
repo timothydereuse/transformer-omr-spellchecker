@@ -4,43 +4,53 @@ import torch
 import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
-import transformer_full_g2p_model as tfgm
-import matplotlib.pyplot as plt
+import transformer_full_seq_model as tfgm
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
+
+print('matplotlib...')
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+print('reloads...')
 reload(dl)
 reload(fcts)
 reload(tfgm)
 
-dset_path = r"D:\Documents\MIDI_errors_testing\essen_meertens_songs.hdf5"
+print('definitions...')
+dset_path = r"essen_meertens_songs.hdf5"
 val_set_size = 0.1
 
-num_dur_vals = 18
-seq_length = 20
+num_dur_vals = 15
+seq_length = 50
 batch_size = 700
 
 num_epochs = 150
-nhid = 50         # the dimension of the feedforward network
-ninp = 50
-nlayers = 1        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+nhid = 256 // 4        # the dimension of the feedforward network
+ninp = 256 // 4
+nlayers = 2        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 2          # the number of heads in the multiheadattention models
-dropout = 0.2      # the dropout value
+dropout = 0.1      # the dropout value
 
-lr = 0.002
+lr = 0.003
 
+print('reading hdf5...')
 midi_fnames = dl.get_all_hdf5_fnames(dset_path)
 np.random.shuffle(midi_fnames)
 split_pt = int(len(midi_fnames) * val_set_size)
 val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
+print('defining datasets...')
 dset_tr = dl.MonoFolkSongDataset(dset_path, seq_length, train_fnames, num_dur_vals)
 dset_vl = dl.MonoFolkSongDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
+print('creating model...')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'device selected: {device}')
 model = tfgm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
@@ -125,8 +135,8 @@ for epoch in range(num_epochs):
 
     scheduler.step(val_loss)
 
-    save_every = 10
-    if not epoch % save_every and epoch > 0:
+    save_every = 15
+    if not epoch % save_every:
         ind_rand = np.random.choice(output.shape[1])
         fig, axs = po.plot(output, target, ind_rand, num_dur_vals)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png')

@@ -4,6 +4,9 @@ runlength encoding vs. piano roll encoding vs. note-tuple encoding
 
 training using masks (diagonally) vs. training on introduced errors
 
+error detection via masking and reconstructing ('how unlikely is this note?') vs explicit error
+detection (see MDTK, 2020)
+
 need:
 
 generalizable way of comparing results between different methods.

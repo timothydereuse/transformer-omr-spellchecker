@@ -109,11 +109,22 @@ class TransformerModel(nn.Module):
 
 if __name__ == '__main__':
     from itertools import product
-    # import matplotlib.pyplot as plt
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
     seq_length = 100
-    num_seqs = 200
-    num_feats = 40
+    num_seqs = 1000
+    num_feats = 50
     num_dur_vals = 10
+
+    num_epochs = 140
+    hidden = 100
+    feedforward = 100
+    nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nhead = 2          # the number of heads in the multiheadattention models
+    dropout = 0.1      # the dropout value
 
     data_r = torch.rand(seq_length, num_seqs, num_feats)
     data = torch.zeros_like(data_r)
@@ -136,12 +147,6 @@ if __name__ == '__main__':
     inputs = data.to(device)
     targets = data.to(device)
 
-    num_epochs = 100
-    hidden = 100
-    feedforward = 100
-    nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-    nhead = 2          # the number of heads in the multiheadattention models
-    dropout = 0.1      # the dropout value
     model = TransformerModel(num_feats, hidden, feedforward, nlayers, dropout).to(device)
     print(sum(p.numel() for p in model.parameters()))
 
@@ -186,6 +191,8 @@ if __name__ == '__main__':
         optimizer.step()
         print(f"epoch: {i} | loss: {loss.item()}")
 
-    # x = (output).detach().cpu().numpy().T
-    # plt.imshow(x[:, 15])
-    # plt.show()
+        if not i % 25:
+            x = (output).detach().cpu().numpy().T
+            plt.imshow(x[:, 15])
+            plt.savefig(f'model_test_epoch_{i}.png')
+            plt.clf()
