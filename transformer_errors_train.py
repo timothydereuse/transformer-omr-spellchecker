@@ -18,24 +18,24 @@ reload(dl)
 reload(fcts)
 reload(tfsm)
 
-logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.DEBUG)
+logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.INFO,
+                    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logging.getLogger().addHandler(logging.StreamHandler())
 
 dset_path = r"essen_meertens_songs.hdf5"
 val_set_size = 0.1
 
 num_dur_vals = 15
-seq_length = 50
-batch_size = 700
+seq_length = 60
+batch_size = 1000
 
-num_epochs = 150
-nhid = 256 // 4        # the dimension of the feedforward network
-ninp = 256 // 4
+num_epochs = 2
+nhid = 128        # the dimension of the feedforward network
+ninp = 128
 nlayers = 2        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-nhead = 2          # the number of heads in the multiheadattention models
 dropout = 0.1      # the dropout value
 
-lr = 0.003
+lr = 0.001
 
 logging.info('reading hdf5...')
 midi_fnames = dl.get_all_hdf5_fnames(dset_path)
@@ -96,6 +96,7 @@ def train_epoch(model, dloader):
 
         total_loss += loss.item()
         num_seqs_used += input.shape[1]
+        logging.info(f'batch {i}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
@@ -125,14 +126,14 @@ for epoch in range(num_epochs):
     elapsed = time.time() - start_time
     logging.info(
         f'epoch {epoch:3d} | '
-        f'ms/epoch {elapsed * 1000:5.2f} | '
-        f'train_loss {cur_loss:3.5f} | '
-        f'val_loss {val_loss:3.5f} ')
+        f's/epoch {elapsed:3.5f} | '
+        f'train_loss {cur_loss:3.7f} | '
+        f'val_loss {val_loss:3.7f} ')
     start_time = time.time()
 
     scheduler.step(val_loss)
 
-    save_every = 15
+    save_every = 5
     if not epoch % save_every:
         ind_rand = np.random.choice(output.shape[1])
         fig, axs = po.plot(output, target, ind_rand, num_dur_vals)
@@ -140,7 +141,7 @@ for epoch in range(num_epochs):
         plt.clf()
         plt.close(fig)
 
-        m_name = f'transformer_epoch-{epoch}_{nhid}.{ninp}.{nlayers}.{nhead}.pt'
+        m_name = f'transformer_epoch-{epoch}_{nhid}.{ninp}.{nlayers}.pt'
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
