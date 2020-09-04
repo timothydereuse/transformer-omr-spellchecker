@@ -104,7 +104,9 @@ class MonoFolkSongDataset(IterableDataset):
             self.pitch_range = use_stats_from.pitch_range
             self.num_dur_vals = use_stats_from.num_dur_vals
 
-        self.num_feats = self.pitch_range[1] - self.pitch_range[0] + self.num_dur_vals + 1
+        # the number of features is this sum plus 2 (one for an off-by-one error caused by
+        # the pitch range being inclusive, and one for the 'hold' message)
+        self.num_feats = self.pitch_range[1] - self.pitch_range[0] + self.num_dur_vals + 2
 
         padding_element = np.zeros(self.num_feats)
         padding_element[-1] = 1
@@ -127,8 +129,8 @@ class MonoFolkSongDataset(IterableDataset):
         # iterate through all given fnames, breaking them into chunks of seq_length...
         for fname in self.fnames:
             x = self.f[fname]
-            runlength = fcts.arr_to_runlength(
-                x, self.delta_mapping, self.pitch_range, monophonic=True)
+            runlength = fcts.arr_to_runlength_mono(
+                x, self.delta_mapping, self.pitch_range)
             num_seqs = np.round(runlength.shape[0] / self.seq_length)
 
             # return sequences of notes from each file, seq_length in length.

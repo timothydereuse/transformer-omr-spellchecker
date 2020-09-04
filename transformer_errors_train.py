@@ -83,12 +83,24 @@ def loss_func(outputs, targets):
 def train_epoch(model, dloader):
     num_seqs_used = 0
     total_loss = 0.
+
+
+    start_time = time.time()
     for i, batch in enumerate(dloader):
+
+        print(f'loading data: {time.time() - start_time}')
+        start_time = time.time()
+
+        start_time = time.time()
         batch = torch.transpose(batch, 0, 1).float().to(device)
         input, target = (batch, batch)
 
         optimizer.zero_grad()
         output = model(input, target)
+
+        print(f'forward: {time.time() - start_time}')
+        start_time = time.time()
+
         loss = loss_func(output, target)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
@@ -97,6 +109,9 @@ def train_epoch(model, dloader):
         total_loss += loss.item()
         num_seqs_used += input.shape[1]
         logging.info(f'batch {i}')
+
+        print(f'backward: {time.time() - start_time}')
+        start_time = time.time()
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
