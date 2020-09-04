@@ -83,15 +83,10 @@ class MonoFolkSongDataset(IterableDataset):
         self.f = h5py.File(self.dset_fname, 'r')
         self.seq_length = seq_length
 
-        # if fnames is None:
-        #     self.midi_fnames = os.listdir(self.root_dir)
-        # else:
-        #     self.midi_fnames = fnames
-
-        self.fnames = []
-        for k in self.f.keys():
-            for n in self.f[k].keys():
-                self.fnames.append(rf'{k}/{n}')
+        if fnames is None:
+            self.fnames = get_all_hdf5_fnames(dset_fname)
+        else:
+            self.fnames = fnames
 
         if shuffle_files:
             np.random.shuffle(self.fnames)

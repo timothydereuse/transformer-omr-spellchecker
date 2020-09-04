@@ -110,6 +110,44 @@ def arr_to_runlength(arr, tick_deltas_mapping, pitch_range, monophonic=False):
     return run_length
 
 
+def arr_to_runlength_mono(arr, delta_mapping, pitch_range):
+    pitches = arr[:, 0]
+    onsets = arr[:, 1]
+    durs = arr[:, 2]
+    num_notes = len(pitches)
+    # ends = onsets + durs
+
+    # set rests to be one pitch higher than the pitch range.
+    pitches[pitches != 0] = np.clip(pitches[pitches != 0], pitch_range[0], pitch_range[1])
+    pitches[pitches == 0] = pitch_range[0] - 1
+    pitches -= (pitch_range[0] - 1)
+
+    pitch_mat = np.zeros([num_notes, 2 + pitch_range[1] - pitch_range[0]])
+    # make list of indices by stacking pitches with integer range
+    pitch_inds = list(np.stack([np.arange(0, num_notes), pitches], 0))
+    pitch_mat[tuple(pitch_inds)] = 1
+
+    # for i in range(len(durs)):
+    #     try:
+    #         dur_mat[i, delta_mapping[durs[i]]] = 1
+    #     except KeyError:
+    #         dur_mat[i, -1] = 1
+
+    # get indices for duration by taking difference of delta mapping keys and durs
+    deltas = np.array(list(delta_mapping.keys()))
+    asdf = np.reshape(np.repeat(deltas, num_notes), [-1, num_notes])
+    asdf = np.abs(asdf - durs)
+    dur_locs = np.argmin(asdf, 0)
+
+    dur_inds = list(np.stack([np.arange(0, num_notes), dur_locs], 0))
+
+    dur_mat = np.zeros([num_notes, len(delta_mapping)])
+    dur_mat[tuple(dur_inds)] = 1
+
+    res = np.concatenate([pitch_mat, dur_mat], 1)
+    return res
+
+
 def arr_to_note_tuple(arr):
     sorted_notes = sorted(arr, key=lambda x: x[1])
     res = np.zeros_like(arr)
@@ -126,3 +164,28 @@ def arr_to_note_tuple(arr):
         # duration
         res[i, 2] = n[2]
     return res
+
+
+if __name__ == '__main__':
+    import data_loaders as dl
+    import h5py
+    from time import time
+
+    dset_path = 'essen_meertens_songs.hdf5'
+    num_songs = 5000
+    num_dur_vals = 20
+
+    fnames = dl.get_all_hdf5_fnames(dset_path)
+    np.random.shuffle(fnames)
+    fnames = fnames[:num_songs]
+
+    f = h5py.File(dset_path, 'r')
+    deltas, pitch_range = dl.get_tick_deltas_for_runlength(f, fnames, num_dur_vals, 0.2)
+
+    start_time = time()
+    for i in range(num_songs):
+        arr = f[fnames[i]]
+        x = arr_to_runlength_mono(arr, deltas, pitch_range)
+    elapsed = time() - start_time
+
+    print(f'{elapsed:4.4f} s, avg {elapsed * 1000/ num_songs:4.4f} ms per song')
