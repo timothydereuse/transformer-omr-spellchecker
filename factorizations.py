@@ -110,7 +110,7 @@ def arr_to_runlength(arr, tick_deltas_mapping, pitch_range, monophonic=False):
     return run_length
 
 
-def arr_to_runlength_mono(arr, delta_mapping, pitch_range):
+def arr_to_runlength_mono(arr, deltas, pitch_range):
     pitches = arr[:, 0]
     onsets = arr[:, 1]
     durs = arr[:, 2]
@@ -134,14 +134,13 @@ def arr_to_runlength_mono(arr, delta_mapping, pitch_range):
     #         dur_mat[i, -1] = 1
 
     # get indices for duration by taking difference of delta mapping keys and durs
-    deltas = np.array(list(delta_mapping.keys()))
     asdf = np.reshape(np.repeat(deltas, num_notes), [-1, num_notes])
     asdf = np.abs(asdf - durs)
     dur_locs = np.argmin(asdf, 0)
 
     dur_inds = list(np.stack([np.arange(0, num_notes), dur_locs], 0))
 
-    dur_mat = np.zeros([num_notes, len(delta_mapping)])
+    dur_mat = np.zeros([num_notes, len(deltas)])
     dur_mat[tuple(dur_inds)] = 1
 
     res = np.concatenate([pitch_mat, dur_mat], 1)

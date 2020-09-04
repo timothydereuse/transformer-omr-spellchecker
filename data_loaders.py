@@ -39,11 +39,12 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.5)
         filler = np.arange(0, num_dur_vals - len(most)) + max(most) + 1
         most = np.concatenate([most, filler])
 
-    res_dict = {v: i for i, v in enumerate(most)}
+    # deltas = {v: i for i, v in enumerate(most)}
+    deltas = most
 
     pitch_range = (min(pitch_c.keys()), max(pitch_c.keys()))
 
-    return res_dict, pitch_range
+    return deltas, pitch_range
 
 
 def get_class_weights(inp):
