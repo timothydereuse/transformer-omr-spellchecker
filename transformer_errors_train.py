@@ -8,6 +8,7 @@ import transformer_full_seq_model as tfsm
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
+import model_params as params
 import logging
 
 import matplotlib
@@ -17,63 +18,61 @@ import matplotlib.pyplot as plt
 reload(dl)
 reload(fcts)
 reload(tfsm)
+reload(params)
 
 logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.INFO,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logging.getLogger().addHandler(logging.StreamHandler())
 
-dset_path = r"essen_meertens_songs.hdf5"
-val_set_size = 0.1
-
-num_dur_vals = 15
-seq_length = 60
-batch_size = 1000
-
-num_epochs = 2
-nhid = 128        # the dimension of the feedforward network
-ninp = 128
-nlayers = 2        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-dropout = 0.1      # the dropout value
-
-lr = 0.001
-
 logging.info('reading hdf5...')
-midi_fnames = dl.get_all_hdf5_fnames(dset_path)
+midi_fnames = dl.get_all_hdf5_fnames(params.dset_path)
 np.random.shuffle(midi_fnames)
-split_pt = int(len(midi_fnames) * val_set_size)
+split_pt = int(len(midi_fnames) * params.val_set_size)
 val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
 logging.info('defining datasets...')
-dset_tr = dl.MonoFolkSongDataset(dset_path, seq_length, train_fnames, num_dur_vals)
-dset_vl = dl.MonoFolkSongDataset(dset_path, seq_length, val_fnames, use_stats_from=dset_tr)
-dloader = DataLoader(dset_tr, batch_size, pin_memory=True)
-dloader_val = DataLoader(dset_vl, batch_size, pin_memory=True)
+dset_tr = dl.MonoFolkSongDataset(params.dset_path, params.seq_length, train_fnames, params.num_dur_vals)
+dset_vl = dl.MonoFolkSongDataset(params.dset_path, params.seq_length, val_fnames, use_stats_from=dset_tr)
+dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
+dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = tfsm.TransformerModel(num_feats, ninp, nhid, nlayers, dropout).to(device)
+model = tfsm.TransformerModel(
+        num_feats=num_feats,
+        feedforward_size=params.ninp,
+        hidden=params.nhid,
+        nlayers=params.nlayers,
+        dropout=params.dropout
+        ).to(device)
 model_size = sum(p.numel() for p in model.parameters())
 logging.info(f'created model with n_params={model_size} on device {device}')
 
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=3, threshold=0.001, verbose=True)
+optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=optimizer,
+            factor=params.lr_plateau_factor,
+            patience=params.lr_plateau_patience,
+            threshold=params.lr_plateau_threshold,
+            verbose=True)
 
 pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
 
 def loss_func(outputs, targets):
-    pitch_targets = targets[:, :, :-num_dur_vals]
-    dur_targets = targets[:, :, -num_dur_vals:]
+    ndv = params.num_dur_vals
+    pitch_targets = targets[:, :, :-ndv]
+    dur_targets = targets[:, :, -ndv:]
 
-    pitches = outputs[:, :, :-num_dur_vals]
+    pitches = outputs[:, :, :-ndv]
     pitches = pitches.view(-1, pitches.shape[-1])
-    durs = outputs[:, :, -num_dur_vals:]
+    durs = outputs[:, :, -ndv:]
     durs = durs.view(-1, durs.shape[-1])
 
     pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
-    dur_targets_inds = dur_targets.reshape(-1, num_dur_vals).max(1).indices
+    dur_targets_inds = dur_targets.reshape(-1, ndv).max(1).indices
 
     pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
     dur_loss = dur_criterion(durs, dur_targets_inds)
@@ -84,34 +83,21 @@ def train_epoch(model, dloader):
     num_seqs_used = 0
     total_loss = 0.
 
-
-    start_time = time.time()
     for i, batch in enumerate(dloader):
-
-        print(f'loading data: {time.time() - start_time}')
-        start_time = time.time()
-
-        start_time = time.time()
         batch = torch.transpose(batch, 0, 1).float().to(device)
         input, target = (batch, batch)
 
         optimizer.zero_grad()
         output = model(input, target)
 
-        print(f'forward: {time.time() - start_time}')
-        start_time = time.time()
-
         loss = loss_func(output, target)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
 
         total_loss += loss.item()
         num_seqs_used += input.shape[1]
         logging.info(f'batch {i}')
-
-        print(f'backward: {time.time() - start_time}')
-        start_time = time.time()
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
@@ -119,7 +105,7 @@ def train_epoch(model, dloader):
 
 logging.info('beginning training')
 start_time = time.time()
-for epoch in range(num_epochs):
+for epoch in range(params.num_epochs):
     model.train()
 
     # perform training epoch
@@ -151,12 +137,12 @@ for epoch in range(num_epochs):
     save_every = 5
     if not epoch % save_every:
         ind_rand = np.random.choice(output.shape[1])
-        fig, axs = po.plot(output, target, ind_rand, num_dur_vals)
+        fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png')
         plt.clf()
         plt.close(fig)
 
-        m_name = f'transformer_epoch-{epoch}_{nhid}.{ninp}.{nlayers}.pt'
+        m_name = f'transformer_epoch-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt'
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
