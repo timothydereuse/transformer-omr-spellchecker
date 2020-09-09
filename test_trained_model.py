@@ -35,13 +35,13 @@ model.load_state_dict(checkpoint['model_state_dict'])
 
 
 def add_errors_to_batch(inp, positions):
-    inp[positions, :, :] = 0
-    inp[positions, :, -2] = 1
-    inp[positions, :, 2] = 1
+    inp[positions, :, :] = 1
+    inp[positions, :, -1] = 1
+    inp[positions, :, 1] = 1
     return inp
 
-model.eval()
 
+model.eval()
 
 for i, batch in enumerate(dloader):
     batch = torch.transpose(batch, 0, 1).float().to(device)
@@ -53,5 +53,5 @@ for i, batch in enumerate(dloader):
     break
 
 ind_rand = np.random.choice(output.shape[1])
-fig, axs = po.plot(output, batch, ind_rand, num_dur_vals)
+fig, axs = po.plot(output, batch, ind_rand, num_dur_vals, errored=edit_batch)
 fig.show()

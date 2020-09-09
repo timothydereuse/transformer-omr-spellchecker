@@ -8,13 +8,16 @@ def get_pr(inp, ind=0):
     maxinds = slice.max(1).indices
     for i, x in enumerate(maxinds):
         slice[i] = torch.sigmoid(slice[i])
-        slice[i][x] += 1
+        slice[i][x] += 5
     pr = slice.cpu().detach().numpy()
     return pr
 
 
-def plot(outputs, targets, ind, num_dur_vals):
-    fig, axs = plt.subplots(1, 3, figsize=(8, 4))
+def plot(outputs, targets, ind, num_dur_vals, errored=None):
+    if errored is None:
+        fig, axs = plt.subplots(1, 3, figsize=(6, 4))
+    else:
+        fig, axs = plt.subplots(1, 4, figsize=(8, 4))
 
     full_out = outputs[:, ind].cpu().detach().numpy()
     axs[0].imshow(full_out.T)
@@ -28,6 +31,14 @@ def plot(outputs, targets, ind, num_dur_vals):
 
     targets = targets[:, ind].cpu().detach().numpy()
     axs[2].imshow(targets.T)
+
+    if errored is not None:
+        pitch_out = errored[:, :, :-num_dur_vals]
+        dur_out = errored[:, :, -num_dur_vals:]
+        do_pr = get_pr(dur_out, ind)
+        po_pr = get_pr(pitch_out, ind)
+        pro = np.concatenate([po_pr, do_pr], 1)
+        axs[3].imshow(pro.T)
 
     return fig, axs
 
