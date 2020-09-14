@@ -5,9 +5,6 @@ import pandas as pd
 fpath = r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\midi\NLB015532_01.mid"
 # x = fileio.midi_to_df(fpath)
 
-
-
-
 def arr_to_df(inp):
     rearranged_song = np.stack([
         inp[:, 1],
