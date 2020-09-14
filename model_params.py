@@ -6,16 +6,16 @@ kern_paths = {
 dset_path = r"essen_meertens_songs.hdf5"
 
 # -- definition of transformer model structure
-nhid = 256 // 4          # the dimension of the feedforward network
-ninp = 256 // 4          # the dimension of the internal transformer representation
-nlayers = 2         # number of encoder/decoder layers
-num_dur_vals = 15   # number of duration values
-seq_length = 20     # length of song sequences
+nhid = 256          # the dimension of the feedforward network
+ninp = 256          # the dimension of the internal transformer representation
+nlayers = 3         # number of encoder/decoder layers
+num_dur_vals = 17   # number of duration values
+seq_length = 60     # length of song sequences
 proportion_for_stats = 1
 dropout = 0.1       # dropout probability
 
 # -- training parameters
-num_epochs = 51
+num_epochs = 46
 val_set_size = 0.1
 lr = 0.001
 batch_size = 1000

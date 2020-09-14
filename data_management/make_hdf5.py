@@ -3,15 +3,14 @@ import numpy as np
 import music21 as m21
 import os
 
-beat_multiplier = 48
-
-f = h5py.File('essen_meertens_songs_durs.hdf5', 'a')
-f.attrs['beat_multiplier'] = beat_multiplier
-
 paths = {
     'essen': r"D:\Documents\datasets\essen\europa",
     'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
 }
+beat_multiplier = 48  # duration values will be multiplied by this number and then rounded
+
+f = h5py.File('essen_meertens_songs_durs.hdf5', 'a')
+f.attrs['beat_multiplier'] = beat_multiplier
 
 for p in paths.keys():
 
