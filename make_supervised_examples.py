@@ -2,37 +2,39 @@
 # return them as (input, target) pairs. this involves removing or otherwise degrading the input
 # in some way. the intent is that these are used "live," in the training loop itself.
 
-from torch.utils.data import IterableDataset, DataLoader
-import factorizations as fcts
-from importlib import reload
+from torch.utils.data import DataLoader
 import torch
 import numpy as np
 
 
 def remove_indices(input, num_indices=1, mode='center'):
 
-    if mode not in ['center', 'start', 'end', 'batch_random', 'entry_random']:
+    if mode == 'center':
+        middle_ind = input.shape[1] / 2
+        st = int(middle_ind - (num_indices / 2))
+        end = int(middle_ind + (num_indices / 2))
+        inds_to_remove = list(range(st, end))
+    elif mode == 'batch_random':
+        st = np.random.randint(input.shape[1] - num_indices)
+        end = st + num_indices
+        inds_to_remove = list(range(st, end))
+    else:
         raise ValueError(f'mode {mode} invalid for remove_indices')
 
-    target_length = 3
-    target_position = 'center'
+    target = input.clone()[:, inds_to_remove]
 
-    middle_ind = batch.shape[1] / 2
-    st = int(middle_ind - (target_length / 2))
-    end = int(middle_ind + (target_length / 2))
-    inds_to_remove = list(range(st, end))
+    # print(inds_to_remove, target.shape, input.shape)
 
-    target = batch.clone()[:, inds_to_remove]
-    batch[:, inds_to_remove] = 1
+    input[:, inds_to_remove] = 0.5
 
-    return batch, target
+    return input, target
 
 
 if __name__ == '__main__':
     import data_loaders as dl
     fname = 'essen_meertens_songs.hdf5'
     num_dur_vals = 17
-    seq_len = 30
+    seq_len = 50
     proportion = 0.2
     dset = dl.MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
                                   proportion_for_stats=proportion)
@@ -44,7 +46,8 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    inp, tgt = remove_indices(batch)
+    kw = {'mode': 'batch_random', 'num_indices': 2}
+    inp, tgt = remove_indices(batch, **kw)
     inp = inp.transpose(1, 0)
     tgt = tgt.transpose(1, 0)
 
@@ -57,3 +60,7 @@ if __name__ == '__main__':
     model = model.float()
 
     out = model(inp, tgt)
+
+    import matplotlib.pyplot as plt
+    plt.imshow(inp.numpy()[:, 0].T)
+    plt.show()

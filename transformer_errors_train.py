@@ -5,6 +5,7 @@ import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
 import transformer_full_seq_model as tfsm
+import make_supervised_examples as mse
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
@@ -19,6 +20,7 @@ reload(dl)
 reload(fcts)
 reload(tfsm)
 reload(params)
+reload(mse)
 
 logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.INFO,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -84,8 +86,12 @@ def train_epoch(model, dloader):
     total_loss = 0.
 
     for i, batch in enumerate(dloader):
-        batch = torch.transpose(batch, 0, 1).float().to(device)
-        input, target = (batch, batch)
+        batch = batch.float().to(device)
+        # batch = batch.transpose(0, 1)
+        # input, target = (batch, batch)
+        input, target = mse.remove_indices(batch, **params.remove_indices_settings)
+        input = input.transpose(0, 1)
+        target = target.transpose(0, 1)
 
         optimizer.zero_grad()
         output = model(input, target)
@@ -95,9 +101,10 @@ def train_epoch(model, dloader):
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
 
-        total_loss += loss.item()
+        batch_loss = loss.item()
+        total_loss += batch_loss
         num_seqs_used += input.shape[1]
-        logging.info(f'batch {i}')
+        logging.info(f'batch {i} | loss {batch_loss}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
@@ -134,14 +141,14 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
-    save_every = 5
-    if not epoch % save_every:
+    if not epoch % params.save_img_every and epoch > 0:
         ind_rand = np.random.choice(output.shape[1])
         fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png')
         plt.clf()
         plt.close(fig)
 
+    if not epoch % params.save_model_every and epoch > 0:
         m_name = f'transformer_epoch-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt'
         torch.save({
                 'epoch': epoch,
