@@ -110,7 +110,7 @@ def train_epoch(model, dloader):
         batch_loss = loss.item()
         total_loss += batch_loss
         num_seqs_used += input.shape[1]
-        logging.info(f'batch {i} | loss {batch_loss}')
+        # logging.info(f'batch {i} | loss {batch_loss}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
