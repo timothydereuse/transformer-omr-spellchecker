@@ -8,9 +8,9 @@ dset_path = r"essen_meertens_songs.hdf5"
 # -- definition of transformer model structure
 nhid = 128          # the dimension of the feedforward network
 ninp = 128          # the dimension of the internal transformer representation
-nlayers = 1         # number of encoder/decoder layers
+nlayers = 2         # number of encoder/decoder layers
 num_dur_vals = 17   # number of duration values
-seq_length = 50     # length of song sequences
+seq_length = 20     # length of song sequences
 proportion_for_stats = 1
 dropout = 0.1       # dropout probability
 
@@ -27,7 +27,7 @@ save_model_every = 10     # save a new model every X epochs
 save_img_every = 2
 
 # -- data augmentation
-remove_indices_settings = {'mode': 'batch_random', 'num_indices': 1}
+remove_indices_settings = {'mode': 'center', 'num_indices': 1}
 
 
 # -- logging

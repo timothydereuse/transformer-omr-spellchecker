@@ -70,10 +70,12 @@ class TransformerModel(nn.Module):
 
     def forward(self, src, trg):
         if self.tgt_mask is None or self.tgt_mask.size(0) != len(trg):
-            self.tgt_mask = self._generate_point_mask(len(trg)).to(trg.device)
+            self.tgt_mask = None
+            # self.tgt_mask = self._generate_point_mask(len(trg)).to(trg.device)
             # self.tgt_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
         if self.src_mask is None or self.src_mask.size(0) != len(trg):
-            self.src_mask = self._generate_point_mask(len(src)).to(src.device)
+            self.src_mask = None
+            # self.src_mask = self._generate_point_mask(len(src)).to(src.device)
             # self.tgt_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
 
         src_pad_mask = self.make_len_mask(src)

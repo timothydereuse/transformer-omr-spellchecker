@@ -30,8 +30,11 @@ val_fnames = midi_fnames[:split_pt]
 train_fnames = midi_fnames[split_pt:]
 
 logging.info('defining datasets...')
-dset_tr = dl.MonoFolkSongDataset(params.dset_path, params.seq_length, train_fnames, params.num_dur_vals)
-dset_vl = dl.MonoFolkSongDataset(params.dset_path, params.seq_length, val_fnames, use_stats_from=dset_tr)
+dset_tr = dl.MonoFolkSongDataset(
+    params.dset_path, params.seq_length, train_fnames, params.num_dur_vals,
+    proportion_for_stats=params.proportion_for_stats)
+dset_vl = dl.MonoFolkSongDataset(
+    params.dset_path, params.seq_length, val_fnames, use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
@@ -79,9 +82,10 @@ def loss_func(outputs, targets):
 
 def prepare_batch(batch):
     input, target = mse.remove_indices(batch, **params.remove_indices_settings)
-    input = input.transpose(0, 1)
-    target = target.transpose(0, 1)
+    input = input.transpose(1, 0)
+    target = target.transpose(1, 0)
     return input, target
+    # return batch.transpose(0, 1), batch.transpose(0, 1)
 
 
 def train_epoch(model, dloader):
@@ -95,7 +99,10 @@ def train_epoch(model, dloader):
         optimizer.zero_grad()
         output = model(input, target)
 
+        # print(torch.isnan(output).nonzero())
+
         loss = loss_func(output, target)
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()

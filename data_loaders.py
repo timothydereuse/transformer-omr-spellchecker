@@ -87,6 +87,7 @@ class MonoFolkSongDataset(IterableDataset):
         self.dset_fname = dset_fname
         self.f = h5py.File(self.dset_fname, 'r')
         self.seq_length = seq_length
+        self.random_offsets = random_offsets
 
         if fnames is None:
             self.fnames = get_all_hdf5_fnames(dset_fname)

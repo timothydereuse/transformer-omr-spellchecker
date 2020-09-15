@@ -25,7 +25,7 @@ def remove_indices(input, num_indices=1, mode='center'):
 
     # print(inds_to_remove, target.shape, input.shape)
 
-    input[:, inds_to_remove] = 0.5
+    input[:, inds_to_remove] = torch.rand_like(input[:, inds_to_remove])
 
     return input, target
 
@@ -34,33 +34,33 @@ if __name__ == '__main__':
     import data_loaders as dl
     fname = 'essen_meertens_songs.hdf5'
     num_dur_vals = 17
-    seq_len = 50
-    proportion = 0.2
+    seq_len = 20
+    proportion = 1
     dset = dl.MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
                                   proportion_for_stats=proportion)
 
-    dload = DataLoader(dset, batch_size=20)
+    dload = DataLoader(dset, batch_size=1000)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)
         if i > 2:
             break
 
-    kw = {'mode': 'batch_random', 'num_indices': 2}
+    kw = {'mode': 'center', 'num_indices': 2}
     inp, tgt = remove_indices(batch, **kw)
     inp = inp.transpose(1, 0)
     tgt = tgt.transpose(1, 0)
 
     import transformer_full_seq_model as tfsm
 
-    model = tfsm.TransformerModel(
-        num_feats=dset.num_feats,
-        nlayers=1
-    )
-    model = model.float()
+    # model = tfsm.TransformerModel(
+    #     num_feats=dset.num_feats,
+    #     nlayers=1
+    # )
+    # model = model.float()
 
-    out = model(inp, tgt)
-
+    # out = model(inp, tgt)
+    #
     import matplotlib.pyplot as plt
     plt.imshow(inp.numpy()[:, 0].T)
     plt.show()
