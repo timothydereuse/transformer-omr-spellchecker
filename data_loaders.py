@@ -67,7 +67,8 @@ class MonoFolkSongDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
     def __init__(self, dset_fname, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None,
-                 proportion_for_stats=0.5, shuffle_files=True):
+                 proportion_for_stats=0.5, shuffle_files=True, padding_amt=None,
+                 random_offsets=True):
         """
         @dset_fname - path to hdf5 file created by make_hdf5.py
         @seq_length - number of units to chop sequences into
@@ -78,6 +79,9 @@ class MonoFolkSongDataset(IterableDataset):
         @proportion_for_stats - in (0, 1]. calculates stats on a random subset of the dataset
             in the hdf5 file (optional)
         @shuffle_files - randomizes order of loading songs from hdf5 file (optional)
+        @padding_amt - amount of padding to add to beginning and end of each song (optional,
+            default: @seq_length // 2)
+        @random_offsets - randomize start position of sequences (optional, default: true)
         """
         super(MonoFolkSongDataset).__init__()
         self.dset_fname = dset_fname
@@ -111,8 +115,9 @@ class MonoFolkSongDataset(IterableDataset):
         padding_element = np.zeros(self.num_feats)
         padding_element[-1] = 1
         padding_element[0] = 1
+        self.padding_amt = padding_amt if padding_amt else self.seq_length // 2
         self.padding_seq = np.stack(
-            [padding_element for _ in range(self.seq_length + 1)],
+            [padding_element for _ in range(self.padding_amt)],
             0)
 
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
@@ -131,14 +136,19 @@ class MonoFolkSongDataset(IterableDataset):
             x = self.f[fname]
             runlength = fcts.arr_to_runlength_mono(
                 x, self.delta_mapping, self.pitch_range)
-            num_seqs = np.round(runlength.shape[0] / self.seq_length)
+
+            # pad runlength encoding on both sides
+            padded_rl = np.concatenate([self.padding_seq, runlength, self.padding_seq])
+            num_seqs = np.floor(padded_rl.shape[0] / self.seq_length)
+            remainder = padded_rl.shape[0] - (num_seqs * self.seq_length)
+            offset = np.random.randint(remainder + 1) if self.random_offsets else 0
 
             # return sequences of notes from each file, seq_length in length.
             # move to the next file when the current one has been exhausted.
-            pad_rl = np.concatenate([runlength, self.padding_seq])
             for i in range(int(num_seqs)):
-                slice = pad_rl[i * self.seq_length:(i+1) * self.seq_length]
-                yield slice
+                st = i * self.seq_length + offset
+                end = (i+1) * self.seq_length + offset
+                yield padded_rl[st:end]
 
     def get_weights(self, proportion=0.4):
         '''
@@ -159,7 +169,7 @@ class MonoFolkSongDataset(IterableDataset):
 
 if __name__ == '__main__':
     fname = 'essen_meertens_songs.hdf5'
-    num_dur_vals = 17
+    num_dur_vals = 10
     seq_len = 30
     proportion = 0.2
     dset = MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
