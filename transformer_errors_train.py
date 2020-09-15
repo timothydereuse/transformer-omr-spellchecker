@@ -22,10 +22,6 @@ reload(tfsm)
 reload(params)
 reload(mse)
 
-logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.INFO,
-                    format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger().addHandler(logging.StreamHandler())
-
 logging.info('reading hdf5...')
 midi_fnames = dl.get_all_hdf5_fnames(params.dset_path)
 np.random.shuffle(midi_fnames)
@@ -81,17 +77,20 @@ def loss_func(outputs, targets):
     return pitch_loss + dur_loss
 
 
+def prepare_batch(batch):
+    input, target = mse.remove_indices(batch, **params.remove_indices_settings)
+    input = input.transpose(0, 1)
+    target = target.transpose(0, 1)
+    return input, target
+
+
 def train_epoch(model, dloader):
     num_seqs_used = 0
     total_loss = 0.
 
     for i, batch in enumerate(dloader):
         batch = batch.float().to(device)
-        # batch = batch.transpose(0, 1)
-        # input, target = (batch, batch)
-        input, target = mse.remove_indices(batch, **params.remove_indices_settings)
-        input = input.transpose(0, 1)
-        target = target.transpose(0, 1)
+        input, target = prepare_batch(batch)
 
         optimizer.zero_grad()
         output = model(input, target)
@@ -124,8 +123,8 @@ for epoch in range(params.num_epochs):
     val_loss = 0.
     with torch.no_grad():
         for i, batch in enumerate(dloader_val):
-            batch = torch.transpose(batch, 0, 1).float().to(device)
-            input, target = (batch, batch)
+            batch = batch.float().to(device)
+            input, target = prepare_batch(batch)
             output = model(input, target)
             val_loss += len(input) * loss_func(output, target).item()
             num_entries += batch.shape[1]
@@ -143,7 +142,7 @@ for epoch in range(params.num_epochs):
 
     if not epoch % params.save_img_every and epoch > 0:
         ind_rand = np.random.choice(output.shape[1])
-        fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals)
+        fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, errored=input)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png')
         plt.clf()
         plt.close(fig)
