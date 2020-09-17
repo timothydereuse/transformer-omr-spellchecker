@@ -9,7 +9,7 @@ import logging
 reload(fcts)
 
 
-def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.5):
+def get_tick_deltas_for_runlength(f, fnames, num_dur_vals=16, proportion=0.5):
 
     num_choice = int(proportion * len(fnames))
     fnames = np.random.choice(fnames, num_choice, replace=False)
@@ -18,7 +18,7 @@ def get_tick_deltas_for_runlength(dset, fnames, num_dur_vals=16, proportion=0.5)
     pitch_c = Counter()
 
     for i, fname in enumerate(fnames):
-        arr = dset[fname]
+        arr = f[fname]
         all_starts = arr[:, 1]
         all_pitches = [x for x in arr[:, 0] if x > 0]
         pitch_c.update(all_pitches)
@@ -54,19 +54,32 @@ def get_class_weights(inp):
     return weights
 
 
-def get_all_hdf5_fnames(inp):
+def get_all_hdf5_fnames(f, base=None):
     fnames = []
-    f = h5py.File(inp, 'r')
     for k in f.keys():
         for n in f[k].keys():
             fnames.append(rf'{k}/{n}')
     return fnames
 
 
+def all_hdf5_keys(obj, keys=[]):
+    '''
+    Recursively find all hdf5 keys subordinate to the given object @obj, corresponding to datasets.
+    '''
+    if isinstance(obj, h5py.Group):
+        for item in obj:
+            if isinstance(obj[item], h5py.Group):
+                all_hdf5_keys(obj[item], keys)
+            else:
+                # only append to list if not a group
+                keys.append(obj[item].name)
+    return keys
+
+
 class MonoFolkSongDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
-    def __init__(self, dset_fname, seq_length, fnames=None, num_dur_vals=None, use_stats_from=None,
+    def __init__(self, dset_fname, seq_length, base=None, num_dur_vals=None, use_stats_from=None,
                  proportion_for_stats=0.5, shuffle_files=True, padding_amt=None,
                  random_offsets=True):
         """
@@ -85,17 +98,14 @@ class MonoFolkSongDataset(IterableDataset):
         """
         super(MonoFolkSongDataset).__init__()
         self.dset_fname = dset_fname
-        self.f = h5py.File(self.dset_fname, 'r')
         self.seq_length = seq_length
         self.random_offsets = random_offsets
+        self.shuffle_files = shuffle_files
 
-        if fnames is None:
-            self.fnames = get_all_hdf5_fnames(dset_fname)
-        else:
-            self.fnames = fnames
-
-        if shuffle_files:
-            np.random.shuffle(self.fnames)
+        self.f = h5py.File(self.dset_fname, 'r')
+        if base is not None:
+            self.f = self.f[base]
+        self.fnames = all_hdf5_keys(self.f)
 
         if use_stats_from is None:
             assert num_dur_vals is not None, "one of num_dur_vals OR use_stats_from must be supplied"
@@ -123,14 +133,15 @@ class MonoFolkSongDataset(IterableDataset):
 
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
 
-    def __iter__(self, fnames=None):
+    def __iter__(self):
         '''
         Main iteration function.
         @fnames: takes a subset of the fnames in the supplied hdf5 file. will only iterate thru
             the suppied names.
         '''
-        if fnames is None:
-            fnames = self.fnames
+
+        if self.shuffle_files:
+            np.random.shuffle(self.fnames)
 
         # iterate through all given fnames, breaking them into chunks of seq_length...
         for fname in self.fnames:
@@ -176,7 +187,7 @@ if __name__ == '__main__':
     dset = MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
                       proportion_for_stats=proportion)
 
-    dload = DataLoader(dset, batch_size=20)
+    dload = DataLoader(dset, batch_size=15)
     for i, x in enumerate(dload):
         print(i, x.shape)
         if i > 2:

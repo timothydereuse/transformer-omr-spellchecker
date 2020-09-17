@@ -2,38 +2,52 @@ import h5py
 import numpy as np
 import music21 as m21
 import os
+import model_params as params
 
-paths = {
-    'essen': r"D:\Documents\datasets\essen\europa",
-    'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
-}
-beat_multiplier = 48  # duration values will be multiplied by this number and then rounded
+paths = params.raw_data_paths
+f = h5py.File(params.dset_path, 'a')
+f.attrs['beat_multiplier'] = params.beat_multiplier
 
-f = h5py.File('essen_meertens_songs_durs.hdf5', 'a')
-f.attrs['beat_multiplier'] = beat_multiplier
+train_grp = f.create_group('train')
+test_grp = f.create_group('test')
+validate_grp = f.create_group('validate')
 
+# iterate over all datasets
 for p in paths.keys():
 
-    grp = f.create_group(p)
+    train_subgrp = train_grp.create_group(p)
+    test_subgrp = test_grp.create_group(p)
+    validate_subgrp = validate_grp.create_group(p)
 
     all_krns = []
     for root, dirs, files in os.walk(paths[p]):
         for name in files:
             if '.krn' in name:
                 all_krns.append(os.path.join(root, name))
+    np.random.shuffle(all_krns)
 
-    for krn_fname in all_krns:
+    split_test = np.round(params.test_proportion * len(all_krns))
+    split_validate = np.round(params.validate_proportion * len(all_krns)) + split_test
 
-        print(f'processing {krn_fname}...')
+    # iterate over all krn files in the current dataset
+    for i, krn_fname in enumerate(all_krns):
 
+        print(f'processing {krn_fname} | {i} of {len(all_krns)} in {p}')
         krn = m21.converter.parse(krn_fname)
         arr = np.array([[
             n.pitch.midi if n.isNote else 0,
-            int(n.offset * beat_multiplier),
-            int(n.duration.quarterLength * beat_multiplier)
+            int(n.offset * params.beat_multiplier),
+            int(n.duration.quarterLength * params.beat_multiplier)
         ] for n in krn.flat.notesAndRests])
 
-        dset = grp.create_dataset(
+        if i <= split_test:
+            selected_subgrp = test_subgrp
+        elif i <= split_validate:
+            selected_subgrp = validate_subgrp
+        else:
+            selected_subgrp = train_subgrp
+
+        dset = selected_subgrp.create_dataset(
             name=krn_fname.split('\\')[-1],
             data=arr
         )
