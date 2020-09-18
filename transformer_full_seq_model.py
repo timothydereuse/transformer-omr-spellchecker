@@ -115,15 +115,15 @@ if __name__ == '__main__':
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    seq_length = 50
-    num_seqs = 1000
-    num_feats = 50
+    seq_length = 30
+    num_seqs = 100
+    num_feats = 20
     num_dur_vals = 10
 
-    num_epochs = 140
+    num_epochs = 100
     hidden = 100
     feedforward = 100
-    nlayers = 3        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nlayers = 1        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 2          # the number of heads in the multiheadattention models
     dropout = 0.1      # the dropout value
 
@@ -200,6 +200,6 @@ if __name__ == '__main__':
         if not i % 25:
             x = (output).detach().cpu().numpy().T
             fig, axs = plot_outputs.plot(output, targets, 3, num_dur_vals)
-            fig.savefig(f'model_test_epoch_{i}.png')
+            fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
             plt.clf()
             plt.close(fig)

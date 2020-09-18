@@ -22,19 +22,18 @@ reload(tfsm)
 reload(params)
 reload(mse)
 
-logging.info('reading hdf5...')
-midi_fnames = dl.get_all_hdf5_fnames(params.dset_path)
-np.random.shuffle(midi_fnames)
-split_pt = int(len(midi_fnames) * params.val_set_size)
-val_fnames = midi_fnames[:split_pt]
-train_fnames = midi_fnames[split_pt:]
-
 logging.info('defining datasets...')
 dset_tr = dl.MonoFolkSongDataset(
-    params.dset_path, params.seq_length, train_fnames, params.num_dur_vals,
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='train',
+    num_dur_vals=params.num_dur_vals,
     proportion_for_stats=params.proportion_for_stats)
 dset_vl = dl.MonoFolkSongDataset(
-    params.dset_path, params.seq_length, val_fnames, use_stats_from=dset_tr)
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='validate',
+    use_stats_from=dset_tr)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
