@@ -62,18 +62,20 @@ def get_all_hdf5_fnames(f, base=None):
     return fnames
 
 
-def all_hdf5_keys(obj, keys=[]):
+def all_hdf5_keys(obj):
     '''
     Recursively find all hdf5 keys subordinate to the given object @obj, corresponding to datasets.
     '''
-    if isinstance(obj, h5py.Group):
-        for item in obj:
-            if isinstance(obj[item], h5py.Group):
-                all_hdf5_keys(obj[item], keys)
-            else:
-                # only append to list if not a group
-                keys.append(obj[item].name)
-    return keys
+    name_list = []
+
+    def visitor_func(name, node):
+        if isinstance(node, h5py.Dataset):
+            name_list.append(name)
+        else:
+            pass
+
+    obj.visititems(visitor_func)
+    return name_list
 
 
 class MonoFolkSongDataset(IterableDataset):
