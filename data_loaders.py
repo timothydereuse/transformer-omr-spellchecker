@@ -81,7 +81,7 @@ def all_hdf5_keys(obj):
 class MonoFolkSongDataset(IterableDataset):
     """meertens_tune_collection dataset."""
 
-    def __init__(self, dset_fname, seq_length, base=None, num_dur_vals=None, use_stats_from=None,
+    def __init__(self, dset_fname, seq_length, num_dur_vals, base=None, use_stats=None,
                  proportion_for_stats=0.5, shuffle_files=True, padding_amt=None,
                  random_offsets=True):
         """
@@ -89,8 +89,8 @@ class MonoFolkSongDataset(IterableDataset):
         @seq_length - number of units to chop sequences into
         @fnames - a subset of the path names within the hdf5 file (optional)
         @num_dur_vals - the number of most common duration values to calculate (optional)
-        @use_stats_from - input another MonoFolkSongDataset into this argument to use its calculated stats
-                          for generating training batches (optional)
+        @use_stats - input another MonoFolkSongDataset's get_stats() into this argument to use its
+            calculated stats for generating training batches (optional)
         @proportion_for_stats - in (0, 1]. calculates stats on a random subset of the dataset
             in the hdf5 file (optional)
         @shuffle_files - randomizes order of loading songs from hdf5 file (optional)
@@ -109,17 +109,16 @@ class MonoFolkSongDataset(IterableDataset):
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
 
-        if use_stats_from is None:
-            assert num_dur_vals is not None, "one of num_dur_vals OR use_stats_from must be supplied"
+        self.num_dur_vals = num_dur_vals
+
+        if use_stats is None:
             dmap, prange = get_tick_deltas_for_runlength(
                 self.f, self.fnames, num_dur_vals, proportion_for_stats)
             self.delta_mapping = dmap
             self.pitch_range = prange
-            self.num_dur_vals = num_dur_vals
         else:
-            self.delta_mapping = use_stats_from.delta_mapping
-            self.pitch_range = use_stats_from.pitch_range
-            self.num_dur_vals = use_stats_from.num_dur_vals
+            self.pitch_range = use_stats[0]
+            self.delta_mapping = use_stats[1]
 
         # the number of features is this sum plus 2 (one for an off-by-one error caused by
         # the pitch range being inclusive, and one for the 'hold' message)
@@ -134,6 +133,9 @@ class MonoFolkSongDataset(IterableDataset):
             0)
 
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
+
+    def get_stats(self):
+        return (self.pitch_range, self.delta_mapping)
 
     def __iter__(self):
         '''

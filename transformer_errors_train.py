@@ -26,14 +26,15 @@ logging.info('defining datasets...')
 dset_tr = dl.MonoFolkSongDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
-    base='train',
     num_dur_vals=params.num_dur_vals,
+    base='train',
     proportion_for_stats=params.proportion_for_stats)
 dset_vl = dl.MonoFolkSongDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
+    num_dur_vals=params.num_dur_vals,
     base='validate',
-    use_stats_from=dset_tr)
+    use_stats=dset_tr.get_stats())
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
@@ -80,9 +81,9 @@ def loss_func(outputs, targets):
 
 
 def prepare_batch(batch):
-    input, target = mse.remove_indices(batch, **params.remove_indices_settings)
+    input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
     input = input.transpose(1, 0)
-    target = target.transpose(1, 0)
+    target = batch.transpose(1, 0)
     return input, target
     # return batch.transpose(0, 1), batch.transpose(0, 1)
 
@@ -153,12 +154,15 @@ for epoch in range(params.num_epochs):
         plt.clf()
         plt.close(fig)
 
-    if not epoch % params.save_model_every and epoch > 0:
-        m_name = f'transformer_epoch-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt'
+    if not epoch % params.save_model_every: # and epoch > 0:
+        m_name = (
+            f'transformer_{params.start_training_time}'
+            f'_epoch-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt')
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
+                'dset_stats': dset_tr.get_stats()
                 # 'loss': loss,
                 }, m_name)
