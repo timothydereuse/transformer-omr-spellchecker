@@ -25,9 +25,10 @@ def remove_indices(input, num_indices=1, mode='center'):
 
     # print(inds_to_remove, target.shape, input.shape)
 
-    input[:, inds_to_remove] = torch.rand_like(input[:, inds_to_remove])
+    output = input.clone()
+    output[:, inds_to_remove] = torch.zeros_like(input[:, inds_to_remove])
 
-    return input, target
+    return output, target
 
 
 if __name__ == '__main__':

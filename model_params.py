@@ -10,21 +10,21 @@ validate_proportion = 0.1
 
 
 # -- definition of symbolic music representation
-num_dur_vals = 5   # number of duration values
-seq_length = 10     # length of song sequences
+num_dur_vals = 15   # number of duration values
+seq_length = 40     # length of song sequences
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
-nhid = 24          # the dimension of the feedforward network
-ninp = 24          # the dimension of the internal transformer representation
-nlayers = 1         # number of encoder/decoder layers
+nhid = 512          # the dimension of the feedforward network
+ninp = 128          # the dimension of the internal transformer representation
+nlayers = 2         # number of encoder/decoder layers
 dropout = 0.1       # dropout probability
 
 # -- training parameters
 num_epochs = 51
 val_set_size = 0.1
 lr = 0.001
-batch_size = 100
+batch_size = 1200
 lr_plateau_factor = 0.2
 lr_plateau_patience = 3
 lr_plateau_threshold = 0.001
@@ -33,8 +33,7 @@ save_model_every = 10     # save a new model every X epochs
 save_img_every = 4
 
 # -- data augmentation
-remove_indices_settings = {'mode': 'center', 'num_indices': 2}
-
+remove_indices_settings = {'mode': 'center', 'num_indices': 1}
 
 # -- logging
 import logging, datetime

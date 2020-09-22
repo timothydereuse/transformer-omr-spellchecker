@@ -9,21 +9,23 @@ import model_params as params
 from importlib import reload
 
 reload(params)
+reload(mse)
 
-model_path = r'transformer_2020-09-21 18-12_epoch-4_24.24.1.pt'
+model_path = r'trained_models\transformer_2020-09-21 15-39_ep-50_512.128.2.pt'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 dset_path = params.dset_path
+checkpoint = torch.load(model_path, map_location=device)
 
 dset_tr = dl.MonoFolkSongDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
-    base='train',
+    base='test',
     num_dur_vals=params.num_dur_vals,
-    proportion_for_stats=params.proportion_for_stats)
+    use_stats=checkpoint['dset_stats'])
 dloader = DataLoader(dset_tr, batch_size=params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = tfsm.TransformerModel(
     num_feats,
     feedforward_size=params.ninp,
@@ -33,7 +35,6 @@ model = tfsm.TransformerModel(
 
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 # epoch = checkpoint['epoch']
@@ -54,15 +55,51 @@ def prepare_batch(batch):
     batch = batch.transpose(1, 0)
     return input, target, batch
 
+
+def get_maxes(b):
+    pitch_out = b[:, :, :-params.num_dur_vals]
+    dur_out = b[:, :, -params.num_dur_vals:]
+    pitch_inds = pitch_out.max(2).indices
+    dur_inds = dur_out.max(2).indices
+    return pitch_inds, dur_inds
+
+
 model.eval()
+incorrect_dur = 0
+incorrect_pitch = 0
+total_dur = 0
+total_pitch = 0
+with torch.no_grad():
+    for i, batch in enumerate(dloader):
+        batch = batch.float().to(device)
+        input, target, batch = prepare_batch(batch)
 
-for i, batch in enumerate(dloader):
-    batch = batch.float().to(device)
-    input, target, batch = prepare_batch(batch)
-    break
+        output = model(input, input)
 
-output = model(input, batch)
+        inds = (input.sum(2) == 0)[:, 0].nonzero().view(-1)
+
+        pitch_o, dur_o = get_maxes(output)
+        pitch_t, dur_t = get_maxes(target)
+
+        pitch_o = pitch_o[inds]
+        dur_o = dur_o[inds]
+
+        pitch_diff = (pitch_o != pitch_t).sum()
+        dur_diff = (dur_o != dur_t).sum()
+        incorrect_dur += dur_diff.numpy()
+        incorrect_pitch += pitch_diff.numpy()
+
+        total_dur += dur_o.numel()
+        total_pitch += pitch_o.numel()
+
+        print(incorrect_dur, incorrect_pitch)
+
+dur_acc = 1 - incorrect_dur / total_dur
+pitch_acc = 1 - incorrect_pitch / total_pitch
+
+print(f'pitch_accuracy: {pitch_acc} | dur_acc: {dur_acc}')
+
 
 ind_rand = np.random.choice(output.shape[1])
-fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, input)
+fig, axs = po.plot(output, batch, ind_rand, params.num_dur_vals, input)
 fig.show()

@@ -154,10 +154,10 @@ for epoch in range(params.num_epochs):
         plt.clf()
         plt.close(fig)
 
-    if not epoch % params.save_model_every: # and epoch > 0:
+    if not epoch % params.save_model_every and epoch > 0:
         m_name = (
             f'transformer_{params.start_training_time}'
-            f'_epoch-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt')
+            f'_ep-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt')
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
