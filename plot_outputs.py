@@ -7,7 +7,7 @@ def get_pr(inp, ind=0):
     slice = torch.transpose(inp, 1, 0)[ind]
     maxinds = slice.max(1).indices
     for i, x in enumerate(maxinds):
-        slice[i] = torch.sigmoid(slice[i])
+        slice[i] = 0
         slice[i][x] += 5
     pr = slice.cpu().detach().numpy()
     return pr
@@ -21,6 +21,7 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
 
     full_out = outputs[:, ind].cpu().detach().numpy()
     axs[0].imshow(full_out.T)
+    axs[0].set_title('Raw Transformer \n Reconstruction')
 
     pitch_out = outputs[:, :, :-num_dur_vals]
     dur_out = outputs[:, :, -num_dur_vals:]
@@ -28,9 +29,11 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     po_pr = get_pr(pitch_out, ind)
     pro = np.concatenate([po_pr, do_pr], 1)
     axs[1].imshow(pro.T)
+    axs[1].set_title('Thresholded \n Reconstruction')
 
     targets = targets[:, ind].cpu().detach().numpy()
     axs[2].imshow(targets.T)
+    axs[2].set_title('Ground Truth')
 
     if errored is not None:
         pitch_out = errored[:, :, :-num_dur_vals]
@@ -39,6 +42,8 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
         po_pr = get_pr(pitch_out, ind)
         pro = np.concatenate([po_pr, do_pr], 1)
         axs[3].imshow(pro.T)
+        axs[3].set_title('Input \n (with errors)')
+
 
     return fig, axs
 

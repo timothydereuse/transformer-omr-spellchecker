@@ -16,8 +16,9 @@ proportion_for_stats = 1
 
 # -- definition of transformer model structure
 nhid = 512          # the dimension of the feedforward network
-ninp = 128          # the dimension of the internal transformer representation
+d_model = 128       # the dimension of the internal transformer representation
 nlayers = 2         # number of encoder/decoder layers
+nhead = 2           # number of attention heads
 dropout = 0.1       # dropout probability
 
 # -- training parameters

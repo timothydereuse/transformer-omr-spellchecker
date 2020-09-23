@@ -42,9 +42,10 @@ num_feats = dset_tr.num_feats
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = tfsm.TransformerModel(
         num_feats=num_feats,
-        feedforward_size=params.ninp,
-        hidden=params.nhid,
+        feedforward_size=params.d_model,
+        hidden=params.hidden,
         nlayers=params.nlayers,
+        nhead=params.nhead,
         dropout=params.dropout
         ).to(device)
 model_size = sum(p.numel() for p in model.parameters())
@@ -157,7 +158,7 @@ for epoch in range(params.num_epochs):
     if not epoch % params.save_model_every and epoch > 0:
         m_name = (
             f'transformer_{params.start_training_time}'
-            f'_ep-{epoch}_{params.nhid}.{params.ninp}.{params.nlayers}.pt')
+            f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
         torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),

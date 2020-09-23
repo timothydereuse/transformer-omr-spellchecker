@@ -24,9 +24,8 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, num_feats, hidden=100, feedforward_size=100, nlayers=3, dropout=0.1):
+    def __init__(self, num_feats, hidden=100, feedforward_size=100, nlayers=3, nhead=2, dropout=0.1):
         super(TransformerModel, self).__init__()
-        nhead = math.ceil(hidden/64)
 
         self.encoder = nn.Sequential(
             nn.Linear(num_feats, hidden),
