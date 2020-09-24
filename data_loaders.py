@@ -120,8 +120,8 @@ class MonoFolkSongDataset(IterableDataset):
             self.pitch_range = use_stats[0]
             self.delta_mapping = use_stats[1]
 
-        # the number of features is this sum plus 2 (one for an off-by-one error caused by
-        # the pitch range being inclusive, and one for the 'hold' message)
+        # the number of features is this sum plus 3 (one for an off-by-one error caused by
+        # the pitch range being inclusive, one for the 'rest' message, one for 'fill in' message)
         self.num_feats = self.pitch_range[1] - self.pitch_range[0] + self.num_dur_vals + 2
 
         padding_element = np.zeros(self.num_feats)
@@ -129,8 +129,7 @@ class MonoFolkSongDataset(IterableDataset):
         padding_element[0] = 1
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 2
         self.padding_seq = np.stack(
-            [padding_element for _ in range(self.padding_amt)],
-            0)
+            [padding_element for _ in range(self.padding_amt)], 0)
 
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
 

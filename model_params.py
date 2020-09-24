@@ -11,31 +11,38 @@ validate_proportion = 0.1
 
 # -- definition of symbolic music representation
 num_dur_vals = 15   # number of duration values
-seq_length = 40     # length of song sequences
+seq_length = 50     # length of song sequences
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
-nhid = 512          # the dimension of the feedforward network
-d_model = 128       # the dimension of the internal transformer representation
-nlayers = 2         # number of encoder/decoder layers
-nhead = 2           # number of attention heads
-dropout = 0.1       # dropout probability
+d_model = 128           # the dimension of the internal transformer representation
+hidden = d_model * 4    # the dimension of the feedforward network
+nlayers = 6             # number of encoder/decoder layers
+nhead = 4               # number of attention heads
+dropout = 0.1           # dropout probability
 
 # -- training parameters
-num_epochs = 51
-val_set_size = 0.1
-lr = 0.001
-batch_size = 1200
+num_epochs = 51                 # number of epochs to train for
+lr = 0.001                      # learning rate
+batch_size = 1000               # size of each batch
 lr_plateau_factor = 0.2
 lr_plateau_patience = 3
-lr_plateau_threshold = 0.001
+lr_plateau_threshold = 0.005
 clip_gradient_norm = 0.5
-save_model_every = 10     # save a new model every X epochs
-save_img_every = 4
+save_model_every = 10           # save a new model every X epochs
+save_img_every = 4              # save a new test image from the validation set every X epochs
 
 # -- data augmentation
-remove_indices_settings = {'mode': 'center', 'num_indices': 1}
-
+remove_indices_settings = {
+    'mode': 'center',
+    'num_indices': 1
+}
+mask_indices_settings = {
+    'num_indices': 10,
+    'prob_random': 0.1,
+    'prob_same': 0.1,
+    'continguous': False
+}
 # -- logging
 import logging, datetime
 start_training_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M")

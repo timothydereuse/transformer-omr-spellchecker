@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
-import transformer_full_seq_model as tfsm
+import transformer_encoder_model as tem
 import make_supervised_examples as mse
 from importlib import reload
 from torch.utils.data import DataLoader
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 reload(dl)
 reload(fcts)
-reload(tfsm)
+reload(tem)
 reload(params)
 reload(mse)
 
@@ -40,9 +40,9 @@ dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = tfsm.TransformerModel(
+model = tem.TransformerBidirectionalModel(
         num_feats=num_feats,
-        feedforward_size=params.d_model,
+        d_model=params.d_model,
         hidden=params.hidden,
         nlayers=params.nlayers,
         nhead=params.nhead,
@@ -82,7 +82,8 @@ def loss_func(outputs, targets):
 
 
 def prepare_batch(batch):
-    input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
+    # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
+    input, _ = mse.mask_indices(batch, **params.mask_indices_settings)
     input = input.transpose(1, 0)
     target = batch.transpose(1, 0)
     return input, target
@@ -98,12 +99,9 @@ def train_epoch(model, dloader):
         input, target = prepare_batch(batch)
 
         optimizer.zero_grad()
-        output = model(input, target)
-
-        # print(torch.isnan(output).nonzero())
+        output = model(input)
 
         loss = loss_func(output, target)
-
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
@@ -111,7 +109,7 @@ def train_epoch(model, dloader):
         batch_loss = loss.item()
         total_loss += batch_loss
         num_seqs_used += input.shape[1]
-        # logging.info(f'batch {i} | loss {batch_loss}')
+        logging.info(f'batch {i} | loss {batch_loss}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
