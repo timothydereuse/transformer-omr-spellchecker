@@ -82,23 +82,31 @@ class TransformerBidirectionalModel(nn.Module):
 
 if __name__ == '__main__':
     from itertools import product
-    import plot_outputs
+    import plot_outputs as po
+    import make_supervised_examples as mse
 
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    from importlib import reload
+
+    reload(mse)
+    reload(po)
 
     seq_length = 30
-    num_seqs = 100
-    num_feats = 20
+    num_seqs = 300
+    num_feats = 30
     num_dur_vals = 10
+    mask_inds_num = 4
 
-    num_epochs = 100
-    d_model = 100
-    hidden = 100
+    num_epochs = 201
+    d_model = 128
+    hidden = 256
     nlayers = 2        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 2          # the number of heads in the multiheadattention models
     dropout = 0.1      # the dropout value
+
+    lr = 0.0005
 
     data_r = torch.rand(seq_length, num_seqs, num_feats)
     data = torch.zeros_like(data_r)
@@ -118,15 +126,15 @@ if __name__ == '__main__':
 
     # inputs = torch.tensor(data[])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inputs = data.to(device)
     targets = data.to(device)
+    inputs, inds = mse.mask_indices(data.transpose(0, 1), mask_inds_num)
+    inputs = inputs.transpose(0, 1).to(device)
 
     model = TransformerBidirectionalModel(
         num_feats, d_model, hidden, nlayers, nhead, dropout).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params} on device {device}')
 
-    lr = 0.001
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     full_loss = nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -170,9 +178,10 @@ if __name__ == '__main__':
         elapsed = time.time() - start_time
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
-        if not i % 25:
+        if not i % 20:
             x = (output).detach().cpu().numpy().T
-            fig, axs = plot_outputs.plot(output, targets, 3, num_dur_vals)
+            ind = np.random.randint(targets.shape[0])
+            fig, axs = po.plot(output, targets, ind, num_dur_vals, errored=inputs)
             fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
             plt.clf()
             plt.close(fig)

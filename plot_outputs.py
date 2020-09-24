@@ -8,7 +8,7 @@ def get_pr(inp, ind=0):
     maxinds = slice.max(1).indices
     for i, x in enumerate(maxinds):
         slice[i] = 0
-        slice[i][x] += 5
+        slice[i][x] += 1
     pr = slice.cpu().detach().numpy()
     return pr
 
@@ -38,8 +38,8 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     if errored is not None:
         pitch_out = errored[:, :, :-num_dur_vals]
         dur_out = errored[:, :, -num_dur_vals:]
-        do_pr = get_pr(dur_out, ind)
-        po_pr = get_pr(pitch_out, ind)
+        do_pr = torch.transpose(dur_out, 1, 0)[ind].cpu().detach().numpy()
+        po_pr = torch.transpose(pitch_out, 1, 0)[ind].cpu().detach().numpy()
         pro = np.concatenate([po_pr, do_pr], 1)
         axs[3].imshow(pro.T)
         axs[3].set_title('Input \n (with errors)')

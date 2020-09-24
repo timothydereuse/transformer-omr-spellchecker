@@ -29,11 +29,11 @@ def remove_indices(input, num_indices=1, mode='center'):
     return output, target
 
 
-def mask_indices(input, num_indices=1, prob_random=0.15, prob_same=0.15, continguous=False):
+def mask_indices(inp, num_indices=1, prob_random=0.15, prob_same=0.15, continguous=False):
     '''
     masked language model procedure used in original BERT paper to train bidirectional tranformer.
     '''
-    seq_len = input.shape[1]
+    seq_len = inp.shape[1]
 
     # make list of indices to mask / corrupt.
     inds_selected = np.array([
@@ -42,12 +42,12 @@ def mask_indices(input, num_indices=1, prob_random=0.15, prob_same=0.15, conting
             np.random.choice(seq_len, num_indices, False)
         ))
         for x
-        in range(input.shape[0])
+        in range(inp.shape[0])
     ]).reshape(-1, 2)
 
-    output = input.clone()
+    output = inp.clone()
 
-    flattened_inp = input.view(-1, input.shape[-1])
+    flattened_inp = inp.reshape(-1, inp.shape[-1])
     num_els = flattened_inp.shape[0]
 
     for ind in inds_selected:
@@ -56,10 +56,10 @@ def mask_indices(input, num_indices=1, prob_random=0.15, prob_same=0.15, conting
             loc = np.random.randint(num_els)
             slice = flattened_inp[loc].clone()
             output[tuple(ind)] = slice
-        elif r > (1 - prob_same):
+        elif r > (1 - prob_random):
             pass
         else:
-            output[tuple(ind)] = 0
+            output[tuple(ind)] = torch.zeros_like(output[tuple(ind)])
 
     return output, inds_selected
 
