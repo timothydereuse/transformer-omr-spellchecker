@@ -5,6 +5,7 @@
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
+import model_params as params
 
 
 def remove_indices(input, num_indices=1, mode='center'):
@@ -49,6 +50,8 @@ def mask_indices(inp, num_indices=1, prob_random=0.15, prob_same=0.15, continguo
 
     flattened_inp = inp.reshape(-1, inp.shape[-1])
     num_els = flattened_inp.shape[0]
+    mask_element = np.zeros(inp.shape[-1])
+    mask_element[params.flags['mask']] = 1
 
     for ind in inds_selected:
         r = np.random.rand()

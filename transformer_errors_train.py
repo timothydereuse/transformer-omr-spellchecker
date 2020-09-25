@@ -66,7 +66,7 @@ dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
 
 def loss_func(outputs, targets):
-    ndv = params.num_dur_vals
+    ndv = dset_tr.dur_subvector_len
     pitch_targets = targets[:, :, :-ndv]
     dur_targets = targets[:, :, -ndv:]
 

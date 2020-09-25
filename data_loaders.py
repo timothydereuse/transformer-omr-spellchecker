@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import h5py
 import logging
+import model_params as params
 reload(fcts)
 
 
@@ -54,14 +55,6 @@ def get_class_weights(inp):
     return weights
 
 
-def get_all_hdf5_fnames(f, base=None):
-    fnames = []
-    for k in f.keys():
-        for n in f[k].keys():
-            fnames.append(rf'{k}/{n}')
-    return fnames
-
-
 def all_hdf5_keys(obj):
     '''
     Recursively find all hdf5 keys subordinate to the given object @obj, corresponding to datasets.
@@ -106,9 +99,7 @@ class MonoFolkSongDataset(IterableDataset):
         self.shuffle_files = shuffle_files
         self.trial_run = trial_run
 
-        # self.flags = {
-        #     ''
-        # }
+        self.flags = params.flags
 
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
@@ -128,16 +119,25 @@ class MonoFolkSongDataset(IterableDataset):
             self.pitch_range = use_stats[0]
             self.delta_mapping = use_stats[1]
 
-        # the number of features is this sum plus 3 (one for an off-by-one error caused by
-        # the pitch range being inclusive, one for the 'rest' message, one for 'fill in' message)
-        self.num_feats = self.pitch_range[1] - self.pitch_range[0] + self.num_dur_vals + 2
+        # the number of features is this sum plus 2 (one for an off-by-one error caused by
+        # the pitch range being inclusive, one for the 'rest' message)
+        self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2
+        self.dur_subvector_len = self.num_dur_vals + len(self.flags)
+        self.num_feats = self.pitch_subvector_len + self.dur_subvector_len
 
-        padding_element = np.zeros(self.num_feats)
-        padding_element[-1] = 1
-        padding_element[0] = 1
+        padding_element = np.zeros([self.num_feats])
+        padding_element[self.flags['pad']] = 1
+
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 2
         self.padding_seq = np.stack(
             [padding_element for _ in range(self.padding_amt)], 0)
+
+        self.sos_element = np.zeros([1, self.num_feats])
+        self.sos_element[0][self.flags['sos']] = 1
+
+        self.eos_element = np.zeros([1, self.num_feats])
+        self.eos_element[0][self.flags['eos']] = 1
+
 
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
 
@@ -147,8 +147,6 @@ class MonoFolkSongDataset(IterableDataset):
     def __iter__(self):
         '''
         Main iteration function.
-        @fnames: takes a subset of the fnames in the supplied hdf5 file. will only iterate thru
-            the suppied names.
         '''
 
         if self.shuffle_files:
@@ -158,10 +156,18 @@ class MonoFolkSongDataset(IterableDataset):
         for fname in self.fnames:
             x = self.f[fname]
             runlength = fcts.arr_to_runlength_mono(
-                x, self.delta_mapping, self.pitch_range)
+                x, self.delta_mapping, self.pitch_range, self.flags)
 
             # pad runlength encoding on both sides
-            padded_rl = np.concatenate([self.padding_seq, runlength, self.padding_seq])
+            padded_rl = np.concatenate([
+                self.padding_seq,
+                self.sos_element,
+                runlength,
+                self.eos_element,
+                self.padding_seq
+                ])
+
+            # figure out how many sequences we can get out of this
             num_seqs = np.floor(padded_rl.shape[0] / self.seq_length)
             remainder = padded_rl.shape[0] - (num_seqs * self.seq_length)
             offset = np.random.randint(remainder + 1) if self.random_offsets else 0

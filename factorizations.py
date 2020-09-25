@@ -111,7 +111,7 @@ def arr_to_runlength(arr, deltas, pitch_range, monophonic=False):
     return run_length
 
 
-def arr_to_runlength_mono(arr, deltas, pitch_range):
+def arr_to_runlength_mono(arr, deltas, pitch_range, flags):
     pitches = arr[:, 0]
     # onsets = arr[:, 1]
     durs = arr[:, 2]
@@ -138,7 +138,17 @@ def arr_to_runlength_mono(arr, deltas, pitch_range):
     dur_mat = np.zeros([num_notes, len(deltas)])
     dur_mat[tuple(dur_inds)] = 1
 
-    res = np.concatenate([pitch_mat, dur_mat], 1)
+    # make empty flags
+    empty_flags = np.zeros((num_notes, len(flags)))
+    res = np.concatenate([pitch_mat, dur_mat, empty_flags], 1)
+
+    # song_begin_flag = np.zeros((num_notes, 1))
+    # song_end_flag = np.zeros((num_notes, 1))
+    # song_begin_flag[flags['sos']] = 1
+    # song_end_flag[flags['eos']] = 1
+    #
+    # res = np.concatenate([song_begin_flag, res, song_end_flag], 0)
+
     return res
 
 
@@ -166,14 +176,14 @@ if __name__ == '__main__':
     from time import time
 
     dset_path = 'essen_meertens_songs.hdf5'
-    num_songs = 5000
-    num_dur_vals = 20
+    f = h5py.File(dset_path, 'r')
+    num_songs = 500
+    num_dur_vals = 10
 
-    fnames = dl.get_all_hdf5_fnames(dset_path)
+    fnames = dl.all_hdf5_keys(f)
     np.random.shuffle(fnames)
     fnames = fnames[:num_songs]
 
-    f = h5py.File(dset_path, 'r')
     deltas, pitch_range = dl.get_tick_deltas_for_runlength(f, fnames, num_dur_vals, 0.2)
 
     start_time = time()

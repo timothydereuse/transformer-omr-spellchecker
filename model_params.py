@@ -21,7 +21,7 @@ nhead = 4               # number of attention heads
 dropout = 0.1           # dropout probability
 
 # -- training parameters
-trial_run = False                #
+trial_run = True                #
 num_epochs = 101                 # number of epochs to train for
 lr = 0.001                      # learning rate
 batch_size = 1000               # size of each batch
@@ -31,6 +31,7 @@ lr_plateau_threshold = 0.01
 clip_gradient_norm = 0.5
 save_model_every = 25           # save a new model every X epochs
 save_img_every = 5              # save a new test image from the validation set every X epochs
+
 
 # -- data augmentation
 remove_indices_settings = {
@@ -43,6 +44,7 @@ mask_indices_settings = {
     'prob_same': 0.1,
     'continguous': False
 }
+
 # -- logging
 import logging, datetime
 start_training_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M")
@@ -50,3 +52,11 @@ logging.basicConfig(filename='transformer_train.log', filemode='w', level=loggin
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
     logging.getLogger().addHandler(logging.StreamHandler())
+
+# -- constants that need to be here so that they can be referenced, but shouldn't be changed
+flags = {
+    'sos': [0, -1],
+    'eos': [0, -2],
+    'mask': [0, -3],
+    'pad': [0, -4]
+}
