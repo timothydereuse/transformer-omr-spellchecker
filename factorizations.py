@@ -142,13 +142,6 @@ def arr_to_runlength_mono(arr, deltas, pitch_range, flags):
     empty_flags = np.zeros((num_notes, len(flags)))
     res = np.concatenate([pitch_mat, dur_mat, empty_flags], 1)
 
-    # song_begin_flag = np.zeros((num_notes, 1))
-    # song_end_flag = np.zeros((num_notes, 1))
-    # song_begin_flag[flags['sos']] = 1
-    # song_end_flag[flags['eos']] = 1
-    #
-    # res = np.concatenate([song_begin_flag, res, song_end_flag], 0)
-
     return res
 
 

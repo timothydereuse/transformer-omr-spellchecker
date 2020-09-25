@@ -163,10 +163,10 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
-    if not params.trial_run and not epoch % params.save_img_every and epoch > 0:
+    if not epoch % params.save_img_every and epoch > 0:
         ind_rand = np.random.choice(output.shape[1])
-        fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, errored=input)
-        fig.savefig(f'./out_imgs/epoch_{epoch}.png')
+        fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
+        fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
 

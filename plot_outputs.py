@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import model_params as params
 
 
 def get_pr(inp, ind=0):
@@ -15,9 +16,9 @@ def get_pr(inp, ind=0):
 
 def plot(outputs, targets, ind, num_dur_vals, errored=None):
     if errored is None:
-        fig, axs = plt.subplots(1, 3, figsize=(6, 4))
+        fig, axs = plt.subplots(1, 3, figsize=(9, 6))
     else:
-        fig, axs = plt.subplots(1, 4, figsize=(8, 4))
+        fig, axs = plt.subplots(1, 4, figsize=(12, 6))
 
     full_out = outputs[:, ind].cpu().detach().numpy()
     axs[0].imshow(full_out.T)
