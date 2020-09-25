@@ -28,13 +28,15 @@ dset_tr = dl.MonoFolkSongDataset(
     seq_length=params.seq_length,
     num_dur_vals=params.num_dur_vals,
     base='train',
-    proportion_for_stats=params.proportion_for_stats)
+    proportion_for_stats=params.proportion_for_stats,
+    trial_run=params.trial_run)
 dset_vl = dl.MonoFolkSongDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
     num_dur_vals=params.num_dur_vals,
     base='validate',
-    use_stats=dset_tr.get_stats())
+    use_stats=dset_tr.get_stats(),
+    trial_run=params.trial_run)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
@@ -109,7 +111,7 @@ def train_epoch(model, dloader):
         batch_loss = loss.item()
         total_loss += batch_loss
         num_seqs_used += input.shape[1]
-        logging.info(f'batch {i} | loss {batch_loss}')
+        # logging.info(f'batch {i} | loss {batch_loss}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
@@ -117,6 +119,8 @@ def train_epoch(model, dloader):
 
 logging.info('beginning training')
 start_time = time.time()
+val_losses = []
+best_model = None
 for epoch in range(params.num_epochs):
     model.train()
 
@@ -131,10 +135,23 @@ for epoch in range(params.num_epochs):
         for i, batch in enumerate(dloader_val):
             batch = batch.float().to(device)
             input, target = prepare_batch(batch)
-            output = model(input, target)
+            output = model(input)
             val_loss += len(input) * loss_func(output, target).item()
             num_entries += batch.shape[1]
     val_loss /= num_entries
+    val_losses.append(val_loss)
+
+    cur_model = {
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'dset_stats': dset_tr.get_stats(),
+            'val_losses': val_losses
+            }
+
+    if val_loss < min(val_losses):
+        best_model = cur_model
 
     elapsed = time.time() - start_time
     logging.info(
@@ -146,22 +163,20 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
-    if not epoch % params.save_img_every and epoch > 0:
+    if not params.trial_run and not epoch % params.save_img_every and epoch > 0:
         ind_rand = np.random.choice(output.shape[1])
         fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, errored=input)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png')
         plt.clf()
         plt.close(fig)
 
-    if not epoch % params.save_model_every and epoch > 0:
+    if not params.trial_run and not epoch % params.save_model_every and epoch > 0:
         m_name = (
             f'transformer_{params.start_training_time}'
             f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
-        torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict(),
-                'dset_stats': dset_tr.get_stats()
-                # 'loss': loss,
-                }, m_name)
+        torch.save(cur_model, m_name)
+
+m_name = (
+    f'transformer_best_{params.start_training_time}'
+    f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
+torch.save(best_model, m_name)
