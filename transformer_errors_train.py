@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params as params
 import logging
+import copy
 
 import matplotlib
 matplotlib.use('Agg')
@@ -150,8 +151,8 @@ for epoch in range(params.num_epochs):
             'val_losses': val_losses
             }
 
-    if val_loss < min(val_losses):
-        best_model = cur_model
+    if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
+        best_model = copy.deepcopy(cur_model)
 
     elapsed = time.time() - start_time
     logging.info(
