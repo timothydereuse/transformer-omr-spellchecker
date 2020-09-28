@@ -30,41 +30,42 @@ def remove_indices(input, num_indices=1, mode='center'):
     return output, target
 
 
-def mask_indices(inp, num_indices=1, prob_random=0.15, prob_same=0.15, continguous=False):
+def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguous=False):
     '''
     masked language model procedure used in original BERT paper to train bidirectional tranformer.
     '''
     seq_len = inp.shape[1]
 
-    # make list of indices to mask / corrupt.
+    # make list of indices to mask / corrupt; select exactly @num_indices from each sequence
     inds_selected = np.array([
         list(zip(
             [x] * num_indices,
             np.random.choice(seq_len, num_indices, False)
         ))
-        for x
-        in range(inp.shape[0])
+        for x in range(inp.shape[0])
     ]).reshape(-1, 2)
+
+    np.random.shuffle(inds_selected)
+    num_rand = int(prob_random * inds_selected.shape[0])
+    num_same = int(prob_same * inds_selected.shape[0])
+
+    inds_rand = inds_selected[:num_rand]
+    inds_mask = inds_selected[num_rand:-num_same]
+    # discard indices in region of num_same
 
     output = inp.clone()
 
+    # randomize the order of the batch, get a couple of them, and replace rand_ind of the
+    # selected indices with other sequence elements in the batch
     flattened_inp = inp.reshape(-1, inp.shape[-1])
-    num_els = flattened_inp.shape[0]
-    mask_element = np.zeros(inp.shape[-1])
-    mask_element[params.flags['mask']] = 1
+    replacer = flattened_inp[np.random.choice(flattened_inp.shape[0], inds_rand.shape[0])]
+    output[inds_rand[:, 0], inds_rand[:, 1]] = replacer
 
-    for ind in inds_selected:
-        r = np.random.rand()
-        if r < prob_random:
-            loc = np.random.randint(num_els)
-            slice = flattened_inp[loc].clone()
-            output[tuple(ind)] = slice
-        elif r > (1 - prob_random):
-            pass
-        else:
-            output[tuple(ind)] = torch.zeros_like(output[tuple(ind)])
+    mask_element = np.zeros((len(inds_mask), inp.shape[-1]))
+    mask_element[:, params.flags['mask']] = 1
+    output[inds_mask[:, 0], inds_mask[:, 1]] = torch.tensor(mask_element, dtype=torch.float)
 
-    return output, inds_selected
+    return output, (inds_mask, inds_rand)
 
 
 if __name__ == '__main__':
@@ -83,10 +84,10 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    kw = {'mode': 'center', 'num_indices': 2}
-    inp, tgt = remove_indices(batch, **kw)
+    kw = {'num_indices': 5, 'prob_same': 0}
+    inp, _ = mask_indices(batch, **kw)
     inp = inp.transpose(1, 0)
-    tgt = tgt.transpose(1, 0)
+    tgt = batch.transpose(1, 0)
 
     import transformer_full_seq_model as tfsm
 
