@@ -1,4 +1,5 @@
 (these are notes for my own benefit)
+sacct -j 51565016 --format=JobID,JobName,ReqMem,MaxRSS,Elapsed
 
 runlength encoding vs. piano roll encoding vs. note-tuple encoding
 

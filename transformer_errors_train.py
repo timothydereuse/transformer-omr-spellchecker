@@ -30,6 +30,7 @@ dset_tr = dl.MonoFolkSongDataset(
     num_dur_vals=params.num_dur_vals,
     base='train',
     proportion_for_stats=params.proportion_for_stats,
+    padding_amt=params.padding_amt,
     trial_run=params.trial_run)
 dset_vl = dl.MonoFolkSongDataset(
     dset_fname=params.dset_path,
@@ -37,6 +38,7 @@ dset_vl = dl.MonoFolkSongDataset(
     num_dur_vals=params.num_dur_vals,
     base='validate',
     use_stats=dset_tr.get_stats(),
+    padding_amt=params.padding_amt,
     trial_run=params.trial_run)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)

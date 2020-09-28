@@ -169,6 +169,11 @@ class MonoFolkSongDataset(IterableDataset):
 
             # figure out how many sequences we can get out of this
             num_seqs = np.floor(padded_rl.shape[0] / self.seq_length)
+
+            # check if the current file is too short to be used with the seq_length desired
+            if num_seqs == 0:
+                continue
+
             remainder = padded_rl.shape[0] - (num_seqs * self.seq_length)
             offset = np.random.randint(remainder + 1) if self.random_offsets else 0
 
