@@ -63,7 +63,8 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
 
     mask_element = np.zeros((len(inds_mask), inp.shape[-1]))
     mask_element[:, params.flags['mask']] = 1
-    output[inds_mask[:, 0], inds_mask[:, 1]] = torch.tensor(mask_element, dtype=torch.float)
+    mask_element = torch.tensor(mask_element).to(output.device).float()
+    output[inds_mask[:, 0], inds_mask[:, 1]] = mask_element
 
     return output, (inds_mask, inds_rand)
 
