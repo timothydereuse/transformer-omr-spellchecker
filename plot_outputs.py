@@ -5,7 +5,7 @@ import model_params as params
 
 
 def get_pr(inp, ind=0):
-    slice = torch.transpose(inp, 1, 0)[ind]
+    slice = inp[ind]
     maxinds = slice.max(1).indices
     for i, x in enumerate(maxinds):
         slice[i] = 0
@@ -20,7 +20,7 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     else:
         fig, axs = plt.subplots(1, 4, figsize=(12, 6))
 
-    full_out = outputs[:, ind].cpu().detach().numpy()
+    full_out = outputs[ind, :].cpu().detach().numpy()
     axs[0].imshow(full_out.T)
     axs[0].set_title('Raw Transformer \n Reconstruction')
 
@@ -32,15 +32,15 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     axs[1].imshow(pro.T)
     axs[1].set_title('Thresholded \n Reconstruction')
 
-    targets = targets[:, ind].cpu().detach().numpy()
+    targets = targets[ind, :].cpu().detach().numpy()
     axs[2].imshow(targets.T)
     axs[2].set_title('Ground Truth')
 
     if errored is not None:
         pitch_out = errored[:, :, :-num_dur_vals]
         dur_out = errored[:, :, -num_dur_vals:]
-        do_pr = torch.transpose(dur_out, 1, 0)[ind].cpu().detach().numpy()
-        po_pr = torch.transpose(pitch_out, 1, 0)[ind].cpu().detach().numpy()
+        do_pr = dur_out[ind].cpu().detach().numpy()
+        po_pr = pitch_out[ind].cpu().detach().numpy()
         pro = np.concatenate([po_pr, do_pr], 1)
         axs[3].imshow(pro.T)
         axs[3].set_title('Input \n (with errors)')

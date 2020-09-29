@@ -138,7 +138,6 @@ class MonoFolkSongDataset(IterableDataset):
         self.eos_element = np.zeros([1, self.num_feats])
         self.eos_element[0][self.flags['eos']] = 1
 
-
         # self.pitch_weights, self.dur_weights = self.get_weights(proportion_for_stats)
 
     def get_stats(self):

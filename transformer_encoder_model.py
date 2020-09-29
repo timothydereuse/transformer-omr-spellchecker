@@ -50,27 +50,27 @@ class TransformerBidirectionalModel(nn.Module):
     def make_len_mask(self, inp):
         # data points are padding iff the first and last elements of the feature vector are 1
         res = inp[:, :, 0] * inp[:, :, -1]
-        return res.transpose(0, 1).to(torch.bool)
+        return res.to(torch.bool)
 
     def forward(self, src):
-        if self.src_mask is None or self.src_mask.size(0) != len(src):
+        if self.src_mask is None or self.src_mask.size(0) != src.shape[1]:
             self.src_mask = None
-            self.src_mask = self._generate_point_mask(len(src)).to(src.device)
-            # self.tgt_mask = self.generate_square_subsequent_mask(len(trg)).to(trg.device)
+            self.src_mask = self._generate_point_mask(src.shape[1]).to(src.device)
 
         src_pad_mask = self.make_len_mask(src)
 
         src = self.encoder(src)
-        src = self.pos_encoder(src)
 
+        src = src.transpose(0, 1)
+        src = self.pos_encoder(src)
         output = self.transformer_encoder(
             src,
             mask=self.src_mask,
             src_key_padding_mask=src_pad_mask,
         )
+        output = output.transpose(0, 1)
 
         output = self.fc_out(output)
-
         return output
 
     def _generate_point_mask(self, sz):
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     seq_length = 30
     num_seqs = 300
-    num_feats = 30
+    num_feats = 40
     num_dur_vals = 10
     mask_inds_num = 4
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     lr = 0.0005
 
-    data_r = torch.rand(seq_length, num_seqs, num_feats)
+    data_r = torch.rand(num_seqs, seq_length, num_feats)
     data = torch.zeros_like(data_r)
 
     note_inds = torch.max(data_r[:, :, :-num_dur_vals], 2).indices
@@ -118,11 +118,11 @@ if __name__ == '__main__':
     for i, j in product(range(seq_length), range(num_seqs)):
         ss = np.sqrt(3)
         ind = int((j * i * ss) % (num_feats - num_dur_vals))
-        data[i][j][ind] = 1
+        data[j][i][ind] = 1
     for i, j in product(range(seq_length), range(num_seqs)):
         ss = np.sqrt(2)
         ind = int((i + j * ss) % (num_dur_vals) + (num_feats - num_dur_vals))
-        data[i][j][ind] = 1
+        data[j][i][ind] = 1
 
     # inputs = torch.tensor(data[])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

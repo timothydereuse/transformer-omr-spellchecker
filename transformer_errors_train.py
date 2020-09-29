@@ -89,9 +89,9 @@ def loss_func(outputs, targets):
 def prepare_batch(batch):
     # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
     input, _ = mse.mask_indices(batch, **params.mask_indices_settings)
-    input = input.transpose(1, 0)
-    target = batch.transpose(1, 0)
-    return input, target
+    # input = input.transpose(1, 0)
+    # target = batch.transpose(1, 0)
+    return input, input
     # return batch.transpose(0, 1), batch.transpose(0, 1)
 
 
@@ -167,7 +167,7 @@ for epoch in range(params.num_epochs):
     scheduler.step(val_loss)
 
     if not epoch % params.save_img_every and epoch > 0:
-        ind_rand = np.random.choice(output.shape[1])
+        ind_rand = np.random.choice(output.shape[0])
         fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
