@@ -89,10 +89,7 @@ def loss_func(outputs, targets):
 def prepare_batch(batch):
     # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
     input, _ = mse.mask_indices(batch, **params.mask_indices_settings)
-    # input = input.transpose(1, 0)
-    # target = batch.transpose(1, 0)
     return input, input
-    # return batch.transpose(0, 1), batch.transpose(0, 1)
 
 
 def train_epoch(model, dloader):
@@ -114,7 +111,6 @@ def train_epoch(model, dloader):
         batch_loss = loss.item()
         total_loss += batch_loss
         num_seqs_used += input.shape[1]
-        # logging.info(f'batch {i} | loss {batch_loss}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss

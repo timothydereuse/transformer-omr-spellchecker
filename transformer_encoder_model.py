@@ -127,8 +127,8 @@ if __name__ == '__main__':
     # inputs = torch.tensor(data[])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     targets = data.to(device)
-    inputs, inds = mse.mask_indices(data.transpose(0, 1), mask_inds_num)
-    inputs = inputs.transpose(0, 1).to(device)
+    inputs, inds = mse.mask_indices(data, mask_inds_num)
+    inputs = inputs.to(device)
 
     model = TransformerBidirectionalModel(
         num_feats, d_model, hidden, nlayers, nhead, dropout).to(device)

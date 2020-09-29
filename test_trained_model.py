@@ -1,5 +1,5 @@
 import torch
-import transformer_full_seq_model as tfsm
+import transformer_encoder_model as tem
 import data_loaders as dl
 import plot_outputs as po
 import numpy as np
@@ -11,7 +11,7 @@ from importlib import reload
 reload(params)
 reload(mse)
 
-model_path = r'trained_models\transformer_2020-09-21 15-39_ep-50_512.128.2.pt'
+model_path = r'trained_models\transformer_best_2020-09-27 21-44_ep-100_1024.256.6.4.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 dset_path = params.dset_path
@@ -26,12 +26,14 @@ dset_tr = dl.MonoFolkSongDataset(
 dloader = DataLoader(dset_tr, batch_size=params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-model = tfsm.TransformerModel(
-    num_feats,
-    feedforward_size=params.ninp,
-    hidden=params.nhid,
-    nlayers=params.nlayers,
-    dropout=params.dropout).to(device)
+model = tem.TransformerBidirectionalModel(
+        num_feats=num_feats,
+        d_model=params.d_model,
+        hidden=params.hidden,
+        nlayers=params.nlayers,
+        nhead=params.nhead,
+        dropout=params.dropout
+        ).to(device)
 
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -48,14 +50,6 @@ def add_errors_to_batch(inp, positions):
     return inp
 
 
-def prepare_batch(batch):
-    input, target = mse.remove_indices(batch, **params.remove_indices_settings)
-    input = input.transpose(1, 0)
-    target = target.transpose(1, 0)
-    batch = batch.transpose(1, 0)
-    return input, target, batch
-
-
 def get_maxes(b):
     pitch_out = b[:, :, :-params.num_dur_vals]
     dur_out = b[:, :, -params.num_dur_vals:]
@@ -64,42 +58,74 @@ def get_maxes(b):
     return pitch_inds, dur_inds
 
 
+def accuracy_with_masks(input, target, mask_inds=None):
+    po, do = input
+    pt, dt = target
+    if mask_inds is not None:
+        x = mask_inds[:, 1]
+        y = mask_inds[:, 0]
+        po = po[x, y]
+        do = do[x, y]
+        pt = pt[x, y]
+        dt = dt[x, y]
+
+    pitch_diff = (po != pt).sum()
+    dur_diff = (do != dt).sum()
+    return pitch_diff.numpy(), dur_diff.numpy()
+
 model.eval()
-incorrect_dur = 0
-incorrect_pitch = 0
-total_dur = 0
-total_pitch = 0
+global_f_dur = 0
+global_f_pitch = 0
+global_total = 0
+mask_f_dur = 0
+mask_f_pitch = 0
+mask_total = 0
+rand_f_dur = 0
+rand_f_pitch = 0
+rand_total = 0
 with torch.no_grad():
     for i, batch in enumerate(dloader):
         batch = batch.float().to(device)
-        input, target, batch = prepare_batch(batch)
+        input, inds = mse.mask_indices(batch, **params.mask_indices_settings)
+        mask_inds, rand_inds = inds
+        input = input.transpose(1, 0)
+        target = batch.transpose(1, 0)
 
-        output = model(input, input)
+        output = model(input)
 
-        inds = (input.sum(2) == 0)[:, 0].nonzero().view(-1)
+        out_m = get_maxes(output)
+        tar_m = get_maxes(target)
 
-        pitch_o, dur_o = get_maxes(output)
-        pitch_t, dur_t = get_maxes(target)
+        pf, df = accuracy_with_masks(out_m, tar_m)
+        global_f_pitch += pf
+        global_f_dur += df
+        global_total += input[0].numel()
 
-        pitch_o = pitch_o[inds]
-        dur_o = dur_o[inds]
+        pf, df = accuracy_with_masks(out_m, tar_m, mask_inds)
+        mask_f_pitch += pf
+        mask_f_dur += df
+        mask_total += mask_inds.shape[0]
 
-        pitch_diff = (pitch_o != pitch_t).sum()
-        dur_diff = (dur_o != dur_t).sum()
-        incorrect_dur += dur_diff.numpy()
-        incorrect_pitch += pitch_diff.numpy()
+        pf, df = accuracy_with_masks(out_m, tar_m, rand_inds)
+        rand_f_pitch += pf
+        rand_f_dur += df
+        rand_total += rand_inds.shape[0]
 
-        total_dur += dur_o.numel()
-        total_pitch += pitch_o.numel()
+        print(pf, df)
 
-        print(incorrect_dur, incorrect_pitch)
+dur_acc = 1 - global_f_dur / global_total
+pitch_acc = 1 - global_f_pitch / global_total
 
-dur_acc = 1 - incorrect_dur / total_dur
-pitch_acc = 1 - incorrect_pitch / total_pitch
+mask_dur_acc = 1 - mask_f_dur / mask_total
+mask_pitch_acc = 1 - mask_f_pitch / mask_total
 
-print(f'pitch_accuracy: {pitch_acc} | dur_acc: {dur_acc}')
+rand_dur_acc = 1 - rand_f_dur / rand_total
+rand_pitch_acc = 1 - rand_f_pitch / rand_total
 
+print(f'global: pitch_accuracy: {pitch_acc} | dur_acc: {dur_acc}')
+print(f'mask: pitch_accuracy: {mask_pitch_acc} | dur_acc: {mask_dur_acc}')
+print(f'rand: pitch_accuracy: {rand_pitch_acc} | dur_acc: {rand_dur_acc}')
 
 ind_rand = np.random.choice(output.shape[1])
-fig, axs = po.plot(output, batch, ind_rand, params.num_dur_vals, input)
+fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, input)
 fig.show()

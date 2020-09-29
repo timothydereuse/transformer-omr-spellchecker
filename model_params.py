@@ -17,7 +17,7 @@ proportion_for_stats = 1
 # -- definition of transformer model structure
 d_model = 256           # the dimension of the internal transformer representation
 hidden = d_model * 4    # the dimension of the feedforward network
-nlayers = 6             # number of encoder/decoder layers
+nlayers = 8             # number of encoder/decoder layers
 nhead = 4               # number of attention heads
 dropout = 0.1           # dropout probability
 
@@ -27,8 +27,8 @@ num_epochs = 101                 # number of epochs to train for
 lr = 0.001                      # learning rate
 batch_size = 1000               # size of each batch
 lr_plateau_factor = 0.25
-lr_plateau_patience = 4
-lr_plateau_threshold = 0.01
+lr_plateau_patience = 3
+lr_plateau_threshold = 0.001
 clip_gradient_norm = 0.5
 save_model_every = 25           # save a new model every X epochs
 save_img_every = 5              # save a new test image from the validation set every X epochs

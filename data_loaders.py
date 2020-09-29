@@ -76,7 +76,7 @@ class MonoFolkSongDataset(IterableDataset):
 
     def __init__(self, dset_fname, seq_length, num_dur_vals, base=None, use_stats=None,
                  proportion_for_stats=0.5, shuffle_files=True, padding_amt=None,
-                 random_offsets=True, trial_run=False):
+                 random_offsets=True, random_transpose=6, trial_run=False):
         """
         @dset_fname - path to hdf5 file created by make_hdf5.py
         @seq_length - number of units to chop sequences into
@@ -98,6 +98,7 @@ class MonoFolkSongDataset(IterableDataset):
         self.random_offsets = random_offsets
         self.shuffle_files = shuffle_files
         self.trial_run = trial_run
+        self.random_transpose = random_transpose
 
         self.flags = params.flags
 
@@ -143,6 +144,17 @@ class MonoFolkSongDataset(IterableDataset):
     def get_stats(self):
         return (self.pitch_range, self.delta_mapping)
 
+    def apply_transposition(self, x):
+        cx = x[:]
+        real_pitches = cx[:, 0][cx[:, 0] > 0]
+        upper_leeway = self.pitch_range[1] - max(real_pitches)
+        lower_leeway = min(real_pitches) - self.pitch_range[0]
+        upper_leeway = min(self.random_transpose, upper_leeway)
+        lower_leeway = min(self.random_transpose, lower_leeway)
+        transp_amt = np.random.randint(-lower_leeway, upper_leeway)
+        cx[:, 0][cx[:, 0] > 0] += transp_amt
+        return cx
+
     def __iter__(self):
         '''
         Main iteration function.
@@ -154,6 +166,8 @@ class MonoFolkSongDataset(IterableDataset):
         # iterate through all given fnames, breaking them into chunks of seq_length...
         for fname in self.fnames:
             x = self.f[fname]
+
+            x = self.apply_transposition(x)
             runlength = fcts.arr_to_runlength_mono(
                 x, self.delta_mapping, self.pitch_range, self.flags)
 
