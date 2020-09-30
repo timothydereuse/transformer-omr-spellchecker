@@ -3,6 +3,7 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
+import model_params as params
 
 
 class PositionalEncoding(nn.Module):
@@ -49,7 +50,7 @@ class TransformerBidirectionalModel(nn.Module):
 
     def make_len_mask(self, inp):
         # data points are padding iff the first and last elements of the feature vector are 1
-        res = inp[:, :, 0] * inp[:, :, -1]
+        res = inp[:, :, params.flags['pad']].sum(2) == 2
         return res.to(torch.bool)
 
     def forward(self, src):
