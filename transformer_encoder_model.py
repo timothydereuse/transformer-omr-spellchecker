@@ -56,7 +56,7 @@ class TransformerBidirectionalModel(nn.Module):
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != src.shape[1]:
             self.src_mask = None
-            self.src_mask = self._generate_point_mask(src.shape[1]).to(src.device)
+            # self.src_mask = self._generate_point_mask(src.shape[1]).to(src.device)
 
         src_pad_mask = self.make_len_mask(src)
 

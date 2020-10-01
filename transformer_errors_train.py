@@ -88,8 +88,8 @@ def loss_func(outputs, targets):
 
 def prepare_batch(batch):
     # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
-    input, _ = mse.mask_indices(batch, **params.mask_indices_settings)
-    return input, input
+    inp, _ = mse.mask_indices(batch, **params.mask_indices_settings)
+    return inp, batch
 
 
 def train_epoch(model, dloader):

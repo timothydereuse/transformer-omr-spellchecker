@@ -11,7 +11,7 @@ from importlib import reload
 reload(params)
 reload(mse)
 
-model_path = r'trained_models\transformer_best_2020-09-27 21-44_ep-100_1024.256.6.4.pt'
+model_path = r'trained_models\transformer_best_2020-09-30 15-19_ep-160_1024.256.6.4.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 dset_path = params.dset_path
@@ -51,19 +51,19 @@ def add_errors_to_batch(inp, positions):
 
 
 def get_maxes(b):
-    pitch_out = b[:, :, :-params.num_dur_vals]
-    dur_out = b[:, :, -params.num_dur_vals:]
+    pitch_out = b[:, :, :dset_tr.pitch_subvector_len]
+    dur_out = b[:, :, -dset_tr.dur_subvector_len:]
     pitch_inds = pitch_out.max(2).indices
     dur_inds = dur_out.max(2).indices
     return pitch_inds, dur_inds
 
 
-def accuracy_with_masks(input, target, mask_inds=None):
-    po, do = input
-    pt, dt = target
+def accuracy_with_masks(out, tar, mask_inds=None):
+    po, do = out
+    pt, dt = tar
     if mask_inds is not None:
-        x = mask_inds[:, 1]
-        y = mask_inds[:, 0]
+        y = mask_inds[:, 1]
+        x = mask_inds[:, 0]
         po = po[x, y]
         do = do[x, y]
         pt = pt[x, y]
@@ -88,18 +88,18 @@ with torch.no_grad():
         batch = batch.float().to(device)
         input, inds = mse.mask_indices(batch, **params.mask_indices_settings)
         mask_inds, rand_inds = inds
-        input = input.transpose(1, 0)
-        target = batch.transpose(1, 0)
+        target = batch
 
         output = model(input)
 
         out_m = get_maxes(output)
         tar_m = get_maxes(target)
+        # inp_m = get_maxes(input)
 
         pf, df = accuracy_with_masks(out_m, tar_m)
         global_f_pitch += pf
         global_f_dur += df
-        global_total += input[0].numel()
+        global_total += out_m[0].numel()
 
         pf, df = accuracy_with_masks(out_m, tar_m, mask_inds)
         mask_f_pitch += pf
