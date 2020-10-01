@@ -89,7 +89,8 @@ def loss_func(outputs, targets):
 def prepare_batch(batch):
     # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
     inp, _ = mse.mask_indices(batch, **params.mask_indices_settings)
-    return inp, batch
+    target = batch
+    return inp, target
 
 
 def train_epoch(model, dloader):
@@ -110,7 +111,7 @@ def train_epoch(model, dloader):
 
         batch_loss = loss.item()
         total_loss += batch_loss
-        num_seqs_used += input.shape[1]
+        num_seqs_used += input.shape[0]
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
@@ -136,7 +137,7 @@ for epoch in range(params.num_epochs):
             input, target = prepare_batch(batch)
             output = model(input)
             val_loss += len(input) * loss_func(output, target).item()
-            num_entries += batch.shape[1]
+            num_entries += batch.shape[0]
     val_loss /= num_entries
     val_losses.append(val_loss)
 
@@ -162,6 +163,7 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
+    # save an image
     if not epoch % params.save_img_every and epoch > 0:
         ind_rand = np.random.choice(output.shape[0])
         fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
@@ -169,13 +171,21 @@ for epoch in range(params.num_epochs):
         plt.clf()
         plt.close(fig)
 
+    # save a model checkpoint
     if not params.trial_run and not epoch % params.save_model_every and epoch > 0:
         m_name = (
             f'transformer_{params.start_training_time}'
             f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
         torch.save(cur_model, m_name)
 
+    # early stopping
+    best_val_loss = min(val_losses)
+    if all([x > best_val_loss for x in val_losses[params.early_stopping_patience:]]):
+        logging.info('stopping early at epoch {epoch}: best val loss was {best_val_loss}')
+        break
+
+best_epoch = best_model['epoch']
 m_name = (
     f'transformer_best_{params.start_training_time}'
-    f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
+    f'_ep-{best_epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
 torch.save(best_model, m_name)
