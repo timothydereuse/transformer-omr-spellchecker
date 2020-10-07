@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
+import test_trained_model as ttm
 import transformer_encoder_model as tem
 import make_supervised_examples as mse
 from importlib import reload
@@ -22,6 +23,7 @@ reload(fcts)
 reload(tem)
 reload(params)
 reload(mse)
+reload(ttm)
 
 logging.info('defining datasets...')
 dset_tr = dl.MonoFolkSongDataset(
@@ -122,9 +124,9 @@ start_time = time.time()
 val_losses = []
 best_model = None
 for epoch in range(params.num_epochs):
-    model.train()
 
     # perform training epoch
+    model.train()
     cur_loss = train_epoch(model, dloader)
 
     # test on validation set
@@ -141,6 +143,7 @@ for epoch in range(params.num_epochs):
     val_loss /= num_entries
     val_losses.append(val_loss)
 
+    # keep snapshot of best model
     cur_model = {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -149,7 +152,6 @@ for epoch in range(params.num_epochs):
             'dset_stats': dset_tr.get_stats(),
             'val_losses': val_losses
             }
-
     if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
         best_model = copy.deepcopy(cur_model)
 
@@ -179,13 +181,32 @@ for epoch in range(params.num_epochs):
         torch.save(cur_model, m_name)
 
     # early stopping
-    best_val_loss = min(val_losses)
-    if all([x > best_val_loss for x in val_losses[params.early_stopping_patience:]]):
-        logging.info('stopping early at epoch {epoch}: best val loss was {best_val_loss}')
+    time_since_best = epoch - val_losses.index(min(val_losses))
+    if time_since_best > params.early_stopping_patience:
+        logging.info(f'stopping early at epoch {epoch}')
         break
 
+# if max_epochs reached, or early stopping condition reached, save best model
 best_epoch = best_model['epoch']
 m_name = (
     f'transformer_best_{params.start_training_time}'
     f'_ep-{best_epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
 torch.save(best_model, m_name)
+
+logging.info('testing best model...')
+dset_tst = dl.MonoFolkSongDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='test',
+    num_dur_vals=params.num_dur_vals,
+    use_stats=dset_tr.get_stats())
+
+model.load_state_dict(best_model['model_state_dict'])
+res_dict, output = ttm.eval_model(model, dset_tst, device)
+
+logging.info((
+    'global: pitch_accuracy: {pitch_acc} | dur_acc: {dur_acc}\n'
+    'mask: pitch_accuracy: {mask_pitch_acc} | dur_acc: {mask_dur_acc}\n'
+    'rand: pitch_accuracy: {rand_pitch_acc} | dur_acc: {rand_dur_acc}\n'
+    ).format(**res_dict)
+)

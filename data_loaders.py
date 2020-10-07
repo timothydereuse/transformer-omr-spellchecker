@@ -145,6 +145,8 @@ class MonoFolkSongDataset(IterableDataset):
         return (self.pitch_range, self.delta_mapping)
 
     def apply_transposition(self, x):
+        if not self.random_transpose:
+            return x
         cx = x[:]
         real_pitches = cx[:, 0][cx[:, 0] > 0]
         upper_leeway = self.pitch_range[1] - max(real_pitches)

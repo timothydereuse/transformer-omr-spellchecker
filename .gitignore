@@ -7,6 +7,7 @@ __pycache__/
 *.xlsx
 out_imgs/*
 midi_degradation_toolkit
+ext_tools/*
 
 # C extensions
 *.so
