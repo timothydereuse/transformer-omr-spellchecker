@@ -22,10 +22,10 @@ nhead = 2               # number of attention heads
 dropout = 0.1           # dropout probability
 
 # -- training parameters
-trial_run = False               # sets dataset to be comically small, for testing.
+trial_run = True               # sets dataset to be comically small, for testing.
 num_epochs = 100                # number of epochs to train for
 lr = 0.001                      # learning rate
-batch_size = 512                # size of each batch
+batch_size = 2048               # size of each batch
 lr_plateau_factor = 0.25
 lr_plateau_patience = 5
 lr_plateau_threshold = 0.002

@@ -35,19 +35,25 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     masked language model procedure used in original BERT paper to train bidirectional tranformer.
     '''
     seq_len = inp.shape[1]
+    batch_size = inp.shape[0]
 
     # make list of indices to mask / corrupt; select exactly @num_indices from each sequence
-    inds_selected = np.array([
-        list(zip(
-            [x] * num_indices,
-            np.random.choice(seq_len, num_indices, False)
-        ))
-        for x in range(inp.shape[0])
-    ]).reshape(-1, 2)
+
+    inds_selected = []
+    inds_left = []
+
+    for i in range(batch_size):
+        inds = np.arange(seq_len)
+        np.random.shuffle(inds)
+        inds_selected += list(zip([i] * num_indices, inds[:num_indices]))
+        inds_left += list(zip([i] * (seq_len - num_indices), inds[num_indices:]))
+
+    inds_selected = np.array(inds_selected)
+    inds_left = np.array(inds_left)
 
     np.random.shuffle(inds_selected)
-    num_rand = int(prob_random * inds_selected.shape[0])
-    num_same = int(prob_same * inds_selected.shape[0])
+    num_rand = int(prob_random * len(inds_selected))
+    num_same = int(prob_same * len(inds_selected))
 
     inds_rand = inds_selected[:num_rand]
     inds_mask = inds_selected[num_rand:-num_same]
@@ -66,7 +72,7 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     mask_element = torch.tensor(mask_element).to(output.device).float()
     output[inds_mask[:, 0], inds_mask[:, 1]] = mask_element
 
-    return output, (inds_mask, inds_rand)
+    return output, (inds_mask, inds_rand, inds_left)
 
 
 if __name__ == '__main__':
