@@ -82,6 +82,28 @@ def eval_model(model, dset, device='cpu'):
     return res, output
 
 
+def results_string(res_dict, with_params=False):
+    m_str = '\n'
+    for k in res_dict.keys():
+        da = res_dict[k]['dur_acc']
+        asdf = ', '.join([f'{(e * 100):1.2f}' for e in da])
+        label = f'{k}_dur_accuracy:'
+        m_str += f'{label: <22} {asdf}\n'
+
+        pa = res_dict[k]['pitch_acc']
+        asdf = ', '.join([f'{(e * 100):1.2f}' for e in pa])
+        label = f'{k}_pitch_accuracy:'
+        m_str += f'{label: <22} {asdf}\n\n'
+
+    if with_params:
+        with open('model_params.py') as f:
+            p = f.read()
+        m_str += '\n -- PARAMETER FILE USED -- \n'
+        m_str += p
+
+    return m_str
+
+
 if __name__ == '__main__':
     model_path = r'trained_models\transformer_best_2020-10-07 15-02_ep-99_512.256.3.2.pt'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -118,6 +140,8 @@ if __name__ == '__main__':
     # print(f'rand: pitch_accuracy: {rand_pitch_acc} | dur_acc: {rand_dur_acc}')
 
     res_dict, output = eval_model(model, dset_tr, device)
+    print(results_string(res_dict))
+
 
     # ind_rand = np.random.choice(output.shape[1])
     # fig, axs = po.plot(output, target, ind_rand, params.num_dur_vals, input)

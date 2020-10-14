@@ -174,7 +174,7 @@ for epoch in range(params.num_epochs):
         plt.close(fig)
 
     # save a model checkpoint
-    if not params.trial_run and not epoch % params.save_model_every and epoch > 0:
+    if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
         m_name = (
             f'transformer_{params.start_training_time}'
             f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
@@ -204,9 +204,5 @@ dset_tst = dl.MonoFolkSongDataset(
 model.load_state_dict(best_model['model_state_dict'])
 res_dict, output = ttm.eval_model(model, dset_tst, device)
 
-logging.info((
-    'global: pitch_accuracy: {pitch_acc} | dur_acc: {dur_acc}\n'
-    'mask: pitch_accuracy: {mask_pitch_acc} | dur_acc: {mask_dur_acc}\n'
-    'rand: pitch_accuracy: {rand_pitch_acc} | dur_acc: {rand_dur_acc}\n'
-    ).format(**res_dict)
-)
+with open(params.results_fname, 'w') as f:
+    f.write(ttm.results_string(res_dict, with_params=True))

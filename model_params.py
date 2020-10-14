@@ -21,25 +21,8 @@ nlayers = 3             # number of encoder/decoder layers
 nhead = 2               # number of attention heads
 dropout = 0.1           # dropout probability
 
-# -- training parameters
-trial_run = True               # sets dataset to be comically small, for testing.
-num_epochs = 100                # number of epochs to train for
-lr = 0.001                      # learning rate
-batch_size = 2048               # size of each batch
-lr_plateau_factor = 0.25
-lr_plateau_patience = 5
-lr_plateau_threshold = 0.002
-clip_gradient_norm = 0.5
-early_stopping_patience = 25    # abort training if it's been this long since best model
-save_model_every = 1000           # save a new model every X epochs
-save_img_every = 5              # save a new test image from the validation set every X epochs
-
-
 # -- data augmentation
-remove_indices_settings = {
-    'mode': 'center',
-    'num_indices': 1
-}
+
 mask_indices_settings = {
     'num_indices': int(seq_length * 0.15),
     'prob_random': 0.05,
@@ -47,10 +30,27 @@ mask_indices_settings = {
     'continguous': False
 }
 
+# -- training parameters
+trial_run = True               # sets dataset to be comically small, for testing.
+num_epochs = 10                # number of epochs to train for
+lr = 0.001                      # learning rate
+batch_size = 2048               # size of each batch
+lr_plateau_factor = 0.25
+lr_plateau_patience = 5
+lr_plateau_threshold = 0.002
+clip_gradient_norm = 0.5
+early_stopping_patience = 25    # abort training if it's been this long since best model
+save_model_every = 1000         # save a new model every X epochs
+save_img_every = 5              # save a new test image from the validation set every X epochs
+
+
 # -- logging
 import logging, datetime
 start_training_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M")
-logging.basicConfig(filename='transformer_train.log', filemode='w', level=logging.INFO,
+log_fname = f'./logs/training_{start_training_time}.log'
+results_fname = f'./logs/test_results_{start_training_time}.log'
+
+logging.basicConfig(filename=log_fname, filemode='w', level=logging.INFO,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
 if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
     logging.getLogger().addHandler(logging.StreamHandler())
@@ -61,4 +61,10 @@ flags = {
     'eos': [0, -2],
     'mask': [0, -3],
     'pad': [0, -4]
+}
+
+# deprecated
+remove_indices_settings = {
+    'mode': 'center',
+    'num_indices': 1
 }
