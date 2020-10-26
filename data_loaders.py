@@ -122,7 +122,7 @@ class MonoFolkSongDataset(IterableDataset):
         expected_shape = 2 if self.use_duration else 1
         real_shape = len(self.f[self.fnames[0]].shape)
         assert real_shape == expected_shape, \
-            f"num_dur_vals = {num_dur_vals} but shape of data is {real_shape}, not {expected_shape}"
+            f"num_dur_vals = {num_dur_vals} but dimensionality of data is {real_shape}, not {expected_shape}"
 
         if use_stats is not None:
             self.pitch_range = use_stats[0]

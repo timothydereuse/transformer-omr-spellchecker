@@ -72,20 +72,24 @@ dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
 def loss_func(outputs, targets, pitch_criterion, dur_criterion):
     ndv = dset_tr.dur_subvector_len
-    pitch_targets = targets[:, :, :-ndv]
-    dur_targets = targets[:, :, -ndv:]
 
-    pitches = outputs[:, :, :-ndv]
+    pitch_targets = targets[:, :, :-ndv] if ndv > 0 else targets
+    pitches = outputs[:, :, :-ndv] if ndv > 0 else outputs
     pitches = pitches.view(-1, pitches.shape[-1])
-    durs = outputs[:, :, -ndv:]
-    durs = durs.view(-1, durs.shape[-1])
-
     pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
-    dur_targets_inds = dur_targets.reshape(-1, ndv).max(1).indices
-
     pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
-    dur_loss = dur_criterion(durs, dur_targets_inds)
-    return pitch_loss + dur_loss
+
+    if ndv > 0:
+        dur_targets = targets[:, :, -ndv:]
+        durs = outputs[:, :, -ndv:]
+        durs = durs.view(-1, durs.shape[-1])
+        dur_targets_inds = dur_targets.reshape(-1, ndv).max(1).indices
+        dur_loss = dur_criterion(durs, dur_targets_inds)
+        res = pitch_loss + dur_loss
+    else:
+        res = pitch_loss
+
+    return res
 
 
 def prepare_batch(batch):

@@ -24,11 +24,16 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     axs[0].imshow(full_out.T)
     axs[0].set_title('Raw Transformer \n Reconstruction')
 
-    pitch_out = outputs[:, :, :-num_dur_vals]
-    dur_out = outputs[:, :, -num_dur_vals:]
-    do_pr = get_pr(dur_out, ind)
-    po_pr = get_pr(pitch_out, ind)
-    pro = np.concatenate([po_pr, do_pr], 1)
+    if num_dur_vals > 0:
+        pitch_out = outputs[:, :, :-num_dur_vals]
+        dur_out = outputs[:, :, -num_dur_vals:]
+        do_pr = get_pr(dur_out, ind)
+        po_pr = get_pr(pitch_out, ind)
+        pro = np.concatenate([po_pr, do_pr], 1)
+    else:
+        pro = get_pr(outputs, ind)
+
+
     axs[1].imshow(pro.T)
     axs[1].set_title('Thresholded \n Reconstruction')
 
@@ -37,14 +42,16 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     axs[2].set_title('Ground Truth')
 
     if errored is not None:
-        pitch_out = errored[:, :, :-num_dur_vals]
-        dur_out = errored[:, :, -num_dur_vals:]
-        do_pr = dur_out[ind].cpu().detach().numpy()
-        po_pr = pitch_out[ind].cpu().detach().numpy()
-        pro = np.concatenate([po_pr, do_pr], 1)
+        if num_dur_vals > 0:
+            pitch_out = errored[:, :, :-num_dur_vals]
+            dur_out = errored[:, :, -num_dur_vals:]
+            do_pr = dur_out[ind].cpu().detach().numpy()
+            po_pr = pitch_out[ind].cpu().detach().numpy()
+            pro = np.concatenate([po_pr, do_pr], 1)
+        else:
+            pro = get_pr(errored, ind)
         axs[3].imshow(pro.T)
         axs[3].set_title('Input \n (with errors)')
-
 
     return fig, axs
 
