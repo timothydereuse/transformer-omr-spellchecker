@@ -118,22 +118,30 @@ class MonoFolkSongDataset(IterableDataset):
         self.num_dur_vals = num_dur_vals
         self.use_duration = (num_dur_vals > 0)
 
+        # make sure shape of data makes sense with parameters:
+        expected_shape = 2 if self.use_duration else 1
+        real_shape = len(self.f[self.fnames[0]].shape)
+        assert real_shape == expected_shape, \
+            f"num_dur_vals = {num_dur_vals} but shape of data is {real_shape}, not {expected_shape}"
+
         if use_stats is not None:
             self.pitch_range = use_stats[0]
             self.delta_mapping = use_stats[1]
-        elif num_dur_vals > 0:
+        elif self.use_duration:
             dmap, prange = get_tick_deltas_for_runlength(
                 self.f, self.fnames, num_dur_vals, proportion_for_stats)
             self.delta_mapping = dmap
             self.pitch_range = prange
+        else:
+            self.pitch_range = get_pitch_range_no_duration(self.f, self.fnames, proportion_for_stats)
+            self.delta_mapping = None
 
+        if self.use_duration:
             # the number of features is this sum plus 2 (one for an off-by-one error caused by
             # the pitch range being inclusive, one for the 'rest' message)
             self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2
             self.dur_subvector_len = self.num_dur_vals + len(self.flags)
         else:
-            self.pitch_range = get_pitch_range_no_duration(self.f, self.fnames, proportion_for_stats)
-            self.delta_mapping = None
             self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2 + len(self.flags)
             self.dur_subvector_len = 0
 

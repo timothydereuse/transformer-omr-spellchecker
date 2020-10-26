@@ -70,7 +70,7 @@ pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
 
-def loss_func(outputs, targets):
+def loss_func(outputs, targets, pitch_criterion, dur_criterion):
     ndv = dset_tr.dur_subvector_len
     pitch_targets = targets[:, :, :-ndv]
     dur_targets = targets[:, :, -ndv:]
@@ -106,7 +106,7 @@ def train_epoch(model, dloader):
         optimizer.zero_grad()
         output = model(input)
 
-        loss = loss_func(output, target)
+        loss = loss_func(output, target, pitch_criterion, dur_criterion)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
@@ -138,7 +138,8 @@ for epoch in range(params.num_epochs):
             batch = batch.float().to(device)
             input, target = prepare_batch(batch)
             output = model(input)
-            val_loss += len(input) * loss_func(output, target).item()
+            batch_loss = loss_func(output, target, pitch_criterion, dur_criterion).item()
+            val_loss += len(input) * batch_loss
             num_entries += batch.shape[0]
     val_loss /= num_entries
     val_losses.append(val_loss)
