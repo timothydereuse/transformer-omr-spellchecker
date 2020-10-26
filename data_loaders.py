@@ -48,12 +48,18 @@ def get_tick_deltas_for_runlength(f, fnames, num_dur_vals=16, proportion=0.5):
     return deltas, pitch_range
 
 
-def get_class_weights(inp):
-    class_sums = torch.sum(inp, (0, 1))
-    class_sums = (class_sums + 1) / max(class_sums)
-    weights = 1 / (class_sums)
-    return weights
+def get_pitch_range_no_duration(f, fnames, proportion=0.5):
+    num_choice = int(proportion * len(fnames))
+    fnames = np.random.choice(fnames, num_choice, replace=False)
+    pitch_c = Counter()
 
+    for i, fname in enumerate(fnames):
+        arr = f[fname]
+        all_pitches = [x for x in arr if x > 0]
+        pitch_c.update(all_pitches)
+
+    pitch_range = (min(pitch_c.keys()), max(pitch_c.keys()))
+    return pitch_range
 
 def all_hdf5_keys(obj):
     '''
@@ -110,20 +116,27 @@ class MonoFolkSongDataset(IterableDataset):
             self.fnames = self.fnames[:100]
 
         self.num_dur_vals = num_dur_vals
+        self.use_duration = (num_dur_vals > 0)
 
-        if use_stats is None:
+        if use_stats is not None:
+            self.pitch_range = use_stats[0]
+            self.delta_mapping = use_stats[1]
+        elif num_dur_vals > 0:
             dmap, prange = get_tick_deltas_for_runlength(
                 self.f, self.fnames, num_dur_vals, proportion_for_stats)
             self.delta_mapping = dmap
             self.pitch_range = prange
-        else:
-            self.pitch_range = use_stats[0]
-            self.delta_mapping = use_stats[1]
 
-        # the number of features is this sum plus 2 (one for an off-by-one error caused by
-        # the pitch range being inclusive, one for the 'rest' message)
-        self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2
-        self.dur_subvector_len = self.num_dur_vals + len(self.flags)
+            # the number of features is this sum plus 2 (one for an off-by-one error caused by
+            # the pitch range being inclusive, one for the 'rest' message)
+            self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2
+            self.dur_subvector_len = self.num_dur_vals + len(self.flags)
+        else:
+            self.pitch_range = get_pitch_range_no_duration(self.f, self.fnames, proportion_for_stats)
+            self.delta_mapping = None
+            self.pitch_subvector_len = self.pitch_range[1] - self.pitch_range[0] + 2 + len(self.flags)
+            self.dur_subvector_len = 0
+
         self.num_feats = self.pitch_subvector_len + self.dur_subvector_len
 
         padding_element = np.zeros([self.num_feats])
@@ -169,9 +182,9 @@ class MonoFolkSongDataset(IterableDataset):
         for fname in self.fnames:
             x = self.f[fname]
 
-            x = self.apply_transposition(x)
+            # x = self.apply_transposition(x)
             runlength = fcts.arr_to_runlength_mono(
-                x, self.delta_mapping, self.pitch_range, self.flags)
+                x, self.delta_mapping, self.pitch_range, self.flags, self.use_duration)
 
             # pad runlength encoding on both sides
             padded_rl = np.concatenate([
@@ -217,8 +230,8 @@ class MonoFolkSongDataset(IterableDataset):
 
 
 if __name__ == '__main__':
-    fname = 'essen_meertens_songs.hdf5'
-    num_dur_vals = 10
+    fname = 'synthetic_repetition_dset.hdf5'
+    num_dur_vals = 0
     seq_len = 30
     proportion = 0.2
     dset = MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,

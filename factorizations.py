@@ -111,12 +111,13 @@ def arr_to_runlength(arr, deltas, pitch_range, monophonic=False):
     return run_length
 
 
-def arr_to_runlength_mono(arr, deltas, pitch_range, flags):
-    pitches = arr[:, 0]
-    # onsets = arr[:, 1]
-    durs = arr[:, 2]
+def arr_to_runlength_mono(arr, deltas, pitch_range, flags, with_duration=True):
+
+    pitches = arr[:, 0] if with_duration else arr[:]
     num_notes = len(pitches)
-    # ends = onsets + durs
+
+    # make empty flags
+    empty_flags = np.zeros((num_notes, len(flags)))
 
     # set rests to be one pitch higher than the pitch range.
     pitches[pitches != 0] = np.clip(pitches[pitches != 0], pitch_range[0], pitch_range[1])
@@ -128,19 +129,20 @@ def arr_to_runlength_mono(arr, deltas, pitch_range, flags):
     pitch_inds = list(np.stack([np.arange(0, num_notes), pitches], 0))
     pitch_mat[tuple(pitch_inds)] = 1
 
-    # get indices for duration by taking difference of delta mapping keys and durs
-    asdf = np.reshape(np.repeat(deltas, num_notes), [-1, num_notes])
-    asdf = np.abs(asdf - durs)
-    dur_locs = np.argmin(asdf, 0)
+    if with_duration:
+        durs = arr[:, 2]
+        # get indices for duration by taking difference of delta mapping keys and durs
+        asdf = np.reshape(np.repeat(deltas, num_notes), [-1, num_notes])
+        asdf = np.abs(asdf - durs)
+        dur_locs = np.argmin(asdf, 0)
 
-    # apply it to the duration matrix in the same way as we did with pitches
-    dur_inds = list(np.stack([np.arange(0, num_notes), dur_locs], 0))
-    dur_mat = np.zeros([num_notes, len(deltas)])
-    dur_mat[tuple(dur_inds)] = 1
-
-    # make empty flags
-    empty_flags = np.zeros((num_notes, len(flags)))
-    res = np.concatenate([pitch_mat, dur_mat, empty_flags], 1)
+        # apply it to the duration matrix in the same way as we did with pitches
+        dur_inds = list(np.stack([np.arange(0, num_notes), dur_locs], 0))
+        dur_mat = np.zeros([num_notes, len(deltas)])
+        dur_mat[tuple(dur_inds)] = 1
+        res = np.concatenate([pitch_mat, dur_mat, empty_flags], 1)
+    else:
+        res = np.concatenate([pitch_mat, empty_flags], 1)
 
     return res
 
