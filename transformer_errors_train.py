@@ -210,4 +210,4 @@ model.load_state_dict(best_model['model_state_dict'])
 res_dict, output = ttm.eval_model(model, dset_tst, device)
 
 with open(params.results_fname, 'w') as f:
-    f.write(ttm.results_string(res_dict, with_params=True))
+    f.write(ttm.results_string(res_dict, with_params=True, use_duration=dset_tr.use_duration))

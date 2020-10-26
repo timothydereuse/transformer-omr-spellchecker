@@ -82,18 +82,21 @@ def eval_model(model, dset, device='cpu'):
     return res, output
 
 
-def results_string(res_dict, with_params=False):
+def results_string(res_dict, with_params=False, use_duration=True):
     m_str = '\n'
     for k in res_dict.keys():
-        da = res_dict[k]['dur_acc']
-        asdf = ', '.join([f'{(e * 100):1.2f}' for e in da])
-        label = f'{k}_dur_accuracy:'
-        m_str += f'{label: <22} {asdf}\n'
-
         pa = res_dict[k]['pitch_acc']
         asdf = ', '.join([f'{(e * 100):1.2f}' for e in pa])
         label = f'{k}_pitch_accuracy:'
         m_str += f'{label: <22} {asdf}\n\n'
+
+        if not use_duration:
+            continue
+
+        da = res_dict[k]['dur_acc']
+        asdf = ', '.join([f'{(e * 100):1.2f}' for e in da])
+        label = f'{k}_dur_accuracy:'
+        m_str += f'{label: <22} {asdf}\n'
 
     if with_params:
         with open('model_params.py') as f:

@@ -24,7 +24,7 @@ mask_indices_settings = {
 
 # -- training parameters
 trial_run = True               # sets dataset to be comically small, for testing.
-num_epochs = 200                # number of epochs to train for
+num_epochs = 20                # number of epochs to train for
 lr = 0.0001                      # learning rate
 batch_size = 2048               # size of each batch
 lr_plateau_factor = 0.25
