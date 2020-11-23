@@ -4,10 +4,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import model_params as params
+import ext_tools.transformer as tr
+import copy
+
+
+def clones(module, N):
+    "Clone N identical layers of a module"
+    return torch.nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=150):
+    def __init__(self, d_model, dropout=0.1, max_len=500):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -24,18 +31,19 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class TransformerBidirectionalModel(nn.Module):
-    def __init__(self, num_feats, d_model=100, hidden=100, nlayers=3, nhead=2, dropout=0.1):
-        super(TransformerBidirectionalModel, self).__init__()
+class MusicTransformerEncoderModel(nn.Module):
+    def __init__(self, num_feats, d_model=128, hidden=200, nlayers=3, nhead=2, dropout=0.1):
+        super(MusicTransformerEncoderModel, self).__init__()
 
-        self.encoder = nn.Sequential(
+        self.ff_encoder = nn.Sequential(
             nn.Linear(num_feats, d_model),
             nn.ReLU(),
         )
+
         self.pos_encoder = PositionalEncoding(d_model, dropout)
 
-        encoder_layers = nn.TransformerEncoderLayer(d_model, nhead, hidden, dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
+        encoder_layer = tr.DecoderLayer(d_model, nhead, hidden, dropout, relative_pos=True)
+        self.transformer_layers = clones(encoder_layer, nlayers)
 
         self.fc_out = nn.Sequential(
             nn.Linear(d_model, num_feats),
@@ -43,42 +51,16 @@ class TransformerBidirectionalModel(nn.Module):
 
         self.src_mask = None
 
-    def generate_square_subsequent_mask(self, sz):
-        mask = torch.triu(torch.ones(sz, sz), 1)
-        mask = mask.masked_fill(mask == 1, float('-inf'))
-        return mask
+    def forward(self, x):
+        x = self.ff_encoder(x)
 
-    def make_len_mask(self, inp):
-        # data points are padding iff the first and last elements of the feature vector are 1
-        res = inp[:, :, params.flags['pad']].sum(2) == 2
-        return res.to(torch.bool)
+        x = x.transpose(0, 1)
+        for layer in self.transformer_layers:
+            x = layer(x, mask=None)
+        x = x.transpose(0, 1)
 
-    def forward(self, src):
-        if self.src_mask is None or self.src_mask.size(0) != src.shape[1]:
-            self.src_mask = None
-            # self.src_mask = self._generate_point_mask(src.shape[1]).to(src.device)
-
-        src_pad_mask = self.make_len_mask(src)
-
-        src = self.encoder(src)
-
-        src = src.transpose(0, 1)
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(
-            src,
-            mask=self.src_mask,
-            src_key_padding_mask=src_pad_mask,
-        )
-        output = output.transpose(0, 1)
-
-        output = self.fc_out(output)
+        output = self.fc_out(x)
         return output
-
-    def _generate_point_mask(self, sz):
-        mask = torch.diag(torch.ones(sz))
-        # mask = torch.zeros(sz, sz)
-        # mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
 
 
 if __name__ == '__main__':
@@ -131,7 +113,7 @@ if __name__ == '__main__':
     inputs, inds = mse.mask_indices(data, mask_inds_num)
     inputs = inputs.to(device)
 
-    model = TransformerBidirectionalModel(
+    model = MusicTransformerEncoderModel(
         num_feats, d_model, hidden, nlayers, nhead, dropout).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params} on device {device}')
@@ -170,8 +152,8 @@ if __name__ == '__main__':
         output = model(inputs)
         output_dim = output.shape[-1]
 
-        # loss = full_loss(output.view(-1, output_dim), targets.view(-1, output_dim))
-        loss = loss_func(output, targets)
+        loss = full_loss(output.view(-1, output_dim), targets.view(-1, output_dim))
+        # loss = loss_func(output, targets)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
