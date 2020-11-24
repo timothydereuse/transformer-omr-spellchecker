@@ -165,6 +165,43 @@ def arr_to_note_tuple(arr):
     return res
 
 
+def pianoroll_to_runlength(x):
+    '''
+    takes in a pypianoroll object and turns it into a run-length encoding.
+    for now, it collapses all non-drum channels down into a single piano roll,
+    and ignores note velocity values.
+    '''
+    trs = [t.pianoroll for t in x.tracks if t.pianoroll.shape[0] > 0]
+    stack_pr = np.stack(trs).clip(0, 1)
+    reduced_pr = np.sum(stack_pr, 0)
+
+    # trim to minimum extent both vertically and horizontally
+    hz_proj = np.sum(reduced_pr, 1).nonzero()[0]
+    vt_proj = np.sum(reduced_pr, 0).nonzero()[0]
+    trim_pr = reduced_pr[hz_proj[0]:hz_proj[-1] + 1, vt_proj[0]:vt_proj[-1] + 1]
+
+    rl_arr = [trim_pr[0, :]]
+    deltas = []
+    sames = 0
+    last_n = 0
+    for n in range(1, trim_pr.shape[0]):
+
+        # if this timestep is the same as the last one, don't record it
+        if all(rl_arr[-1] == trim_pr[n, :]):
+            sames += 1
+            continue
+
+        # otherwise, make a new entry
+        new_entry = trim_pr[n, :]
+        rl_arr.append(new_entry)
+        deltas.append(n - last_n)
+        last_n = n
+    rl = np.stack(rl_arr)
+    deltas += [0]
+    deltas = np.expand_dims(np.array(deltas), 1)
+    rl = np.concatenate([deltas, rl], 1)
+
+
 if __name__ == '__main__':
     import data_loaders as dl
     import h5py

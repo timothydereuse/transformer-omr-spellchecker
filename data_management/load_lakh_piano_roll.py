@@ -20,30 +20,7 @@ for root, dirs, files in os.walk(lpr_root):
 
 
 x = ppr.load(all_fnames[5555])
-trs = [t.pianoroll for t in x.tracks if t.pianoroll.shape[0] > 0]
-stack_pr = np.stack(trs).clip(0, 1)
-reduced_pr = np.sum(stack_pr, 0)
 
-hz_proj = np.sum(reduced_pr, 1).nonzero()[0]
-vt_proj = np.sum(reduced_pr, 0).nonzero()[0]
-trim_pr = reduced_pr[hz_proj[0]:hz_proj[-1] + 1, vt_proj[0]:vt_proj[-1] + 1]
-
-rl_arr = [trim_pr[0, :]]
-deltas = []
-sames = 0
-last_n = 0
-for n in range(1, trim_pr.shape[0]):
-    if all(rl_arr[-1] == trim_pr[n, :]):
-        sames += 1
-        continue
-    new_entry = trim_pr[n, :]
-    rl_arr.append(new_entry)
-    deltas.append(n - last_n)
-    last_n = n
-rl = np.stack(rl_arr)
-deltas += [0]
-deltas = np.expand_dims(np.array(deltas), 1)
-rl = np.concatenate([deltas, rl], 1)
 
 def load_lmd_runlength(num, seq_length):
 
