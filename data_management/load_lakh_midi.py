@@ -12,8 +12,8 @@ import numpy as np
 reload(fcts)
 
 
-json_key = r"D:\Documents\lakh_midi_dataset\md5_to_paths.json"
-lmd_root = r"D:\Documents\lakh_midi_dataset\lmd_full"
+json_key = r"D:\Documents\datasets\lakh_midi_dataset\md5_to_paths.json"
+lmd_root = r"D:\Documents\datasets\lakh_midi_dataset\lmd_full"
 
 
 def get_midi_from_md5(md5):

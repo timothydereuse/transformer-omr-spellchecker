@@ -1,30 +1,30 @@
 # name of this set of parameters:
-params_name = 'TRIAL'
+params_name = 'NODUR_BASE'
 
 # -- definition of symbolic music representation
 num_dur_vals = 0   # number of duration values
 seq_length = 40     # length of song sequences
-padding_amt = 5    # max padding on both sides of a song
+padding_amt = 10    # max padding on both sides of a song
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
 d_model = 256          # the dimension of the internal transformer representation
 hidden = d_model * 2    # the dimension of the feedforward network
-nlayers = 2             # number of encoder/decoder layers
+nlayers = 4             # number of encoder/decoder layers
 nhead = 2               # number of attention heads
 dropout = 0.1           # dropout probability
 
 # -- data augmentation
 mask_indices_settings = {
-    'num_indices': int(seq_length * 0.15),
-    'prob_random': 0.05,
+    'num_indices': int(seq_length * 0.05),
+    'prob_random': 0.00,
     'prob_same': 0.15,
     'continguous': False
 }
 
 # -- training parameters
-trial_run = True               # sets dataset to be comically small, for testing.
-num_epochs = 20                # number of epochs to train for
+trial_run = False               # sets dataset to be comically small, for testing.
+num_epochs = 200                # number of epochs to train for
 lr = 0.0001                      # learning rate
 batch_size = 2048               # size of each batch
 lr_plateau_factor = 0.25
