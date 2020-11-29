@@ -3,6 +3,7 @@ import factorizations as fcts
 from importlib import reload
 from collections import Counter
 import torch
+import os
 import numpy as np
 import h5py
 import logging
@@ -60,6 +61,7 @@ def get_pitch_range_no_duration(f, fnames, proportion=0.5):
 
     pitch_range = (min(pitch_c.keys()), max(pitch_c.keys()))
     return pitch_range
+
 
 def all_hdf5_keys(obj):
     '''
@@ -235,6 +237,89 @@ class MonoFolkSongDataset(IterableDataset):
         pitch = sums[:-self.num_dur_vals].float()
         dur = sums[-self.num_dur_vals:].float()
         return pitch, dur
+
+
+class MidiNoteTupleDataset(IterableDataset):
+
+    def __init__(self, dset_fname, seq_length, base=None, shuffle_files=True,
+                 padding_amt=None, random_offsets=True, trial_run=False):
+        """
+        @dset_root -
+        @seq_length - number of units to chop sequences into
+        @fnames - a subset of the path names within the hdf5 file (optional)
+        @num_dur_vals - the number of most common duration values to calculate (optional)
+        @shuffle_files - randomizes order of loading songs from hdf5 file (optional)
+        @padding_amt - amount of padding to add to beginning and end of each song (optional,
+            default: @seq_length // 2)
+        @random_offsets - randomize start position of sequences (optional, default: true)
+        @trial_run - set to true to dramatically reduce size of dataset
+        """
+        super(MidiNoteTupleDataset).__init__()
+
+        self.dset_fname = dset_fname
+        self.seq_length = seq_length
+        self.random_offsets = random_offsets
+        self.shuffle_files = shuffle_files
+        self.trial_run = trial_run
+        self.flags = params.notetuple_flags
+
+        self.f = h5py.File(self.dset_fname, 'r')
+        if base is not None:
+            self.f = self.f[base]
+        self.fnames = all_hdf5_keys(self.f)
+        if trial_run:
+            self.fnames = self.fnames[:100]
+
+        self.num_feats = 3
+        padding_element = np.array(self.flags['pad'])
+
+        self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
+        self.padding_seq = np.stack(
+            [padding_element for _ in range(self.padding_amt)], 0)
+
+        self.sos_element = np.array([self.flags['sos']])
+        self.eos_element = np.array([self.flags['eos']])
+
+    def __iter__(self):
+        '''
+        Main iteration function.
+        '''
+
+        if self.shuffle_files:
+            np.random.shuffle(self.fnames)
+
+        # iterate through all given fnames, breaking them into chunks of seq_length...
+        for fname in self.fnames:
+            x = self.f[fname]
+
+            # no need to use a custom factorization, just extract the relevant columns
+            notetuples = x[:, 1:4]
+
+            # pad runlength encoding on both sides
+            padded_nt = np.concatenate([
+                self.padding_seq,
+                self.sos_element,
+                notetuples,
+                self.eos_element,
+                self.padding_seq
+                ])
+
+            # figure out how many sequences we can get out of this
+            num_seqs = np.floor(padded_nt.shape[0] / self.seq_length)
+
+            # check if the current file is too short to be used with the seq_length desired
+            if num_seqs == 0:
+                continue
+
+            remainder = padded_nt.shape[0] - (num_seqs * self.seq_length)
+            offset = np.random.randint(remainder + 1) if self.random_offsets else 0
+
+            # return sequences of notes from each file, seq_length in length.
+            # move to the next file when the current one has been exhausted.
+            for i in range(int(num_seqs)):
+                st = i * self.seq_length + offset
+                end = (i+1) * self.seq_length + offset
+                yield padded_nt[st:end]
 
 
 if __name__ == '__main__':
