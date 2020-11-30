@@ -5,7 +5,7 @@ import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
 import test_trained_model as ttm
-import transformer_encoder_model as tem
+import music_transformer_model as mtm
 import make_supervised_examples as mse
 from importlib import reload
 from torch.utils.data import DataLoader
@@ -20,26 +20,22 @@ import matplotlib.pyplot as plt
 
 reload(dl)
 reload(fcts)
-reload(tem)
+reload(mtm)
 reload(params)
 reload(mse)
 reload(ttm)
 
 logging.info('defining datasets...')
-dset_tr = dl.MonoFolkSongDataset(
+dset_tr = dl.MidiNoteTupleDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
-    num_dur_vals=params.num_dur_vals,
     base='train',
-    proportion_for_stats=params.proportion_for_stats,
     padding_amt=params.padding_amt,
     trial_run=params.trial_run)
-dset_vl = dl.MonoFolkSongDataset(
+dset_vl = dl.MidiNoteTupleDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
-    num_dur_vals=params.num_dur_vals,
     base='validate',
-    use_stats=dset_tr.get_stats(),
     padding_amt=params.padding_amt,
     trial_run=params.trial_run)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
@@ -47,7 +43,7 @@ dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = tem.TransformerBidirectionalModel(
+model = mtm.MusicTransformerEncoderModel(
         num_feats=num_feats,
         d_model=params.d_model,
         hidden=params.hidden,
@@ -66,36 +62,10 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             threshold=params.lr_plateau_threshold,
             verbose=True)
 
-pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
-dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
-
-
-def loss_func(outputs, targets, pitch_criterion, dur_criterion):
-    ndv = dset_tr.dur_subvector_len
-
-    pitch_targets = targets[:, :, :-ndv] if ndv > 0 else targets
-    pitches = outputs[:, :, :-ndv] if ndv > 0 else outputs
-    pitches = pitches.view(-1, pitches.shape[-1])
-    pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
-    pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
-
-    if ndv > 0:
-        dur_targets = targets[:, :, -ndv:]
-        durs = outputs[:, :, -ndv:]
-        durs = durs.view(-1, durs.shape[-1])
-        dur_targets_inds = dur_targets.reshape(-1, ndv).max(1).indices
-        dur_loss = dur_criterion(durs, dur_targets_inds)
-        res = pitch_loss + dur_loss
-    else:
-        res = pitch_loss
-
-    return res
-
+criterion = nn.BCEWithLogitsLoss(reduction='mean').to(device)
 
 def prepare_batch(batch):
-    # input, _ = mse.remove_indices(batch, **params.remove_indices_settings)
-    inp, _ = mse.mask_indices(batch, **params.mask_indices_settings)
-    target = batch
+    inp, target = mse.error_indices(batch, **params.error_indices_settings)
     return inp, target
 
 
@@ -110,7 +80,7 @@ def train_epoch(model, dloader):
         optimizer.zero_grad()
         output = model(input)
 
-        loss = loss_func(output, target, pitch_criterion, dur_criterion)
+        loss = criterion(output, target)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()

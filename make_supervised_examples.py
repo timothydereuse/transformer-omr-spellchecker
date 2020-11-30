@@ -85,18 +85,12 @@ def error_indices(inp, num_indices=5):
 
     means = inp.float().view(-1, 3).mean(0)
     stds = inp.float().view(-1, 3).std(0)
-
-    # make list of indices to mask / corrupt; select exactly @num_indices from each sequence
-
-    inds_selected = []
-    inds_left = []
-
     errored_indices = np.zeros([batch_size, seq_len])
 
     for i in range(batch_size):
         inds = np.arange(seq_len)
         np.random.shuffle(inds)
-        sel_inds = output[:num_indices]
+        sel_inds = inds[:num_indices]
         errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data

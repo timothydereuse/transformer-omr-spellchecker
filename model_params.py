@@ -22,6 +22,10 @@ mask_indices_settings = {
     'continguous': False
 }
 
+error_indices_settings = {
+    'num_indices': int(seq_length * 0.01),
+}
+
 # -- training parameters
 trial_run = False               # sets dataset to be comically small, for testing.
 num_epochs = 200                # number of epochs to train for
