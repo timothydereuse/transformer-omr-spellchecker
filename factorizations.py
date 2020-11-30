@@ -201,6 +201,7 @@ def pianoroll_to_runlength(x):
     deltas = np.expand_dims(np.array(deltas), 1)
     rl = np.concatenate([deltas, rl], 1)
 
+    return rl
 
 if __name__ == '__main__':
     import data_loaders as dl

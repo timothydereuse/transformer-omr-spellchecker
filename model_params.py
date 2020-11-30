@@ -4,14 +4,14 @@ params_name = 'BASE'
 # -- definition of symbolic music representation
 num_dur_vals = 0   # number of duration values
 seq_length = 300     # length of song sequences
-padding_amt = 10    # max padding on both sides of a song
+padding_amt = 50    # max padding on both sides of a song
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
-d_model = 64          # the dimension of the internal transformer representation
+d_model = 128          # the dimension of the internal transformer representation
 hidden = d_model * 4    # the dimension of the feedforward network
-nlayers = 3             # number of encoder/decoder layers
-nhead = 1               # number of attention heads
+nlayers = 6             # number of encoder/decoder layers
+nhead = 4               # number of attention heads
 depth_recurrence = 1    # number of passes through whole network
 dropout = 0.1           # dropout probability
 
@@ -28,7 +28,7 @@ error_indices_settings = {
 }
 
 # -- training parameters
-trial_run = True               # sets dataset to be comically small, for testing.
+trial_run = False               # sets dataset to be comically small, for testing.
 num_epochs = 200                # number of epochs to train for
 lr = 0.0001                      # learning rate
 batch_size = 64               # size of each batch
@@ -38,7 +38,7 @@ lr_plateau_threshold = 0.002
 clip_gradient_norm = 0.5
 early_stopping_patience = 25    # abort training if it's been this long since best model
 save_model_every = 1000         # save a new model every X epochs
-save_img_every = 10              # save a new test image from the validation set every X epochs
+save_img_every = 2              # save a new test image from the validation set every X epochs
 
 # -- paths to data
 raw_data_paths = {

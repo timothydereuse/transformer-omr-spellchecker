@@ -33,7 +33,6 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     else:
         pro = get_pr(outputs, ind)
 
-
     axs[1].imshow(pro.T)
     axs[1].set_title('Thresholded \n Reconstruction')
 
@@ -65,14 +64,16 @@ def plot_notetuple(inp, output, target):
         pr[i, int(n[2])] = 1
         pr[i, -1] = int(n[1] == 0)
 
-    axs[0].imshow(pr.T, aspect='auto', interpolation='none')
+    axs[0].imshow(pr.T, aspect='auto', interpolation=None)
     axs[0].set_title('Input (with errors)')
 
     trg = target.cpu().detach().numpy()
+    trg = np.stack([trg for _ in range(50)], 1)
     opt = torch.sigmoid(output).squeeze(-1).cpu().detach().numpy()
+    opt = np.stack([opt for _ in range(50)], 1)
 
-    locs = np.stack([trg, opt], 1)
-    axs[1].imshow(locs.T, aspect='auto', interpolation='none')
+    locs = np.concatenate([trg, opt], 1)
+    axs[1].imshow(locs.T, aspect='auto', interpolation=None)
     axs[1].set_title('Error locations + Predicted error locations')
 
     return fig, axs

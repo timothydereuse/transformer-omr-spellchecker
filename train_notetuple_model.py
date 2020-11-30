@@ -119,7 +119,7 @@ for epoch in range(params.num_epochs):
             batch = batch.float().to(device)
             inp, target = prepare_batch(batch)
             output = model(inp)
-            batch_loss = criterion(output.squeeze(2), target).item()
+            batch_loss = criterion(output.squeeze(-1), target).item()
             val_loss += len(inp) * batch_loss
             num_entries += batch.shape[0]
     val_loss /= num_entries
