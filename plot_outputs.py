@@ -56,6 +56,27 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     return fig, axs
 
 
+def plot_notetuple(inp, output, target):
+    fig, axs = plt.subplots(2, 1, figsize=(6, 8))
+
+    pr = np.zeros([inp.shape[0], 129])
+    # Iterate over note names, which will be converted to note number later
+    for i, n in enumerate(inp):
+        pr[i, int(n[2])] = 1
+        pr[i, -1] = int(n[1] == 0)
+
+    axs[0].imshow(pr.T, aspect='auto')
+    axs[0].set_title('Input (with errors)')
+
+    trg = target.cpu().detach().numpy()
+    opt = torch.sigmoid(output).squeeze(-1).cpu().detach().numpy()
+
+    locs = np.stack([trg, opt], 1)
+    axs[1].imshow(locs.T, aspect='auto')
+    axs[1].set_title('Error locations + Predicted error locations')
+
+    return fig, axs
+
 # pitch_data = data[:, :, :-num_dur_vals]
 # dur_data = data[:, :, -num_dur_vals:]
 # plot(pitch_output, dur_output, pitch_data, dur_data,  7)

@@ -50,6 +50,7 @@ model = mtm.MusicTransformerEncoderModel(
         nlayers=params.nlayers,
         nhead=params.nhead,
         dim_out=1,
+        depth_recurrence=params.depth_recurrence,
         dropout=params.dropout
         ).to(device)
 model_size = sum(p.numel() for p in model.parameters())
@@ -116,10 +117,10 @@ for epoch in range(params.num_epochs):
     with torch.no_grad():
         for i, batch in enumerate(dloader_val):
             batch = batch.float().to(device)
-            input, target = prepare_batch(batch)
-            output = model(input)
+            inp, target = prepare_batch(batch)
+            output = model(inp)
             batch_loss = criterion(output.squeeze(2), target).item()
-            val_loss += len(input) * batch_loss
+            val_loss += len(inp) * batch_loss
             num_entries += batch.shape[0]
     val_loss /= num_entries
     val_losses.append(val_loss)
@@ -146,13 +147,13 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
-    # # save an image
-    # if not epoch % params.save_img_every and epoch > 0:
-    #     ind_rand = np.random.choice(output.shape[0])
-    #     fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
-    #     fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
-    #     plt.clf()
-    #     plt.close(fig)
+    # save an image
+    if not epoch % params.save_img_every and epoch > 0:
+        ind_rand = np.random.choice(output.shape[0])
+        fig, axs = po.plot_notetuple(inp, output, target)
+        fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
+        plt.clf()
+        plt.close(fig)
     #
     # # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
