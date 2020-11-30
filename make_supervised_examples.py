@@ -94,8 +94,8 @@ def error_indices(inp, num_indices=5):
         errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = (torch.rand(num_indices, 3) * 2 - 1) * stds + means
-        output[i, sel_inds] = errors.round()
+        errors = torch.normal(0, 1, num_indices, 3) * stds + means
+        output[i, sel_inds] = errors.round().abs()
 
     return output, errored_indices
 
