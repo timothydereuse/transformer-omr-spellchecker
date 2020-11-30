@@ -49,6 +49,7 @@ model = mtm.MusicTransformerEncoderModel(
         hidden=params.hidden,
         nlayers=params.nlayers,
         nhead=params.nhead,
+        dim_out=1,
         dropout=params.dropout
         ).to(device)
 model_size = sum(p.numel() for p in model.parameters())
@@ -62,7 +63,12 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             threshold=params.lr_plateau_threshold,
             verbose=True)
 
-criterion = nn.BCEWithLogitsLoss(reduction='mean').to(device)
+class_ratio = params.seq_length / params.error_indices_settings['num_indices']
+criterion = nn.BCEWithLogitsLoss(
+    reduction='mean',
+    weight=torch.ones(params.seq_length) * class_ratio
+    ).to(device)
+
 
 def prepare_batch(batch):
     inp, target = mse.error_indices(batch, **params.error_indices_settings)
@@ -80,7 +86,7 @@ def train_epoch(model, dloader):
         optimizer.zero_grad()
         output = model(input)
 
-        loss = criterion(output, target)
+        loss = criterion(output.squeeze(-1), target)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
@@ -112,7 +118,7 @@ for epoch in range(params.num_epochs):
             batch = batch.float().to(device)
             input, target = prepare_batch(batch)
             output = model(input)
-            batch_loss = loss_func(output, target, pitch_criterion, dur_criterion).item()
+            batch_loss = criterion(output.squeeze(2), target).item()
             val_loss += len(input) * batch_loss
             num_entries += batch.shape[0]
     val_loss /= num_entries
@@ -124,7 +130,7 @@ for epoch in range(params.num_epochs):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
-            'dset_stats': dset_tr.get_stats(),
+            # 'dset_stats': dset_tr.get_stats(),
             'val_losses': val_losses
             }
     if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
@@ -140,20 +146,20 @@ for epoch in range(params.num_epochs):
 
     scheduler.step(val_loss)
 
-    # save an image
-    if not epoch % params.save_img_every and epoch > 0:
-        ind_rand = np.random.choice(output.shape[0])
-        fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
-        fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
-        plt.clf()
-        plt.close(fig)
-
-    # save a model checkpoint
-    if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
-        m_name = (
-            f'transformer_{params.start_training_time}'
-            f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
-        torch.save(cur_model, m_name)
+    # # save an image
+    # if not epoch % params.save_img_every and epoch > 0:
+    #     ind_rand = np.random.choice(output.shape[0])
+    #     fig, axs = po.plot(output, target, ind_rand, dset_tr.dur_subvector_len, errored=input)
+    #     fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
+    #     plt.clf()
+    #     plt.close(fig)
+    #
+    # # save a model checkpoint
+    # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
+    #     m_name = (
+    #         f'transformer_{params.start_training_time}'
+    #         f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
+    #     torch.save(cur_model, m_name)
 
     # early stopping
     time_since_best = epoch - val_losses.index(min(val_losses))
@@ -161,23 +167,23 @@ for epoch in range(params.num_epochs):
         logging.info(f'stopping early at epoch {epoch}')
         break
 
-# if max_epochs reached, or early stopping condition reached, save best model
-best_epoch = best_model['epoch']
-m_name = (
-    f'transformer_best_{params.start_training_time}'
-    f'_ep-{best_epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
-torch.save(best_model, m_name)
-
-logging.info('testing best model...')
-dset_tst = dl.MonoFolkSongDataset(
-    dset_fname=params.dset_path,
-    seq_length=params.seq_length,
-    base='test',
-    num_dur_vals=params.num_dur_vals,
-    use_stats=dset_tr.get_stats())
-
-model.load_state_dict(best_model['model_state_dict'])
-res_dict, output = ttm.eval_model(model, dset_tst, device)
-
-with open(params.results_fname, 'w') as f:
-    f.write(ttm.results_string(res_dict, with_params=True, use_duration=dset_tr.use_duration))
+# # if max_epochs reached, or early stopping condition reached, save best model
+# best_epoch = best_model['epoch']
+# m_name = (
+#     f'transformer_best_{params.start_training_time}'
+#     f'_ep-{best_epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
+# torch.save(best_model, m_name)
+#
+# logging.info('testing best model...')
+# dset_tst = dl.MonoFolkSongDataset(
+#     dset_fname=params.dset_path,
+#     seq_length=params.seq_length,
+#     base='test',
+#     num_dur_vals=params.num_dur_vals,
+#     use_stats=dset_tr.get_stats())
+#
+# model.load_state_dict(best_model['model_state_dict'])
+# res_dict, output = ttm.eval_model(model, dset_tst, device)
+#
+# with open(params.results_fname, 'w') as f:
+#     f.write(ttm.results_string(res_dict, with_params=True, use_duration=dset_tr.use_duration))

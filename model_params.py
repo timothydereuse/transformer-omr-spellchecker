@@ -3,14 +3,14 @@ params_name = 'BASE'
 
 # -- definition of symbolic music representation
 num_dur_vals = 0   # number of duration values
-seq_length = 40     # length of song sequences
+seq_length = 100     # length of song sequences
 padding_amt = 10    # max padding on both sides of a song
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
 d_model = 256          # the dimension of the internal transformer representation
 hidden = d_model * 2    # the dimension of the feedforward network
-nlayers = 4             # number of encoder/decoder layers
+nlayers = 3             # number of encoder/decoder layers
 nhead = 2               # number of attention heads
 dropout = 0.1           # dropout probability
 
@@ -23,14 +23,14 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': int(seq_length * 0.01),
+    'num_indices': 5,
 }
 
 # -- training parameters
-trial_run = False               # sets dataset to be comically small, for testing.
+trial_run = True               # sets dataset to be comically small, for testing.
 num_epochs = 200                # number of epochs to train for
 lr = 0.0001                      # learning rate
-batch_size = 2048               # size of each batch
+batch_size = 64               # size of each batch
 lr_plateau_factor = 0.25
 lr_plateau_patience = 5
 lr_plateau_threshold = 0.002

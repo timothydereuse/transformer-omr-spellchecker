@@ -85,7 +85,7 @@ def error_indices(inp, num_indices=5):
 
     means = inp.float().view(-1, 3).mean(0)
     stds = inp.float().view(-1, 3).std(0)
-    errored_indices = np.zeros([batch_size, seq_len])
+    errored_indices = torch.zeros(batch_size, seq_len)
 
     for i in range(batch_size):
         inds = np.arange(seq_len)
@@ -95,7 +95,7 @@ def error_indices(inp, num_indices=5):
 
         # make errors from distribution of actual data
         errors = (torch.rand(num_indices, 3) * 2 - 1) * stds + means
-        output[i, sel_inds] = errors.round().int()
+        output[i, sel_inds] = errors.round()
 
     return output, errored_indices
 
