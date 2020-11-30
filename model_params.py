@@ -1,5 +1,5 @@
 # name of this set of parameters:
-params_name = 'NODUR_BASE'
+params_name = 'BASE'
 
 # -- definition of symbolic music representation
 num_dur_vals = 0   # number of duration values
@@ -40,7 +40,7 @@ raw_data_paths = {
     'essen': r"D:\Documents\datasets\essen\europa",
     'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
 }
-dset_path = r"synthetic_repetition_dset.hdf5"
+dset_path = r"lmd_cleansed.hdf5"
 beat_multiplier = 48  # duration values will be multiplied by this number and then rounded
 test_proportion = 0.1
 validate_proportion = 0.1
@@ -65,6 +65,13 @@ flags = {
 if num_dur_vals > 0:
     for x in flags.keys():
         flags[x] = [0] + flags[x]
+
+notetuple_flags = {
+    'sos': [0, 0, 128],
+    'eos': [0, 0, 129],
+    'mask': [0, 0, 0],
+    'pad': [0, 0, 130]
+}
 
 # deprecated
 remove_indices_settings = {
