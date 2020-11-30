@@ -65,14 +65,14 @@ def plot_notetuple(inp, output, target):
         pr[i, int(n[2])] = 1
         pr[i, -1] = int(n[1] == 0)
 
-    axs[0].imshow(pr.T, aspect='auto')
+    axs[0].imshow(pr.T, aspect='auto', interpolation='none')
     axs[0].set_title('Input (with errors)')
 
     trg = target.cpu().detach().numpy()
     opt = torch.sigmoid(output).squeeze(-1).cpu().detach().numpy()
 
     locs = np.stack([trg, opt], 1)
-    axs[1].imshow(locs.T, aspect='auto')
+    axs[1].imshow(locs.T, aspect='auto', interpolation='none')
     axs[1].set_title('Error locations + Predicted error locations')
 
     return fig, axs

@@ -246,8 +246,7 @@ class MidiNoteTupleDataset(IterableDataset):
         """
         @dset_root -
         @seq_length - number of units to chop sequences into
-        @fnames - a subset of the path names within the hdf5 file (optional)
-        @num_dur_vals - the number of most common duration values to calculate (optional)
+        @base - a subset of the path names within the hdf5 file (optional)
         @shuffle_files - randomizes order of loading songs from hdf5 file (optional)
         @padding_amt - amount of padding to add to beginning and end of each song (optional,
             default: @seq_length // 2)
@@ -268,7 +267,7 @@ class MidiNoteTupleDataset(IterableDataset):
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
         if trial_run:
-            self.fnames = self.fnames[:100]
+            self.fnames = self.fnames[:25]
 
         self.num_feats = 3
         padding_element = np.array(self.flags['pad'])
@@ -323,12 +322,11 @@ class MidiNoteTupleDataset(IterableDataset):
 
 
 if __name__ == '__main__':
-    fname = 'synthetic_repetition_dset.hdf5'
+    fname = 'lmd_cleansed.hdf5'
     num_dur_vals = 0
-    seq_len = 30
+    seq_len = 500
     proportion = 0.2
-    dset = MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
-                      proportion_for_stats=proportion)
+    dset = MidiNoteTupleDataset(fname, seq_len)
 
     dload = DataLoader(dset, batch_size=15)
     for i, x in enumerate(dload):

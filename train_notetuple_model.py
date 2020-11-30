@@ -149,8 +149,8 @@ for epoch in range(params.num_epochs):
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
-        ind_rand = np.random.choice(output.shape[0])
-        fig, axs = po.plot_notetuple(inp, output, target)
+        ind = np.random.choice(output.shape[0])
+        fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind])
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
