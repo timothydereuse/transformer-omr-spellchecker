@@ -75,6 +75,37 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     return output, (inds_mask, inds_rand, inds_left)
 
 
+def error_indices(inp, num_indices=5):
+    '''
+    adding errors systematically to batches of notetuple-format data
+    '''
+    seq_len = inp.shape[1]
+    batch_size = inp.shape[0]
+    output = inp.clone()
+
+    means = inp.float().view(-1, 3).mean(0)
+    stds = inp.float().view(-1, 3).std(0)
+
+    # make list of indices to mask / corrupt; select exactly @num_indices from each sequence
+
+    inds_selected = []
+    inds_left = []
+
+    errored_indices = np.zeros([batch_size, seq_len])
+
+    for i in range(batch_size):
+        inds = np.arange(seq_len)
+        np.random.shuffle(inds)
+        sel_inds = output[:num_indices]
+        errored_indices[i, sel_inds] = 1
+
+        # make errors from distribution of actual data
+        errors = (torch.rand(num_indices, 3) * 2 - 1) * stds + means
+        output[i, sel_inds] = errors.round().int()
+
+    return output, errored_indices
+
+
 if __name__ == '__main__':
     import data_loaders as dl
     fname = 'essen_meertens_songs.hdf5'

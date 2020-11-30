@@ -32,7 +32,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MusicTransformerEncoderModel(nn.Module):
-    def __init__(self, num_feats, d_model=128, hidden=200, nlayers=3, nhead=2, dropout=0.1):
+    def __init__(self, num_feats, d_model=128, hidden=200, nlayers=3, nhead=2, dim_out=1, dropout=0.1):
         super(MusicTransformerEncoderModel, self).__init__()
 
         self.ff_encoder = nn.Sequential(
@@ -46,7 +46,7 @@ class MusicTransformerEncoderModel(nn.Module):
         self.transformer_layers = clones(encoder_layer, nlayers)
 
         self.fc_out = nn.Sequential(
-            nn.Linear(d_model, num_feats),
+            nn.Linear(d_model, dim_out),
         )
 
         self.src_mask = None
