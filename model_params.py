@@ -3,15 +3,16 @@ params_name = 'BASE'
 
 # -- definition of symbolic music representation
 num_dur_vals = 0   # number of duration values
-seq_length = 100     # length of song sequences
+seq_length = 300     # length of song sequences
 padding_amt = 10    # max padding on both sides of a song
 proportion_for_stats = 1
 
 # -- definition of transformer model structure
-d_model = 256          # the dimension of the internal transformer representation
-hidden = d_model * 2    # the dimension of the feedforward network
+d_model = 64          # the dimension of the internal transformer representation
+hidden = d_model * 4    # the dimension of the feedforward network
 nlayers = 3             # number of encoder/decoder layers
-nhead = 2               # number of attention heads
+nhead = 1               # number of attention heads
+depth_recurrence = 1    # number of passes through whole network
 dropout = 0.1           # dropout probability
 
 # -- data augmentation

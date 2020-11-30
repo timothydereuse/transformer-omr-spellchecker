@@ -32,7 +32,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MusicTransformerEncoderModel(nn.Module):
-    def __init__(self, num_feats, d_model=128, hidden=200, nlayers=3, nhead=2, dim_out=1, dropout=0.1):
+    def __init__(self, num_feats, d_model=128, hidden=200, nlayers=3, nhead=2, dim_out=1, depth_recurrence=3, dropout=0.1):
         super(MusicTransformerEncoderModel, self).__init__()
 
         self.ff_encoder = nn.Sequential(
@@ -41,6 +41,7 @@ class MusicTransformerEncoderModel(nn.Module):
         )
 
         self.pos_encoder = PositionalEncoding(d_model, dropout)
+        self.depth_recurrence = depth_recurrence
 
         encoder_layer = tr.DecoderLayer(d_model, nhead, hidden, dropout, relative_pos=True)
         self.transformer_layers = clones(encoder_layer, nlayers)
@@ -55,8 +56,9 @@ class MusicTransformerEncoderModel(nn.Module):
         x = self.ff_encoder(x)
 
         x = x.transpose(0, 1)
-        for layer in self.transformer_layers:
-            x = layer(x, mask=None)
+        for i in range(self.depth_recurrence):
+            for layer in self.transformer_layers:
+                x = layer(x, mask=None)
         x = x.transpose(0, 1)
 
         output = self.fc_out(x)
@@ -76,7 +78,7 @@ if __name__ == '__main__':
     reload(mse)
     reload(po)
 
-    seq_length = 30
+    seq_length = 100
     num_seqs = 300
     num_feats = 40
     num_dur_vals = 10
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     num_epochs = 201
     d_model = 128
     hidden = 256
-    nlayers = 4        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nlayers = 1        # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 4          # the number of heads in the multiheadattention models
     dropout = 0.1      # the dropout value
 
@@ -114,32 +116,32 @@ if __name__ == '__main__':
     inputs = inputs.to(device)
 
     model = MusicTransformerEncoderModel(
-        num_feats, d_model, hidden, nlayers, nhead, dropout).to(device)
+        num_feats, d_model, hidden, nlayers, nhead, num_feats, 3, dropout).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params} on device {device}')
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    full_loss = nn.BCEWithLogitsLoss(reduction='mean')
+    full_loss = nn.MSELoss(reduction='mean')
 
-    pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
-    dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
+    # pitch_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
+    # dur_criterion = nn.CrossEntropyLoss(reduction='mean').to(device)
 
-    def loss_func(outputs, targets):
-
-        pitch_targets = targets[:, :, :-num_dur_vals]
-        dur_targets = targets[:, :, -num_dur_vals:]
-
-        pitches = outputs[:, :, :-num_dur_vals]
-        pitches = pitches.view(-1, pitches.shape[-1])
-        durs = outputs[:, :, -num_dur_vals:]
-        durs = durs.view(-1, durs.shape[-1])
-
-        pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
-        dur_targets_inds = dur_targets.reshape(-1, num_dur_vals).max(1).indices
-
-        pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
-        dur_loss = dur_criterion(durs.view(-1, num_dur_vals), dur_targets_inds)
-        return pitch_loss + dur_loss
+    # def loss_func(outputs, targets):
+    #
+    #     pitch_targets = targets[:, :, :-num_dur_vals]
+    #     dur_targets = targets[:, :, -num_dur_vals:]
+    #
+    #     pitches = outputs[:, :, :-num_dur_vals]
+    #     pitches = pitches.view(-1, pitches.shape[-1])
+    #     durs = outputs[:, :, -num_dur_vals:]
+    #     durs = durs.view(-1, durs.shape[-1])
+    #
+    #     pitch_targets_inds = pitch_targets.reshape(-1, pitch_targets.shape[-1]).max(1).indices
+    #     dur_targets_inds = dur_targets.reshape(-1, num_dur_vals).max(1).indices
+    #
+    #     pitch_loss = pitch_criterion(pitches, pitch_targets_inds)
+    #     dur_loss = dur_criterion(durs.view(-1, num_dur_vals), dur_targets_inds)
+    #     return pitch_loss + dur_loss
 
     model.train()
     epoch_loss = 0
@@ -153,7 +155,6 @@ if __name__ == '__main__':
         output_dim = output.shape[-1]
 
         loss = full_loss(output.view(-1, output_dim), targets.view(-1, output_dim))
-        # loss = loss_func(output, targets)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
@@ -161,10 +162,10 @@ if __name__ == '__main__':
         elapsed = time.time() - start_time
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
-        if not i % 20:
-            x = (output).detach().cpu().numpy().T
-            ind = np.random.randint(targets.shape[0])
-            fig, axs = po.plot(output, targets, ind, num_dur_vals, errored=inputs)
-            fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
-            plt.clf()
-            plt.close(fig)
+        # if not i % 20:
+        #     x = (output).detach().cpu().numpy().T
+        #     ind = np.random.randint(targets.shape[0])
+        #     fig, axs = po.plot(output, targets, ind, num_dur_vals, errored=inputs)
+        #     fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
+        #     plt.clf()
+        #     plt.close(fig)
