@@ -61,7 +61,8 @@ def plot_notetuple(inp, output, target):
     pr = np.zeros([inp.shape[0], 129])
     # Iterate over note names, which will be converted to note number later
     for i, n in enumerate(inp):
-        pr[i, int(n[2])] = 1
+        pitch = np.clip(n[2], 0, 127)
+        pr[i, int(pitch)] = 1
         pr[i, -1] = int(n[1] == 0)
 
     axs[0].imshow(pr.T, aspect='auto', interpolation=None)

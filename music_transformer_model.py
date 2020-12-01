@@ -55,11 +55,9 @@ class MusicTransformerEncoderModel(nn.Module):
     def forward(self, x):
         x = self.ff_encoder(x)
 
-        x = x.transpose(0, 1)
         for i in range(self.depth_recurrence):
             for layer in self.transformer_layers:
                 x = layer(x, mask=None)
-        x = x.transpose(0, 1)
 
         output = self.fc_out(x)
         return output
