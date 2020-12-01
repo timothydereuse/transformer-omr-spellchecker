@@ -79,13 +79,15 @@ def error_indices(inp, num_indices=5):
     '''
     adding errors systematically to batches of notetuple-format data
     '''
+    device = inp.device
+
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
     output = inp.clone()
 
-    means = inp.float().view(-1, 3).mean(0)
-    stds = inp.float().view(-1, 3).std(0)
-    errored_indices = torch.zeros(batch_size, seq_len)
+    means = inp.float().view(-1, 3).mean(0).to(device)
+    stds = inp.float().view(-1, 3).std(0).to(device)
+    errored_indices = torch.zeros(batch_size, seq_len).to(device)
 
     for i in range(batch_size):
         inds = np.arange(seq_len)
@@ -94,7 +96,7 @@ def error_indices(inp, num_indices=5):
         errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = torch.normal(0.0, 1.0, (num_indices, 3)) * stds + means
+        errors = torch.normal(0.0, 1.0, (num_indices, 3)).to(device) * stds + means
         output[i, sel_inds] = errors.round().abs()
 
     return output, errored_indices

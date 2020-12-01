@@ -267,7 +267,7 @@ class MidiNoteTupleDataset(IterableDataset):
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
         if trial_run:
-            self.fnames = self.fnames[:25]
+            self.fnames = self.fnames[:trial_run]
 
         self.num_feats = 3
         padding_element = np.array(self.flags['pad'])
