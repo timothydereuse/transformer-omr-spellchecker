@@ -28,13 +28,6 @@ reload(ttm)
 num_gpus = torch.cuda.device_count()
 if torch.cuda.is_available():
     logging.info(f'found {num_gpus} gpus')
-    for i in range(torch.cuda.device_count()):
-        t = torch.cuda.get_device_properties(i)
-        c = torch.cuda.memory_cached(i)
-        a = torch.cuda.memory_allocated(i)
-        logging.info(t)
-        logging.info(c)
-        logging.info(a)
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
@@ -78,6 +71,14 @@ def prepare_batch(batch):
     return inp, target
 
 
+def log_gpu_info():
+    for i in range(torch.cuda.device_count()):
+        t = torch.cuda.get_device_properties(i)
+        c = torch.cuda.memory_cached(i)
+        a = torch.cuda.memory_allocated(i)
+        logging.info(f'device: {t}, memory cached: {c}, memory allocated: {a}')
+
+
 def train_epoch(model, dloader):
     num_seqs_used = 0
     total_loss = 0.
@@ -112,6 +113,7 @@ for epoch in range(params.num_epochs):
     # perform training epoch
     model.train()
     cur_loss = train_epoch(model, dloader)
+    log_gpu_info()
 
     # test on validation set
     model.eval()
