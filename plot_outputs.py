@@ -57,6 +57,7 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
 
 def plot_notetuple(inp, output, target):
     fig, axs = plt.subplots(2, 1, figsize=(6, 8))
+    inp = inp.cpu().detach().numpy()
 
     pr = np.zeros([inp.shape[0], 129])
     # Iterate over note names, which will be converted to note number later

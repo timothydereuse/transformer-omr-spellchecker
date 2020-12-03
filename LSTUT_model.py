@@ -78,7 +78,7 @@ if __name__ == '__main__':
     lstm_inp = 64
     lstm_hidden = 128
     lstm_layers = 1
-    tf_inp = 64
+    tf_inp = 48
     tf_hidden = tf_inp * 2
     tf_k = 128
 

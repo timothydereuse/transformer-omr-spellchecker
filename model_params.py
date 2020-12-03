@@ -2,18 +2,42 @@
 params_name = 'BASE'
 
 # -- definition of symbolic music representation
-num_dur_vals = 0   # number of duration values
-seq_length = 300     # length of song sequences
+seq_length = 256     # length of song sequences
 padding_amt = 50    # max padding on both sides of a song
-proportion_for_stats = 1
 
-# -- definition of transformer model structure
-d_model = 128          # the dimension of the internal transformer representation
-hidden = d_model * 4    # the dimension of the feedforward network
-nlayers = 6             # number of encoder/decoder layers
-nhead = 4               # number of attention heads
-depth_recurrence = 1    # number of passes through whole network
-dropout = 0.1           # dropout probability
+# -- training parameters
+trial_run = 0.075               # reduces size of dataset
+num_epochs = 200                # number of epochs to train for
+lr = 0.0001                     # initial learning rate
+batch_size = 10               # size of each batch
+clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
+early_stopping_patience = 10    # abort training if it's been this long since best model
+save_model_every = 1000         # save a new model every X epochs
+save_img_every = 1              # save a new test image from the validation set every X epochs
+
+
+# -- definition of LSTUT model
+lstut_settings = {
+    'seq_length': seq_length,
+    'num_feats': 3,
+    'lstm_inp': 64,
+    'lstm_hidden': 128,
+    'lstm_layers': 1,
+    'tf_inp': 48,
+    'tf_hidden': 96,
+    'tf_k': 128,
+    'nhead': 4,
+    'tf_depth': 4,
+    'dropout': 0.15
+}
+
+# -- learning rate plateau scheduler settings
+scheduler_settings = {
+    'factor': 0.25,
+    'patience': 2,
+    'threshold': 0.002,
+    'verbose': True
+}
 
 # -- data augmentation
 mask_indices_settings = {
@@ -27,24 +51,8 @@ error_indices_settings = {
     'num_indices': 5,
 }
 
-# -- training parameters
-trial_run = 0.06               # sets dataset to be comically small, for testing.
-num_epochs = 200                # number of epochs to train for
-lr = 0.0001                      # learning rate
-batch_size = 2048               # size of each batch
-lr_plateau_factor = 0.25
-lr_plateau_patience = 5
-lr_plateau_threshold = 0.002
-clip_gradient_norm = 0.5
-early_stopping_patience = 25    # abort training if it's been this long since best model
-save_model_every = 1000         # save a new model every X epochs
-save_img_every = 2              # save a new test image from the validation set every X epochs
 
 # -- paths to data
-raw_data_paths = {
-    'essen': r"D:\Documents\datasets\essen\europa",
-    'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
-}
 dset_path = r"lmd_cleansed.hdf5"
 beat_multiplier = 48  # duration values will be multiplied by this number and then rounded
 test_proportion = 0.1
@@ -67,9 +75,6 @@ flags = {
     'eos': [-2],
     'mask': [-3],
     'pad': [-4]}
-if num_dur_vals > 0:
-    for x in flags.keys():
-        flags[x] = [0] + flags[x]
 
 notetuple_flags = {
     'sos': [0, 0, 128],
@@ -82,4 +87,10 @@ notetuple_flags = {
 remove_indices_settings = {
     'mode': 'center',
     'num_indices': 1
+}
+num_dur_vals = 0   # number of duration values
+proportion_for_stats = 1
+raw_data_paths = {
+    'essen': r"D:\Documents\datasets\essen\europa",
+    'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
 }

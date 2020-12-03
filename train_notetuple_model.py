@@ -5,7 +5,7 @@ import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
 import test_trained_model as ttm
-import music_transformer_model as mtm
+import LSTUT_model as lstut
 import make_supervised_examples as mse
 from importlib import reload
 from torch.utils.data import DataLoader
@@ -20,10 +20,24 @@ import matplotlib.pyplot as plt
 
 reload(dl)
 reload(fcts)
-reload(mtm)
+reload(lstut)
 reload(params)
 reload(mse)
 reload(ttm)
+
+num_gpus = torch.cuda.device_count()
+if torch.cuda.is_available():
+    logging.info(f'found {num_gpus} gpus')
+    for i in range(torch.cuda.device_count()):
+        t = torch.cuda.get_device_properties(i)
+        c = torch.cuda.memory_cached(i)
+        a = torch.cuda.memory_allocated(i)
+        logging.info(t)
+        logging.info(c)
+        logging.info(a)
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 logging.info('defining datasets...')
 dset_tr = dl.MidiNoteTupleDataset(
@@ -42,27 +56,15 @@ dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = mtm.MusicTransformerEncoderModel(
-        num_feats=num_feats,
-        d_model=params.d_model,
-        hidden=params.hidden,
-        nlayers=params.nlayers,
-        nhead=params.nhead,
-        dim_out=1,
-        depth_recurrence=params.depth_recurrence,
-        dropout=params.dropout
-        ).to(device)
+model = lstut.LSTUTModel(**params.lstut_settings).to(device)
 model_size = sum(p.numel() for p in model.parameters())
-logging.info(f'created model with n_params={model_size} on device {device}')
+
+model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
+logging.info(f'created model with n_params={model_size}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            factor=params.lr_plateau_factor,
-            patience=params.lr_plateau_patience,
-            threshold=params.lr_plateau_threshold,
-            verbose=True)
+            optimizer=optimizer, **params.scheduler_settings)
 
 class_ratio = params.seq_length / params.error_indices_settings['num_indices']
 criterion = nn.BCEWithLogitsLoss(
@@ -95,6 +97,7 @@ def train_epoch(model, dloader):
         batch_loss = loss.item()
         total_loss += batch_loss
         num_seqs_used += input.shape[0]
+        logging.info(f'    batch {i}, loss {batch_loss:3.7f}')
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss
