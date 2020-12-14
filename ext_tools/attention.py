@@ -29,8 +29,7 @@ class MultiheadedAttention(nn.Module):
         #relative positional embeddings
         self.relative_pos = relative_pos
         if relative_pos:
-            self.Er = torch.randn([heads, self.max_length, s],
-                    device=d())
+            self.Er = torch.randn([heads, self.max_length, s])
         else:
             self.Er = None
 
@@ -50,14 +49,14 @@ class MultiheadedAttention(nn.Module):
             #apply same position embeddings across the batch
             #Is it possible to apply positional self-attention over
             #only half of all relative distances?
-            Er  = self.Er[:, embedding_start:, :].unsqueeze(0)
+            Er  = self.Er[:, embedding_start:, :].unsqueeze(0).to(x.device)
             QEr = torch.matmul(queries, Er.transpose(-1,-2))
             QEr = self._mask_positions(QEr)
             #Get relative position attention scores
             #combine batch with head dimension
             SRel = self._skew(QEr).contiguous().view(b*h, t, t)
         else:
-            SRel = torch.zeros([b*h, t, t], device=d())
+            SRel = torch.zeros([b*h, t, t], device=x.device)
         queries, keys, values = map(lambda x: x.contiguous()\
                 .view(b*h, t, s), (queries, keys, values))
         #Compute scaled dot-product self-attention
@@ -69,7 +68,7 @@ class MultiheadedAttention(nn.Module):
         scores = scores + SRel
         #(b*h, t, t)
 
-        subsequent_mask = torch.triu(torch.ones(1, t, t, device=d()),
+        subsequent_mask = torch.triu(torch.ones(1, t, t, device=x.device),
                 1)
         scores = scores.masked_fill(subsequent_mask == 1, -1e9)
         if mask is not None:

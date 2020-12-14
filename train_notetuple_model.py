@@ -5,8 +5,9 @@ import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
 import test_trained_model as ttm
-import LSTUT_model as lstut
+import models.LSTUT_model as lstut
 import make_supervised_examples as mse
+import test_trained_notetuple_model as ttnm
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
@@ -18,6 +19,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+reload(ttnm)
 reload(dl)
 reload(fcts)
 reload(lstut)
@@ -62,7 +64,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 class_ratio = params.seq_length / params.error_indices_settings['num_indices']
 criterion = nn.BCEWithLogitsLoss(
     reduction='mean',
-    weight=torch.ones(params.seq_length) * class_ratio
+    weight=torch.ones(params.seq_length) * np.sqrt(class_ratio)
     ).to(device)
 
 
@@ -74,9 +76,9 @@ def prepare_batch(batch):
 def log_gpu_info():
     for i in range(torch.cuda.device_count()):
         t = torch.cuda.get_device_properties(i)
-        c = torch.cuda.memory_cached(i)
-        a = torch.cuda.memory_allocated(i)
-        logging.info(f'device: {t}, memory cached: {c}, memory allocated: {a}')
+        c = torch.cuda.memory_cached(i) / (2 ** 10)
+        a = torch.cuda.memory_allocated(i)  / (2 ** 10)
+        logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
 def train_epoch(model, dloader):
@@ -105,6 +107,7 @@ def train_epoch(model, dloader):
 
 
 logging.info('beginning training')
+log_gpu_info()
 start_time = time.time()
 val_losses = []
 best_model = None
@@ -127,6 +130,7 @@ for epoch in range(params.num_epochs):
             batch_loss = criterion(output.squeeze(-1), target).item()
             val_loss += len(inp) * batch_loss
             num_entries += batch.shape[0]
+    F1_score, F1_thresh = ttnm.multilabel_thresholding(output, target)
     val_loss /= num_entries
     val_losses.append(val_loss)
 
@@ -147,7 +151,9 @@ for epoch in range(params.num_epochs):
         f'epoch {epoch:3d} | '
         f's/epoch {elapsed:3.5f} | '
         f'train_loss {cur_loss:3.7f} | '
-        f'val_loss {val_loss:3.7f} ')
+        f'val_loss {val_loss:3.7f} '
+        f'val_F1_score {F1_score:3.5f} '
+        f'val_F1_thresh {F1_thresh:3.5f} ')
     start_time = time.time()
 
     scheduler.step(val_loss)

@@ -47,6 +47,9 @@ class LSTUTModel(nn.Module):
     def forward(self, inp):
         # inp = torch.rand(num_seqs, seq_length, num_feats)
 
+        self.lstm1.flatten_parameters()
+        self.lstm2.flatten_parameters()
+
         x = self.gelu(self.embedding_ff(inp))
         x, _ = self.lstm1(x)
 
@@ -56,6 +59,8 @@ class LSTUTModel(nn.Module):
         x = self.norm(x + lstm_out)
         x, _ = self.lstm2(x)
         out = self.output_ff(x)
+
+
 
         return out
 
@@ -75,11 +80,11 @@ if __name__ == '__main__':
     seq_length = 20
     num_feats = 3
 
-    lstm_inp = 64
-    lstm_hidden = 128
+    lstm_inp = 6
+    lstm_hidden = 6
     lstm_layers = 1
-    tf_inp = 48
-    tf_hidden = tf_inp * 2
+    tf_inp = 64
+    tf_hidden = 64
     tf_k = 128
 
     nhead = 4
@@ -124,7 +129,7 @@ if __name__ == '__main__':
 
         # if not i % 20:
         #     x = (output).detach().cpu().numpy().T
-        #     ind = np.random.randint(targets.shape[0])
+        #     ind = n%rp.random.randint(targets.shape[0])
         #     fig, axs = po.plot(output, targets, ind, num_dur_vals, errored=inputs)
         #     fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
         #     plt.clf()

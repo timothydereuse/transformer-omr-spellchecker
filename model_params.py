@@ -6,10 +6,10 @@ seq_length = 256     # length of song sequences
 padding_amt = 50    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.075               # reduces size of dataset
-num_epochs = 200                # number of epochs to train for
-lr = 0.0001                     # initial learning rate
-batch_size = 10               # size of each batch
+trial_run = 0.1               # reduces size of dataset
+num_epochs = 20                # number of epochs to train for
+lr = 0.0005                    # initial learning rate
+batch_size = 3              # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 10    # abort training if it's been this long since best model
 save_model_every = 1000         # save a new model every X epochs
@@ -20,14 +20,14 @@ save_img_every = 1              # save a new test image from the validation set 
 lstut_settings = {
     'seq_length': seq_length,
     'num_feats': 3,
-    'lstm_inp': 64,
+    'lstm_inp': 32,
     'lstm_hidden': 128,
-    'lstm_layers': 1,
-    'tf_inp': 48,
-    'tf_hidden': 96,
+    'lstm_layers': 2,
+    'tf_inp': 64,
+    'tf_hidden': 128,
     'tf_k': 128,
-    'nhead': 4,
-    'tf_depth': 4,
+    'nhead': 1,
+    'tf_depth': 6,
     'dropout': 0.15
 }
 

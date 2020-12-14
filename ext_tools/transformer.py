@@ -48,7 +48,7 @@ class MusicTransformer(nn.Module):
             #batch dimension
             pos = pos.unsqueeze(0)
             #move to GPU if needed
-            pos = pos.to(d())
+            # pos = pos.to(d())
             self.register_buffer('pos', pos)
         else:
             if seq_length == None:
@@ -66,8 +66,7 @@ class MusicTransformer(nn.Module):
         if self.positional_encoding:
             positions = self.pos[:, :t, :]
         else:
-            positions = self.pos(torch.arange(t,
-                device=d()))[None, :, :].expand(b, t, e)
+            positions = self.pos(torch.arange(t, device=x.device))[None, :, :].expand(b, t, e)
         x = x + positions
         #another dropout layer here?
         #pass input batch and mask through layers
