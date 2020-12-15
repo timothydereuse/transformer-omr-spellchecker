@@ -37,7 +37,7 @@ class LSTUTModel(nn.Module):
             dim_ff=tf_hidden,
             dropout=dropout,
             nhead=nhead,
-            depth=tf_hidden,
+            depth=tf_depth,
             parameter_sharing="layerwise",
             )
         self.norm = nn.LayerNorm(tf_inp)
@@ -83,8 +83,8 @@ if __name__ == '__main__':
     lstm_inp = 6
     lstm_hidden = 6
     lstm_layers = 1
-    tf_inp = 64
-    tf_hidden = 64
+    tf_inp = 128
+    tf_hidden = 128
     tf_k = 128
 
     nhead = 4
