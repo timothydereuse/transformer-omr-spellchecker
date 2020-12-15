@@ -31,6 +31,15 @@ lstut_settings = {
     'dropout': 0.15
 }
 
+# -- definition of LSTM model
+lstm_settings = {
+    'num_feats': 3,
+    'lstm_inp': 128,
+    'lstm_hidden': 128,
+    'lstm_layers': 6,
+    'dropout': 0.15
+}
+
 # -- learning rate plateau scheduler settings
 scheduler_settings = {
     'factor': 0.25,
