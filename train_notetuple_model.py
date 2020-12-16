@@ -52,8 +52,8 @@ dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-# model = lstut.LSTUTModel(**params.lstut_settings).to(device)
-model = lstm.LSTMModel(**params.lstm_settings).to(device)
+model = lstut.LSTUTModel(**params.lstut_settings).to(device)
+# model = lstm.LSTMModel(**params.lstm_settings).to(device)
 model_size = sum(p.numel() for p in model.parameters())
 
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))

@@ -1,5 +1,4 @@
 import torch
-import transformer_encoder_model as tem
 import data_loaders as dl
 import plot_outputs as po
 import numpy as np
@@ -28,16 +27,18 @@ def f_measure(inps, targets, threshold=0.5):
     return F1
 
 
-def multilabel_thresholding(output, target, num_trials=100):
+def multilabel_thresholding(output, target, num_trials=1000):
     output = output.cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)
 
-    sort_output = np.sort(output)
-    thresholds = np.interp(
-        x=np.linspace(0, len(sort_output), num_trials),
-        xp=np.arange(len(sort_output)),
-        fp=sort_output
-    )
+    # sort_output = np.sort(output)
+    # thresholds = np.interp(
+    #     x=np.linspace(0, len(sort_output), num_trials),
+    #     xp=np.arange(len(sort_output)),
+    #     fp=sort_output
+    # )
+
+    thresholds = np.linspace(min(output), max(output), num_trials)
 
     F1s = np.zeros(output.shape)
     for i, t in enumerate(thresholds):

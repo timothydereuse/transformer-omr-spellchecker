@@ -1,5 +1,4 @@
 import torch
-import transformer_encoder_model as tem
 import data_loaders as dl
 import plot_outputs as po
 import numpy as np
