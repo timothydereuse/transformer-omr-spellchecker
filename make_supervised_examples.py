@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import torch
 import numpy as np
 import model_params as params
+from difflib import SequenceMatcher
 
 
 def remove_indices(input, num_indices=1, mode='center'):
@@ -87,29 +88,68 @@ def error_indices(inp, num_indices=5):
 
     means = inp.float().view(-1, 3).mean(0).to(device)
     stds = inp.float().view(-1, 3).std(0).to(device)
-    errored_indices = torch.zeros(batch_size, seq_len).to(device)
+    errored_indices = np.zeros((batch_size, seq_len, 3))
 
     for i in range(batch_size):
+        entry = output[i]
+
         inds = np.arange(seq_len)
         np.random.shuffle(inds)
         sel_inds = inds[:num_indices]
-        errored_indices[i, sel_inds] = 1
+        inds_delete = inds[num_indices:2*num_indices]
+        # errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
         errors = torch.normal(0.0, 1.0, (num_indices, 3)).to(device) * stds + means
-        output[i, sel_inds] = errors.round().abs()
+        entry[sel_inds] = errors.round().abs()
+
+        # delete masked entries
+        mask = np.ones(len(entry), dtype='bool')
+        mask[inds_delete] = False
+        entry = entry[mask]
+
+        # more errors to insert instead of replace
+        inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
+        errors = torch.normal(0.0, 1.0, (num_indices, 3)).to(device) * stds + means
+        for n in range(num_indices):
+            entry = np.insert(entry, inds_insert[n], errors[n], 0)
+
+        errored_indices[i] = get_notetuple_diff(entry, inp[i])
+        output[i] = entry
 
     return output, errored_indices
 
 
+def get_notetuple_diff(err, orig):
+    err = [tuple(x) for x in err]
+    orig = [tuple(x) for x in orig]
+
+    s = SequenceMatcher(None, err, orig)
+    ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
+
+    # replace / insert / delete
+    record = np.zeros([len(orig), 3])
+    mapping = {
+        'replace': 0,
+        'insert': 1,
+        'delete': 2
+    }
+
+    for item in ops:
+        end_index = min(item[2], item[1] + 1)
+        record[item[1]:end_index, mapping[item[0]]] = 1
+
+    return record
+
+
 if __name__ == '__main__':
     import data_loaders as dl
-    fname = 'essen_meertens_songs.hdf5'
-    num_dur_vals = 17
-    seq_len = 20
-    proportion = 1
-    dset = dl.MonoFolkSongDataset(fname, seq_len, num_dur_vals=num_dur_vals,
-                                  proportion_for_stats=proportion)
+    dset = dl.MidiNoteTupleDataset(
+        dset_fname=params.dset_path,
+        seq_length=params.seq_length,
+        base='train',
+        padding_amt=params.padding_amt,
+        trial_run=params.trial_run)
 
     dload = DataLoader(dset, batch_size=1000)
     for i, batch in enumerate(dload):
@@ -118,12 +158,13 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    kw = {'num_indices': 5, 'prob_same': 0}
-    inp, _ = mask_indices(batch, **kw)
-    inp = inp.transpose(1, 0)
-    tgt = batch.transpose(1, 0)
+    kw = {'num_indices': 5}
+    errored, indices = error_indices(batch, **kw)
 
-    import transformer_full_seq_model as tfsm
+    orig = [tuple(x) for x in batch[0].numpy()]
+    err = [tuple(x) for x in errored[0].numpy()]
+
+
 
     # model = tfsm.TransformerModel(
     #     num_feats=dset.num_feats,
@@ -133,6 +174,6 @@ if __name__ == '__main__':
 
     # out = model(inp, tgt)
     #
-    import matplotlib.pyplot as plt
-    plt.imshow(inp.numpy()[:, 0].T)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.imshow(inp.numpy()[:, 0].T)
+    # plt.show()
