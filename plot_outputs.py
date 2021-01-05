@@ -55,7 +55,7 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     return fig, axs
 
 
-def plot_notetuple(inp, output, target):
+def plot_notetuple(inp, output, target, thresh=None):
     fig, axs = plt.subplots(2, 1, figsize=(6, 8))
     inp = inp.cpu().detach().numpy()
 
@@ -70,11 +70,15 @@ def plot_notetuple(inp, output, target):
     axs[0].set_title('Input (with errors)')
 
     trg = target.cpu().detach().numpy()
-    trg = np.stack([trg for _ in range(50)], 1)
-    opt = torch.sigmoid(output).squeeze(-1).cpu().detach().numpy()
-    opt = np.stack([opt for _ in range(50)], 1)
+    opt = output.squeeze(-1).cpu().detach().numpy()
+
+    if thresh:
+        opt = opt < thresh
 
     locs = np.concatenate([trg, opt], 1)
+    # repeat entries a bunch of times because matplotlib doesn't
+    # respect the interpolation=None entry sometimes, which looks ugly
+    locs = [locs[:, x] for x in np.repeat(range(locs.shape[1]), 25)]
     axs[1].imshow(locs.T, aspect='auto', interpolation=None)
     axs[1].set_title('Error locations + Predicted error locations')
 

@@ -91,7 +91,7 @@ def train_epoch(model, dloader):
     for i, batch in enumerate(dloader):
         batch = batch.float().cpu()
         input, target = prepare_batch(batch)
-        
+
         batch.to(device)
         input.to(device)
         target.to(device)
@@ -175,7 +175,7 @@ for epoch in range(params.num_epochs):
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
         ind = np.random.choice(output.shape[0])
-        fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind])
+        fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind], F1_thresh)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
