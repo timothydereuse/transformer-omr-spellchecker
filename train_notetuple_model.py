@@ -92,9 +92,9 @@ def train_epoch(model, dloader):
         batch = batch.float().cpu()
         input, target = prepare_batch(batch)
 
-        batch.to(device)
-        input.to(device)
-        target.to(device)
+        batch = batch.to(device)
+        input = input.to(device)
+        target = target.to(device)
 
         optimizer.zero_grad()
         output = model(input)

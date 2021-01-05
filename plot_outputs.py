@@ -78,8 +78,8 @@ def plot_notetuple(inp, output, target, thresh=None):
     locs = np.concatenate([trg, opt], 1)
     # repeat entries a bunch of times because matplotlib doesn't
     # respect the interpolation=None entry sometimes, which looks ugly
-    locs = [locs[:, x] for x in np.repeat(range(locs.shape[1]), 25)]
-    axs[1].imshow(locs.T, aspect='auto', interpolation=None)
+    locs = np.array([locs[:, x] for x in np.repeat(range(locs.shape[1]), 25)])
+    axs[1].imshow(locs, aspect='auto', interpolation=None)
     axs[1].set_title('Error locations + Predicted error locations')
 
     return fig, axs
