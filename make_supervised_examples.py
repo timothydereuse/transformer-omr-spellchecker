@@ -78,16 +78,16 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
 
 def error_indices(inp, num_indices=5):
     '''
-    adding errors systematically to batches of notetuple-format data
+    adding errors systematically to batches of notetuple-format data. should happen on cpu only.
     '''
-    device = inp.device
 
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
+    pad_seq = torch.tensor([params.notetuple_flags['pad'] for _ in range(seq_len)], dtype=inp.dtype)
     output = inp.clone()
 
-    means = inp.float().view(-1, 3).mean(0).to(device)
-    stds = inp.float().view(-1, 3).std(0).to(device)
+    means = inp.float().view(-1, 3).mean(0)
+    stds = inp.float().view(-1, 3).std(0)
     errored_indices = np.zeros((batch_size, seq_len, 3))
 
     for i in range(batch_size):
@@ -96,33 +96,38 @@ def error_indices(inp, num_indices=5):
         inds = np.arange(seq_len)
         np.random.shuffle(inds)
         sel_inds = inds[:num_indices]
-        inds_delete = inds[num_indices:2*num_indices]
         # errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = torch.normal(0.0, 1.0, (num_indices, 3)).to(device) * stds + means
+        errors = torch.normal(0.0, 1.0, (num_indices, 3)) * stds + means
         entry[sel_inds] = errors.round().abs()
 
         # delete masked entries
         mask = np.ones(len(entry), dtype='bool')
+        inds_delete = inds[num_indices:2*num_indices]
         mask[inds_delete] = False
         entry = entry[mask]
 
         # more errors to insert instead of replace
         inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
-        errors = torch.normal(0.0, 1.0, (num_indices, 3)).to(device) * stds + means
+        errors = torch.normal(0.0, 1.0, (num_indices, 3)) * stds + means
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
         errored_indices[i] = get_notetuple_diff(entry, inp[i])
-        output[i] = entry
 
-    return output, errored_indices
+        # add padding in case overall sequence length has changed, then cut down
+        # to length of original output
+        entry = torch.cat([entry, pad_seq], 0)
+        end = min(entry.shape[0], output.shape[0])
+        output[i, :end] = entry[:end]
+
+    return output, torch.tensor(errored_indices, dtype=inp.dtype)
 
 
 def get_notetuple_diff(err, orig):
-    err = [tuple(x) for x in err]
-    orig = [tuple(x) for x in orig]
+    err = [tuple(x) for x in err.numpy()]
+    orig = [tuple(x) for x in orig.numpy()]
 
     s = SequenceMatcher(None, err, orig)
     ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
@@ -136,8 +141,9 @@ def get_notetuple_diff(err, orig):
     }
 
     for item in ops:
-        end_index = min(item[2], item[1] + 1)
-        record[item[1]:end_index, mapping[item[0]]] = 1
+        end_index = max(item[2], item[1] + 1)
+        type_ind = mapping[item[0]]
+        record[item[1]:end_index, type_ind] = 1
 
     return record
 
@@ -151,7 +157,7 @@ if __name__ == '__main__':
         padding_amt=params.padding_amt,
         trial_run=params.trial_run)
 
-    dload = DataLoader(dset, batch_size=1000)
+    dload = DataLoader(dset, batch_size=40)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)
@@ -160,10 +166,6 @@ if __name__ == '__main__':
 
     kw = {'num_indices': 5}
     errored, indices = error_indices(batch, **kw)
-
-    orig = [tuple(x) for x in batch[0].numpy()]
-    err = [tuple(x) for x in errored[0].numpy()]
-
 
 
     # model = tfsm.TransformerModel(

@@ -6,10 +6,10 @@ seq_length = 256     # length of song sequences
 padding_amt = 50    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.01               # reduces size of dataset
+trial_run = 0.001               # reduces size of dataset
 num_epochs = 30                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
-batch_size = 5               # size of each batch
+batch_size = 8               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 10    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs

@@ -89,8 +89,12 @@ def train_epoch(model, dloader):
     total_loss = 0.
 
     for i, batch in enumerate(dloader):
-        batch = batch.float().to(device)
+        batch = batch.float().cpu()
         input, target = prepare_batch(batch)
+        
+        batch.to(device)
+        input.to(device)
+        target.to(device)
 
         optimizer.zero_grad()
         output = model(input)
