@@ -40,7 +40,7 @@ def multilabel_thresholding(output, target, num_trials=1000):
 
     thresholds = np.linspace(min(output), max(output), num_trials)
 
-    F1s = np.zeros(output.shape)
+    F1s = np.zeros(thresholds.shape)
     for i, t in enumerate(thresholds):
         F1s[i] = f_measure(output, target, t)
 
