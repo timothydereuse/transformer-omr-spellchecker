@@ -21,6 +21,7 @@ class LSTUTModel(nn.Module):
         self.tf_inp = tf_inp
         self.tf_hidden = tf_hidden
         self.tf_k = tf_k
+        self.dim_out = dim_out
 
         self.nhead = nhead
         self.tf_depth = tf_depth
@@ -42,7 +43,7 @@ class LSTUTModel(nn.Module):
             )
         self.norm = nn.LayerNorm(tf_inp)
         self.lstm2 = nn.LSTM(tf_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=True)
-        self.output_ff = nn.Linear(lstm_hidden * 2, 1)
+        self.output_ff = nn.Linear(lstm_hidden * 2, dim_out)
 
     def forward(self, inp):
         # inp = torch.rand(num_seqs, seq_length, num_feats)

@@ -64,9 +64,10 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
 class_ratio = params.seq_length / params.error_indices_settings['num_indices']
+num_classes = params.lstut_settings['dim_out'] * params.seq_length
 criterion = nn.BCEWithLogitsLoss(
     reduction='mean',
-    weight=torch.ones(params.seq_length) * np.sqrt(class_ratio)
+    weight=torch.ones(num_classes) * np.sqrt(class_ratio)
     ).to(device)
 
 
@@ -79,7 +80,7 @@ def log_gpu_info():
     for i in range(torch.cuda.device_count()):
         t = torch.cuda.get_device_properties(i)
         c = torch.cuda.memory_cached(i) / (2 ** 10)
-        a = torch.cuda.memory_allocated(i)  / (2 ** 10)
+        a = torch.cuda.memory_allocated(i) / (2 ** 10)
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
@@ -94,7 +95,11 @@ def train_epoch(model, dloader):
         optimizer.zero_grad()
         output = model(input)
 
-        loss = criterion(output.squeeze(-1), target)
+        loss = criterion(
+            output.view(output.shape[0], -1),
+            target.view(target.shape[0], -1)
+            )
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
         optimizer.step()
@@ -129,7 +134,10 @@ for epoch in range(params.num_epochs):
             batch = batch.float().to(device)
             inp, target = prepare_batch(batch)
             output = model(inp)
-            batch_loss = criterion(output.squeeze(-1), target).item()
+            batch_loss = criterion(
+                output.view(output.shape[0], -1),
+                target.view(target.shape[0], -1)
+                ).item()
             val_loss += len(inp) * batch_loss
             num_entries += batch.shape[0]
     F1_score, F1_thresh = ttnm.multilabel_thresholding(output, target)
