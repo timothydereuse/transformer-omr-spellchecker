@@ -2,11 +2,11 @@
 params_name = 'BASE'
 
 # -- definition of symbolic music representation
-seq_length = 256     # length of song sequences
+seq_length = 128     # length of song sequences
 padding_amt = 20    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.3               # reduces size of dataset
+trial_run = 0.001               # reduces size of dataset
 num_epochs = 30                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
 batch_size = 256               # size of each batch
@@ -23,10 +23,10 @@ lstut_settings = {
     'lstm_inp': 64,
     'lstm_hidden': 128,
     'lstm_layers': 1,
-    'tf_inp': 64,
-    'tf_hidden': 64,
+    'tf_inp': 128,
+    'tf_hidden': 128,
     'tf_k': 128,
-    'nhead': 2,
+    'nhead': 1,
     'tf_depth': 6,
     'dim_out': 3,
     'dropout': 0.15
@@ -58,7 +58,7 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': 5,
+    'num_indices': 4,
 }
 
 

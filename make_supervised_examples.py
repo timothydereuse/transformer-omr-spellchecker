@@ -118,8 +118,8 @@ def error_indices(inp, num_indices=5):
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
+        end = min(len(entry), output.shape[0])
         entry = torch.cat([entry, pad_seq], 0)
-        end = min(entry.shape[0], output.shape[0])
         output[i, :end] = entry[:end]
 
     return output, torch.tensor(errored_indices, dtype=inp.dtype)

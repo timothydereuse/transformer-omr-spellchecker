@@ -73,7 +73,7 @@ def plot_notetuple(inp, output, target, thresh=None):
     opt = output.squeeze(-1).cpu().detach().numpy()
 
     if thresh:
-        opt = opt < thresh
+        opt = opt > thresh
 
     locs = np.concatenate([trg, opt], 1)
     # repeat entries a bunch of times because matplotlib doesn't
