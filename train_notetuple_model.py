@@ -135,8 +135,13 @@ for epoch in range(params.num_epochs):
     val_loss = 0.
     with torch.no_grad():
         for i, batch in enumerate(dloader_val):
-            batch = batch.float().to(device)
+            batch = batch.float().cpu()
             inp, target = prepare_batch(batch)
+
+            batch = batch.to(device)
+            input = input.to(device)
+            target = target.to(device)
+
             output = model(inp)
             batch_loss = criterion(
                 output.view(output.shape[0], -1),
