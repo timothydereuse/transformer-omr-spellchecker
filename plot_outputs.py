@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import model_params as params
 
 
@@ -83,6 +84,58 @@ def plot_notetuple(inp, output, target, thresh=None):
     axs[1].set_title('Error locations + Predicted error locations')
 
     return fig, axs
+
+
+def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
+    orig = orig.cpu().numpy().round().astype('int')
+    err = err.cpu().numpy().round().astype('int')
+    tgt_corr = tgt_corr.cpu().numpy().astype('int')
+    pred_corr = (pred_corr.cpu().numpy() > thresh).astype('int')
+
+    pr_length = max(orig[:, 1].sum(), err[:, 1].sum())
+
+    def make_pr(notes, corr=None):
+        pr = np.zeros([pr_length, 128])
+        cur_time = 0
+        for i, e in enumerate(notes):
+            note_val = 1
+            if e[2] > 127:
+                continue
+            elif corr is None:
+                pass
+            elif corr[i, 0]:
+                note_val = 2
+            elif corr[i, 1]:
+                note_val = 3
+            elif corr[i, 2]:
+                note_val = 4
+            pr[cur_time:cur_time + e[0], e[2]] = note_val
+            cur_time += e[1]
+        return pr
+
+    original_pr = make_pr(orig)
+    real_corrected = make_pr(err, tgt_corr)
+    pred_corrected = make_pr(err, pred_corr)
+
+    cmap = colors.ListedColormap(['black', 'gray', 'white', 'orange', 'cyan'])
+    bounds = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5]
+    norm = colors.BoundaryNorm(bounds, cmap.N)
+
+    fig, axs = plt.subplots(3, 1, figsize=(12, 12))
+    axs[0].imshow(original_pr.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[0].set_title('Real Music')
+
+    axs[1].imshow(real_corrected.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[1].set_title('Musical Input (real errors)')
+
+    axs[2].imshow(pred_corrected.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[2].set_title('Musical Input (predicted errors)')
+
+    # fig.savefig('test.png', bbox_inches='tight')
+
+    return fig, axs
+
+
 
 # pitch_data = data[:, :, :-num_dur_vals]
 # dur_data = data[:, :, -num_dur_vals:]

@@ -241,6 +241,13 @@ class MonoFolkSongDataset(IterableDataset):
 
 class MidiNoteTupleDataset(IterableDataset):
 
+    program_ranges = {
+        (0, 24): 0,
+        (25, 32): 1,
+        (33, 40): 2,
+        (41, 128): 3
+    }
+
     def __init__(self, dset_fname, seq_length, base=None, shuffle_files=True,
                  padding_amt=None, random_offsets=True, trial_run=False):
         """
@@ -279,6 +286,14 @@ class MidiNoteTupleDataset(IterableDataset):
         self.sos_element = np.array([self.flags['sos']])
         self.eos_element = np.array([self.flags['eos']])
 
+    def simplify_programs(self, programs):
+        x = np.zeros(programs.shape)
+        for k in self.program_ranges.keys():
+            in_category = (k[0] < programs) * (programs <= k[1])
+            print(k, in_category.sum())
+            x[in_category] = self.program_ranges[k]
+        return np.expand_dims(x, 1)
+
     def __iter__(self):
         '''
         Main iteration function.
@@ -292,7 +307,10 @@ class MidiNoteTupleDataset(IterableDataset):
             x = self.f[fname]
 
             # no need to use a custom factorization, just extract the relevant columns
-            notetuples = x[:, 1:4]
+            # onset, duration, time to next onset, pitch, velocity, program
+            programs = self.simplify_programs(x[:, 5])
+            # print(x[:, 1:4].shape, programs.shape)
+            notetuples = np.concatenate([x[:, 1:4], programs], 1)
 
             # pad runlength encoding on both sides
             padded_nt = np.concatenate([

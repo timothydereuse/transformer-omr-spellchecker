@@ -2,18 +2,18 @@
 params_name = 'BASE'
 
 # -- definition of symbolic music representation
-seq_length = 128     # length of song sequences
+seq_length = 512     # length of song sequences
 padding_amt = 20    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.001               # reduces size of dataset
+trial_run = 0.2               # reduces size of dataset
 num_epochs = 30                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
 batch_size = 256               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 10    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
-save_img_every = 4              # save a new test image from the validation set every X epochs
+save_img_every = 2              # save a new test image from the validation set every X epochs
 
 
 # -- definition of LSTUT model
@@ -23,10 +23,10 @@ lstut_settings = {
     'lstm_inp': 64,
     'lstm_hidden': 128,
     'lstm_layers': 1,
-    'tf_inp': 128,
+    'tf_inp': 256,
     'tf_hidden': 128,
     'tf_k': 128,
-    'nhead': 1,
+    'nhead': 4,
     'tf_depth': 6,
     'dim_out': 3,
     'dropout': 0.15
@@ -58,7 +58,7 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': 4,
+    'num_indices': 3,
 }
 
 
@@ -87,10 +87,10 @@ flags = {
     'pad': [-4]}
 
 notetuple_flags = {
-    'sos': [0, 0, 128],
-    'eos': [0, 0, 129],
-    'mask': [0, 0, 0],
-    'pad': [0, 0, 130]
+    'sos': [0, 0, 0, 10],
+    'eos': [0, 0, 0, 20],
+    'mask': [0, 0, 0, 30],
+    'pad': [0, 0, 0, 0]
 }
 
 # deprecated
