@@ -2,14 +2,14 @@
 params_name = 'BASE'
 
 # -- definition of symbolic music representation
-seq_length = 512     # length of song sequences
+seq_length = 256     # length of song sequences
 padding_amt = 20    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.2               # reduces size of dataset
+trial_run = 0.002               # reduces size of dataset
 num_epochs = 30                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
-batch_size = 256               # size of each batch
+batch_size = 1028               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 10    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
@@ -19,13 +19,13 @@ save_img_every = 2              # save a new test image from the validation set 
 # -- definition of LSTUT model
 lstut_settings = {
     'seq_length': seq_length,
-    'num_feats': 3,
+    'num_feats': 4,
     'lstm_inp': 64,
     'lstm_hidden': 128,
     'lstm_layers': 1,
-    'tf_inp': 256,
+    'tf_inp': 128,
     'tf_hidden': 128,
-    'tf_k': 128,
+    'tf_k': 64,
     'nhead': 4,
     'tf_depth': 6,
     'dim_out': 3,
@@ -58,7 +58,7 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': 3,
+    'num_indices': 5,
 }
 
 

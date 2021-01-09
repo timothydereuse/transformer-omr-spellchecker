@@ -276,7 +276,7 @@ class MidiNoteTupleDataset(IterableDataset):
         if trial_run:
             self.fnames = self.fnames[:int(len(self.fnames) * trial_run)]
 
-        self.num_feats = 3
+        self.num_feats = 4
         padding_element = np.array(self.flags['pad'])
 
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
@@ -290,7 +290,6 @@ class MidiNoteTupleDataset(IterableDataset):
         x = np.zeros(programs.shape)
         for k in self.program_ranges.keys():
             in_category = (k[0] < programs) * (programs <= k[1])
-            print(k, in_category.sum())
             x[in_category] = self.program_ranges[k]
         return np.expand_dims(x, 1)
 

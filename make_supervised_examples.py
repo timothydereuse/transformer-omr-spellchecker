@@ -83,12 +83,15 @@ def error_indices(inp, num_indices=5):
 
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
+    num_feats = inp.shape[-1]
     pad_seq = torch.tensor([params.notetuple_flags['pad'] for _ in range(seq_len)], dtype=inp.dtype)
     output = inp.clone()
 
-    means = inp.float().view(-1, 3).mean(0)
-    stds = inp.float().view(-1, 3).std(0)
-    errored_indices = np.zeros((batch_size, seq_len, 3))
+    means = inp.float().view(-1, num_feats).mean(0)
+    stds = inp.float().view(-1, num_feats).std(0)
+    # array to hold record of diff edits (three types: replace, insert, delete)
+    num_diff_types = 3
+    errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
 
     for i in range(batch_size):
         entry = output[i]
@@ -99,7 +102,7 @@ def error_indices(inp, num_indices=5):
         # errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = torch.normal(0.0, 1.0, (num_indices, 3)) * stds + means
+        errors = torch.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
         entry[sel_inds] = errors.round().abs()
 
         # delete masked entries
@@ -110,7 +113,7 @@ def error_indices(inp, num_indices=5):
 
         # more errors to insert instead of replace
         inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
-        errors = torch.normal(0.0, 1.0, (num_indices, 3)) * stds + means
+        errors = torch.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 

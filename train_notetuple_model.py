@@ -27,6 +27,7 @@ reload(lstut)
 reload(params)
 reload(mse)
 reload(ttm)
+reload(po)
 
 num_gpus = torch.cuda.device_count()
 if torch.cuda.is_available():
@@ -90,14 +91,14 @@ def train_epoch(model, dloader):
 
     for i, batch in enumerate(dloader):
         batch = batch.float().cpu()
-        input, target = prepare_batch(batch)
+        inp, target = prepare_batch(batch)
 
         batch = batch.to(device)
-        input = input.to(device)
+        inp = inp.to(device)
         target = target.to(device)
 
         optimizer.zero_grad()
-        output = model(input)
+        output = model(inp)
 
         loss = criterion(
             output.view(output.shape[0], -1),
@@ -110,7 +111,7 @@ def train_epoch(model, dloader):
 
         batch_loss = loss.item()
         total_loss += batch_loss
-        num_seqs_used += input.shape[0]
+        num_seqs_used += inp.shape[0]
         logging.info(f'    batch {i}, loss {batch_loss:3.7f}')
 
     mean_loss = total_loss / num_seqs_used
@@ -139,7 +140,7 @@ for epoch in range(params.num_epochs):
             inp, target = prepare_batch(batch)
 
             batch = batch.to(device)
-            input = input.to(device)
+            inp = inp.to(device)
             target = target.to(device)
 
             output = model(inp)
@@ -180,7 +181,8 @@ for epoch in range(params.num_epochs):
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
         ind = np.random.choice(output.shape[0])
-        fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind], F1_thresh)
+        # fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind], F1_thresh)
+        fig, axs = po.plot_pianoroll_corrections(batch[ind], inp[ind], target[ind], output[ind], F1_thresh)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
