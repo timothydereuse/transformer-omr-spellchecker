@@ -23,11 +23,11 @@ lstut_settings = {
     'lstm_inp': 64,
     'lstm_hidden': 128,
     'lstm_layers': 1,
-    'tf_inp': 128,
-    'tf_hidden': 128,
+    'tf_inp': 512,
+    'tf_ff': 256,
     'tf_k': 64,
-    'nhead': 4,
-    'tf_depth': 6,
+    'nhead': 2,
+    'tf_depth': 4,
     'dim_out': 3,
     'dropout': 0.15
 }

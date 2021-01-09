@@ -64,11 +64,11 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = params.seq_length / params.error_indices_settings['num_indices']
+class_ratio = params.seq_length / (3 * params.error_indices_settings['num_indices'])
 num_classes = params.lstut_settings['dim_out'] * params.seq_length
 criterion = nn.BCEWithLogitsLoss(
     reduction='mean',
-    weight=torch.ones(num_classes) * np.sqrt(class_ratio)
+    weight=torch.ones(num_classes) * class_ratio
     ).to(device)
 
 

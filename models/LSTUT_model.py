@@ -9,7 +9,7 @@ import copy
 
 
 class LSTUTModel(nn.Module):
-    def __init__(self, seq_length, num_feats, lstm_inp=64, lstm_hidden=200, lstm_layers=2, tf_inp=64, tf_hidden=128, tf_depth=4, tf_k=128, nhead=4, dim_out=1, dropout=0.1):
+    def __init__(self, seq_length, num_feats, lstm_inp=64, lstm_hidden=200, lstm_layers=2, tf_inp=64, tf_ff=128, tf_depth=4, tf_k=128, nhead=4, dim_out=1, dropout=0.1):
         super(LSTUTModel, self).__init__()
 
         self.seq_length = seq_length
@@ -19,7 +19,7 @@ class LSTUTModel(nn.Module):
         self.lstm_hidden = lstm_hidden
         self.lstm_layers = lstm_layers
         self.tf_inp = tf_inp
-        self.tf_hidden = tf_hidden
+        self.tf_ff = tf_ff
         self.tf_k = tf_k
         self.dim_out = dim_out
 
@@ -38,7 +38,7 @@ class LSTUTModel(nn.Module):
             input_size=seq_length,
             channels=tf_inp,
             dim_k=tf_k,
-            dim_ff=tf_hidden,
+            dim_ff=tf_ff,
             dropout=dropout,
             nhead=nhead,
             depth=tf_depth,
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     lstm_hidden = 6
     lstm_layers = 1
     tf_inp = 128
-    tf_hidden = 128
+    tf_ff = 128
     tf_k = 128
 
     nhead = 4
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTUTModel(
-        seq_length, num_feats, lstm_inp, lstm_hidden, lstm_layers, tf_inp, tf_hidden, tf_depth, tf_k, nhead
+        seq_length, num_feats, lstm_inp, lstm_hidden, lstm_layers, tf_inp, tf_ff, tf_depth, tf_k, nhead
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters())
