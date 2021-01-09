@@ -27,10 +27,13 @@ class LSTUTModel(nn.Module):
         self.tf_depth = tf_depth
         self.dropout = dropout
 
+        # n.b. LSTM takes on the role of positional encoding - no need for it!
         self.embedding_ff = nn.Linear(num_feats, lstm_inp)
         self.gelu = nn.GELU()
-        self.lstm1 = nn.LSTM(lstm_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=True)
-        self.lstm_to_tf_ff = nn.Linear(lstm_hidden * 2, tf_inp)
+        # self.lstm1 = nn.LSTM(lstm_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=True)
+        # self.lstm_to_tf_ff = nn.Linear(lstm_hidden * 2, tf_inp)
+        self.lstm1 = nn.LSTM(lstm_inp, tf_inp, lstm_layers, batch_first=True, bidirectional=False)
+        # self.lstm_to_tf_ff = nn.Linear(lstm_hidden * 2, tf_inp)
         self.transformer = Linformer(
             input_size=seq_length,
             channels=tf_inp,
@@ -42,8 +45,8 @@ class LSTUTModel(nn.Module):
             parameter_sharing="layerwise",
             )
         self.norm = nn.LayerNorm(tf_inp)
-        self.lstm2 = nn.LSTM(tf_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=True)
-        self.output_ff = nn.Linear(lstm_hidden * 2, dim_out)
+        self.lstm2 = nn.LSTM(tf_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=False)
+        self.output_ff = nn.Linear(lstm_hidden, dim_out)
 
     def forward(self, inp):
         # inp = torch.rand(num_seqs, seq_length, num_feats)
@@ -52,9 +55,9 @@ class LSTUTModel(nn.Module):
         self.lstm2.flatten_parameters()
 
         x = self.gelu(self.embedding_ff(inp))
-        x, _ = self.lstm1(x)
+        lstm_out, _ = self.lstm1(x)
 
-        lstm_out = self.gelu(self.lstm_to_tf_ff(x))
+        # lstm_out = self.gelu(self.lstm_to_tf_ff(x))
         x = lstm_out.clone()
         x = self.transformer(x)
         x = self.norm(x + lstm_out)
