@@ -60,7 +60,7 @@ class LSTUTModel(nn.Module):
         # lstm_out = self.gelu(self.lstm_to_tf_ff(x))
         x = lstm_out.clone()
         x = self.transformer(x)
-        x = self.norm(x + lstm_out)
+        # x = self.norm(x + lstm_out)
         x, _ = self.lstm2(x)
         out = self.output_ff(x)
 
