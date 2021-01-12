@@ -1,14 +1,15 @@
 import torch
 import data_loaders as dl
-import plot_outputs as po
 import numpy as np
 import make_supervised_examples as mse
-from torch.utils.data import IterableDataset, DataLoader
+import models.LSTUT_model as lstut
+from torch.utils.data import DataLoader
 import model_params as params
 from importlib import reload
 
 reload(params)
 reload(mse)
+
 
 def get_maxes(b, dset):
     pitch_out = b[:, :, :dset.pitch_subvector_len]
@@ -121,18 +122,13 @@ if __name__ == '__main__':
         use_stats=checkpoint['dset_stats'])
     dloader = DataLoader(dset_tr, batch_size=params.batch_size, pin_memory=True)
 
-    model = tem.TransformerBidirectionalModel(
-            num_feats=dset_tr.num_feats,
-            d_model=params.d_model,
-            hidden=params.hidden,
-            nlayers=params.nlayers,
-            nhead=params.nhead,
-            dropout=params.dropout
-            ).to(device)
+    model = lstut.LSTUTModel(**params.lstut_settings).to(device)
+    model_size = sum(p.numel() for p in model.parameters())
+
+    model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
+    model.load_state_dict(checkpoint['model_state_dict'])
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-    model.load_state_dict(checkpoint['model_state_dict'])
     # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     # epoch = checkpoint['epoch']
     # loss = checkpoint['loss']

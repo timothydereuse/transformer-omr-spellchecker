@@ -6,10 +6,10 @@ seq_length = 128     # length of song sequences
 padding_amt = 20    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.0003               # reduces size of dataset
-num_epochs = 30                # number of epochs to train for
+trial_run = 0.001               # reduces size of dataset
+num_epochs = 5                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
-batch_size = 4096               # size of each batch
+batch_size = 2048               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 10    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
@@ -20,13 +20,13 @@ save_img_every = 4              # save a new test image from the validation set 
 lstut_settings = {
     'seq_length': seq_length,
     'num_feats': 4,
-    'lstm_inp': 128,
-    'lstm_hidden': 128,
+    'lstm_inp': 64,
+    'lstm_hidden': 64,
     'lstm_layers': 2,
-    'tf_inp': 256,
-    'tf_ff': 256,
-    'tf_k': 128,
-    'nhead': 4,
+    'tf_inp': 64,
+    'tf_ff': 64,
+    'tf_k': 32,
+    'nhead': 1,
     'tf_depth': 5,
     'dim_out': 3,
     'dropout': 0.15
@@ -80,8 +80,8 @@ if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handle
     logging.getLogger().addHandler(logging.StreamHandler())
 
 lstut_summary_str = (
-    'lstm:{lstm_inp}-{lstm_hidden}-{lstm_layers}_tf:'
-    '-{tf_inp}-{tf_ff}-{tf_k}-{nhead}-{tf_depth}').format(**lstut_settings)
+    'lstm-{lstm_inp}-{lstm_hidden}-{lstm_layers}_tf-'
+    '{tf_inp}-{tf_ff}-{tf_k}-{nhead}-{tf_depth}').format(**lstut_settings)
 
 # -- constants that need to be here so that they can be referenced, but shouldn't be changed
 flags = {
