@@ -160,8 +160,8 @@ for epoch in range(params.num_epochs):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
-            # 'dset_stats': dset_tr.get_stats(),
-            'val_losses': val_losses
+            'val_losses': val_losses,
+            'best_thresh': F1_thresh
             }
     if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
         best_model = copy.deepcopy(cur_model)
@@ -186,13 +186,13 @@ for epoch in range(params.num_epochs):
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
-    #
-    # # save a model checkpoint
-    # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
-    #     m_name = (
-    #         f'transformer_{params.start_training_time}'
-    #         f'_ep-{epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
-    #     torch.save(cur_model, m_name)
+
+    # save a model checkpoint
+    if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
+        m_name = (
+            f'lstut_{params.start_training_time}'
+            f'_{params.lstut_summary_str}.pt')
+        torch.save(cur_model, m_name)
 
     # early stopping
     time_since_best = epoch - val_losses.index(min(val_losses))
@@ -200,12 +200,11 @@ for epoch in range(params.num_epochs):
         logging.info(f'stopping early at epoch {epoch}')
         break
 
-# # if max_epochs reached, or early stopping condition reached, save best model
-# best_epoch = best_model['epoch']
-# m_name = (
-#     f'transformer_best_{params.start_training_time}'
-#     f'_ep-{best_epoch}_{params.hidden}.{params.d_model}.{params.nlayers}.{params.nhead}.pt')
-# torch.save(best_model, m_name)
+# if max_epochs reached, or early stopping condition reached, save best model
+best_epoch = best_model['epoch']
+m_name = (f'lstut_best_{params.start_training_time}_{params.lstut_summary_str}.pt')
+torch.save(best_model, m_name)
+
 #
 # logging.info('testing best model...')
 # dset_tst = dl.MonoFolkSongDataset(
