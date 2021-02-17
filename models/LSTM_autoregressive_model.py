@@ -2,55 +2,68 @@ import torch
 import torch.nn as nn
 
 
-class EncoderRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=3):
-        super(EncoderRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+class Encoder(nn.Module):
+    def __init__(self, input_feats, emb_dim, hid_dim, dropout):
+        super().__init__()
 
-        self.embedding = nn.Linear(input_size, hidden_size)
-        self.lstm = nn.LSTM(hidden_size, hidden_size // 2, num_layers=self.num_layers, bidirectional=True, batch_first=True)
+        self.hid_dim = hid_dim
+        self.embedding = nn.Linear(input_feats, emb_dim)  # no dropout as only one layer!
+        self.rnn = nn.GRU(emb_dim, hid_dim)
+        self.dropout = nn.Dropout(dropout)
 
-    def forward(self, input):
-        embedded = torch.relu(self.embedding(input))
-        output = embedded
-        output, hidden = self.lstm(output)
-        return output, hidden
+    def forward(self, src):
+        # src = [src len, batch size]
+        embedded = self.dropout(self.embedding(src))
+        # embedded = [src len, batch size, emb dim]
+        outputs, hidden = self.rnn(embedded)  # no cell state!
+
+        # outputs = [src len, batch size, hid dim * n directions]
+        # hidden = [n layers * n directions, batch size, hid dim]
+        # outputs are always from the top hidden layer
+        return hidden
 
 
-class AttnDecoderRNN(nn.Module):
-    def __init__(self, hidden_size, output_size, num_layers=3, dropout_p=0.1, max_length=100):
-        super(AttnDecoderRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
-        self.dropout_p = dropout_p
-        self.max_length = max_length
+class Decoder(nn.Module):
+    def __init__(self, output_dim, emb_dim, hid_dim, dropout):
+        super().__init__()
 
-        self.embedding = nn.Linear(self.output_size, self.hidden_size)
-        self.attn = nn.Linear(self.hidden_size, self.max_length)
-        self.attn_combine = nn.Linear(self.hidden_size, self.hidden_size)
-        self.dropout = nn.Dropout(self.dropout_p)
-        self.lstm = nn.LSTM(hidden_size, hidden_size, num_layers=self.num_layers, batch_first=True)
-        self.out = nn.Linear(self.hidden_size, self.output_size)
+        self.hid_dim = hid_dim
+        self.output_dim = output_dim
+        self.embedding = nn.Embedding(output_dim, emb_dim)
+        self.rnn = nn.GRU(emb_dim + hid_dim, hid_dim)
+        self.fc_out = nn.Linear(emb_dim + hid_dim * 2, output_dim)
+        self.dropout = nn.Dropout(dropout)
 
-    def forward(self, targets, hidden, encoder_outputs):
-        embedded = torch.relu(self.embedding(targets))
-        embedded = self.dropout(embedded)
+    def forward(self, input, hidden, context):
 
-        attn_input = torch.cat((embedded, hidden[0]), 1)
-        attn_weights = torch.softmax(self.attn(attn_input), dim=1)
-        print(attn_weights.shape, encoder_outputs[0].shape)
-        attn_applied = torch.bmm(attn_weights, encoder_outputs)
+        # input = [batch size]
+        # hidden = [n layers * n directions, batch size, hid dim]
+        # context = [n layers * n directions, batch size, hid dim]
 
-        output = torch.cat((embedded[0], attn_applied[0]), 1)
+        # n layers and n directions in the decoder will both always be 1, therefore:
+        # hidden = [1, batch size, hid dim]
+        # context = [1, batch size, hid dim]
 
-        output = self.attn_combine(output).unsqueeze(0)
-        output = torch.relu(output)
+        input = input.unsqueeze(0)
+        # input = [1, batch size]
 
-        output, hidden = self.lstm(output, hidden)
-        return output, hidden, attn_weights
+        embedded = self.dropout(self.embedding(input))
+        # embedded = [1, batch size, emb dim]
 
+        emb_con = torch.cat((embedded, context), dim = 2)
+        # emb_con = [1, batch size, emb dim + hid dim]
+
+        output, hidden = self.rnn(emb_con, hidden)
+        # output = [seq len, batch size, hid dim * n directions]
+        # hidden = [n layers * n directions, batch size, hid dim]
+        # seq len, n layers and n directions will always be 1 in the decoder, therefore:
+        # output = [1, batch size, hid dim]
+        # hidden = [1, batch size, hid dim]
+        output = torch.cat((embedded.squeeze(0), hidden.squeeze(0), context.squeeze(0)), dim = 1)
+        # output = [batch size, emb dim + hid dim * 2]
+        prediction = self.fc_out(output)
+        # prediction = [batch size, output dim]
+        return prediction, hidden
 
 teacher_forcing_ratio = 0.5
 
