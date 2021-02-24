@@ -76,7 +76,7 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     return output, (inds_mask, inds_rand, inds_left)
 
 
-def error_indices(inp, num_indices=5):
+def error_indices(inp, for_autoregressive=False, num_indices=5):
     '''
     adding errors systematically to batches of notetuple-format data. should happen on cpu only.
     '''
@@ -91,7 +91,11 @@ def error_indices(inp, num_indices=5):
     stds = inp.float().view(-1, num_feats).std(0)
     # array to hold record of diff edits (three types: replace, insert, delete)
     num_diff_types = 3
-    errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
+
+    if not for_autoregressive:
+        errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
+    else:
+        errored_indices = []
 
     for i in range(batch_size):
         entry = output[i]
@@ -117,7 +121,11 @@ def error_indices(inp, num_indices=5):
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
-        errored_indices[i] = get_notetuple_diff(entry, inp[i])
+        error_alignment = get_notetuple_diff(entry, inp[i], for_autoregressive)
+        if not for_autoregressive:
+            errored_indices[i] = error_alignment
+        else:
+            errored_indices.append(error_alignment)
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
@@ -125,10 +133,16 @@ def error_indices(inp, num_indices=5):
         entry = torch.cat([entry, pad_seq], 0)
         output[i, :end] = entry[:end]
 
+    if for_autoregressive:
+        mat = np.zeros((batch_size, max(len(x) for x in errored_indices), num_diff_types))
+        for i in range(batch_size):
+            mat[i, :len(errored_indices[i])] = errored_indices[i]
+        errored_indices = mat
+
     return output, torch.tensor(errored_indices, dtype=inp.dtype)
 
 
-def get_notetuple_diff(err, orig):
+def get_notetuple_diff(err, orig, for_autoregressive=False):
     err = [tuple(x) for x in err.numpy()]
     orig = [tuple(x) for x in orig.numpy()]
 
@@ -136,18 +150,26 @@ def get_notetuple_diff(err, orig):
     ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
 
     # replace / insert / delete
-    record = np.zeros([len(orig), 3])
     mapping = {
         'replace': 0,
         'insert': 1,
         'delete': 2
     }
 
-    for item in ops:
-        end_index = max(item[2], item[1] + 1)
-        type_ind = mapping[item[0]]
-        record[item[1]:end_index, type_ind] = 1
-
+    if not for_autoregressive:
+        record = np.zeros([len(orig), 3])
+        for item in ops:
+            end_index = max(item[2], item[1] + 1)
+            type_ind = mapping[item[0]]
+            record[item[1]:end_index, type_ind] = 1
+    else:
+        record = []
+        for item in ops:
+            start_index = item[1]
+            amt = (item[2] - item[1]) if (item[2] - item[1]) > 0 else item[4] - item[3]
+            type_ind = mapping[item[0]]
+            record.append([type_ind, start_index, amt])
+        record = np.stack(record, 0)
     return record
 
 
@@ -167,7 +189,7 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    kw = {'num_indices': 5}
+    kw = {'num_indices': 5, 'for_autoregressive': True}
     errored, indices = error_indices(batch, **kw)
 
 
