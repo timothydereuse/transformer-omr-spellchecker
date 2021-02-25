@@ -1,32 +1,42 @@
 # name of this set of parameters:
-params_name = 'BASE'
+params_name = 'BASE_NHEAD-2'
 
 # -- definition of symbolic music representation
 seq_length = 128     # length of song sequences
-padding_amt = 20    # max padding on both sides of a song
+padding_amt = 16    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.001               # reduces size of dataset
-num_epochs = 5                # number of epochs to train for
+trial_run = 0.4               # reduces size of dataset
+num_epochs = 60                # number of epochs to train for
 lr = 0.0002                    # initial learning rate
-batch_size = 2048               # size of each batch
+batch_size = 1800               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
-early_stopping_patience = 10    # abort training if it's been this long since best model
+early_stopping_patience = 8    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
 save_img_every = 4              # save a new test image from the validation set every X epochs
 
+# -- definition of autoregressive transformer model
+transformer_ar_settings = {
+    'input_feats': 4,
+    'output_feats': 4,
+    'n_layers': 2,
+    'n_heads': 1,
+    'hidden_dim': 64,
+    'ff_dim': 64,
+    'dropout': 0.15
+}
 
 # -- definition of LSTUT model
 lstut_settings = {
     'seq_length': seq_length,
     'num_feats': 4,
-    'lstm_inp': 64,
-    'lstm_hidden': 64,
+    'lstm_inp': 128,
+    'lstm_hidden': 128,
     'lstm_layers': 2,
-    'tf_inp': 64,
-    'tf_ff': 64,
-    'tf_k': 32,
-    'nhead': 1,
+    'tf_inp': 256,
+    'tf_ff': 256,
+    'tf_k': 128,
+    'nhead': 4,
     'tf_depth': 5,
     'dim_out': 3,
     'dropout': 0.15
@@ -44,7 +54,7 @@ lstm_settings = {
 # -- learning rate plateau scheduler settings
 scheduler_settings = {
     'factor': 0.25,
-    'patience': 2,
+    'patience': 3,
     'threshold': 0.005,
     'verbose': True
 }
@@ -58,7 +68,7 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': 5,
+    'num_indices': 4,
 }
 
 

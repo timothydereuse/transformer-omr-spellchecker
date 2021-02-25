@@ -173,6 +173,12 @@ def get_notetuple_diff(err, orig, for_autoregressive=False):
     return record
 
 
+def autoregressive_target(batch):
+    tgt = batch[:-1]
+    inp = batch[1:]
+    return inp, tgt
+
+
 if __name__ == '__main__':
     import data_loaders as dl
     dset = dl.MidiNoteTupleDataset(
