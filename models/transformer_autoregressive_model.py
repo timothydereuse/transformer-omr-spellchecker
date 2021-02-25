@@ -69,11 +69,18 @@ class TransformerEncoderDecoder(nn.Module):
         self.src_embed = nn.Linear(self.input_feats, self.d_model)
         self.tgt_embed = nn.Linear(self.output_feats, self.d_model)
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
+        self.tgt_mask = fast_transformers.masking.TriangularCausalMask(N=12)
 
-    def forward(self, src, tgt, tgt_mask, src_len_mask=None, tgt_len_mask=None):
+
+    def forward(self, src, tgt, src_len_mask=None, tgt_len_mask=None):
         "Take in and process masked src and target sequences."
+
+        if not (self.tgt_mask.shape[0] == tgt.shape[0]):
+            self.tgt_mask = fast_transformers.masking.TriangularCausalMask(tgt.shape[0])
+            # self.tgt_mask = self.tgt_mask.to(tgt.device)
+
         memory = self.encode(src, len_mask=src_len_mask)
-        decoded = self.decode(tgt, memory, tgt_mask, len_mask=tgt_len_mask)
+        decoded = self.decode(tgt, memory, self.tgt_mask, len_mask=tgt_len_mask)
         decoded = self.A(self.final_ff(decoded))
         return decoded
 
@@ -112,7 +119,7 @@ if __name__ == '__main__':
         start_time = time.time()
         optimizer.zero_grad()
 
-        output = model(X, tgt, tgt_mask=x_mask, src_len_mask=src_len_mask, tgt_len_mask=tgt_len_mask)
+        output = model(X, tgt, src_len_mask=src_len_mask, tgt_len_mask=tgt_len_mask)
 
         loss = criterion(output, tgt)
         loss.backward()
