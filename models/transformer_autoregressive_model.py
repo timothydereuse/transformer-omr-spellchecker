@@ -23,14 +23,14 @@ attention_type = 'linear'
 d_model = value_dimensions * n_heads
 
 
-class EncoderDecoder(nn.Module):
+class TransformerEncoderDecoder(nn.Module):
     """
     A standard Encoder-Decoder architecture. Base for this and many
     other models.
     """
 
-    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim):
-        super(EncoderDecoder, self).__init__()
+    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim, dropout=0.15):
+        super(TransformerEncoderDecoder, self).__init__()
 
         self.input_feats = input_feats
         self.output_feats = output_feats
@@ -49,7 +49,8 @@ class EncoderDecoder(nn.Module):
             query_dimensions=hidden_dim,
             value_dimensions=hidden_dim,
             feed_forward_dimensions=ff_dim,
-            attention_type='linear'
+            attention_type='linear',
+            dropout=dropout
         )
 
         decoder_builder = TransformerDecoderBuilder.from_kwargs(
@@ -59,7 +60,8 @@ class EncoderDecoder(nn.Module):
             value_dimensions=hidden_dim,
             feed_forward_dimensions=ff_dim,
             cross_attention_type='linear',
-            self_attention_type='causal-linear'
+            self_attention_type='causal-linear',
+            dropout=dropout
         )
 
         self.encoder = encoder_builder.get()
@@ -83,54 +85,44 @@ class EncoderDecoder(nn.Module):
         tgt_embedded = self.A(self.tgt_embed(tgt))
         return self.decoder(tgt_embedded, memory, tgt_mask, x_length_mask=len_mask)
 
-#
-#
-# # Build a transformer with linear attention builder.
-# encoder = encoder_builder.get()
-# decoder = decoder_builder.get()
+if __name__ == '__main__':
+    X = torch.rand(batch_size, seq_len, input_feats)
+    tgt = torch.rand(batch_size, tgt_seq_len, output_feats)
 
-# Construct the dummy input
-X = torch.rand(batch_size, seq_len, input_feats)
-tgt = torch.rand(batch_size, tgt_seq_len, output_feats)
+    x_mask = fast_transformers.masking.TriangularCausalMask(tgt_seq_len)
+    lengths = torch.randint(seq_len, (batch_size,))
+    src_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=seq_len)
+    lengths = torch.randint(tgt_seq_len, (batch_size,))
+    tgt_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=tgt_seq_len)
 
-x_mask = fast_transformers.masking.TriangularCausalMask(tgt_seq_len)
-lengths = torch.randint(seq_len, (batch_size,))
-src_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=seq_len)
-lengths = torch.randint(tgt_seq_len, (batch_size,))
-tgt_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=tgt_seq_len)
+    model = TransformerEncoderDecoder(input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim)
 
-model = EncoderDecoder(input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    criterion = nn.MSELoss(reduction='mean')
 
+    num_epochs = 100
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-criterion = nn.MSELoss(reduction='mean')
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f'created model with n_params={n_params}')
 
-num_epochs = 100
+    model.train()
+    epoch_loss = 0
+    for i in range(num_epochs):
 
-n_params = sum(p.numel() for p in model.parameters())
-print(f'created model with n_params={n_params}')
+        start_time = time.time()
+        optimizer.zero_grad()
 
+        output = model(X, tgt, tgt_mask=x_mask, src_len_mask=src_len_mask, tgt_len_mask=tgt_len_mask)
 
-model.train()
-epoch_loss = 0
-for i in range(num_epochs):
+        loss = criterion(output, tgt)
+        loss.backward()
 
-    start_time = time.time()
-    optimizer.zero_grad()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        optimizer.step()
 
-    output = model(X, tgt, tgt_mask=x_mask, src_len_mask=src_len_mask, tgt_len_mask=tgt_len_mask)
+        elapsed = time.time() - start_time
+        print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
-    loss = criterion(output, tgt)
-    loss.backward()
-
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-    optimizer.step()
-
-    elapsed = time.time() - start_time
-    print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
-
-
-
-# with torch.no_grad():
-#     memory = encoder(X)
-#     y_pred = decoder(tgt, memory, x_mask)
+    # with torch.no_grad():
+    #     memory = encoder(X)
+    #     y_pred = decoder(tgt, memory, x_mask)
