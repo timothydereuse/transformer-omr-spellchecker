@@ -174,8 +174,8 @@ def get_notetuple_diff(err, orig, for_autoregressive=False):
 
 
 def autoregressive_target(batch):
-    tgt = batch[:-1]
-    inp = batch[1:]
+    tgt = batch[:, :-1]
+    inp = batch[:, 1:]
     return inp, tgt
 
 
