@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 from fast_transformers.builders import TransformerEncoderBuilder, TransformerDecoderBuilder
 import fast_transformers
+from models.positional_encoding import PositionalEncoding
 import time
+
 
 class TransformerEncoderDecoder(nn.Module):
     """
@@ -10,7 +12,7 @@ class TransformerEncoderDecoder(nn.Module):
     other models.
     """
 
-    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim, dropout=0.15):
+    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim, depth_recurrence=3, dropout=0.15):
         super(TransformerEncoderDecoder, self).__init__()
 
         self.input_feats = input_feats
@@ -21,6 +23,9 @@ class TransformerEncoderDecoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.ff_dim = ff_dim
         self.d_model = hidden_dim * n_heads
+        self.depth_recurrence = depth_recurrence
+
+        self.pe = PositionalEncoding(self.d_model, dropout=dropout, max_len=4096)
 
         self.A = nn.GELU()
 
@@ -52,17 +57,16 @@ class TransformerEncoderDecoder(nn.Module):
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
         self.tgt_mask = fast_transformers.masking.TriangularCausalMask(N=12)
 
-
     def forward(self, src, tgt, src_len_mask=None, tgt_len_mask=None):
-        "Take in and process masked src and target sequences."
-
         memory = self.encode(src, len_mask=src_len_mask)
         decoded = self.decode(tgt, memory, self.tgt_mask, len_mask=tgt_len_mask)
         return decoded
 
     def encode(self, src, len_mask=None):
-        src_embedded = self.A(self.src_embed(src))
-        return self.encoder(src_embedded, length_mask=len_mask)
+        x = self.pe(self.src_embed(src))
+        for _ in range(self.depth_recurrence):
+            x = self.encoder(x, length_mask=len_mask)
+        return x
 
     def decode(self, tgt, memory, tgt_mask, len_mask=None):
 
@@ -70,9 +74,10 @@ class TransformerEncoderDecoder(nn.Module):
             self.tgt_mask = fast_transformers.masking.TriangularCausalMask(tgt.shape[1])
             # self.tgt_mask = self.tgt_mask.to(tgt.device)
 
-        tgt_embedded = self.A(self.tgt_embed(tgt))
-        decoded = self.decoder(tgt_embedded, memory, tgt_mask, x_length_mask=len_mask)
-        decoded = self.A(self.final_ff(decoded))
+        x = self.pe(self.tgt_embed(tgt))
+        for _ in range(self.depth_recurrence):
+            x = self.decoder(x, memory, tgt_mask, x_length_mask=len_mask)
+        decoded = self.final_ff(x)
         return decoded
 
     def inference_decode(self, src, tgt_length, src_len_mask=None):
