@@ -12,7 +12,7 @@ class TransformerEncoderDecoder(nn.Module):
     other models.
     """
 
-    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim, depth_recurrence=3, dropout=0.15):
+    def __init__(self, input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
         super(TransformerEncoderDecoder, self).__init__()
 
         self.input_feats = input_feats
@@ -23,7 +23,7 @@ class TransformerEncoderDecoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.ff_dim = ff_dim
         self.d_model = hidden_dim * n_heads
-        self.depth_recurrence = depth_recurrence
+        self.tf_depth = tf_depth
 
         self.pe = PositionalEncoding(self.d_model, dropout=dropout, max_len=4096)
 
@@ -64,7 +64,7 @@ class TransformerEncoderDecoder(nn.Module):
 
     def encode(self, src, len_mask=None):
         x = self.pe(self.src_embed(src))
-        for _ in range(self.depth_recurrence):
+        for _ in range(self.tf_depth):
             x = self.encoder(x, length_mask=len_mask)
         return x
 
@@ -75,7 +75,7 @@ class TransformerEncoderDecoder(nn.Module):
             # self.tgt_mask = self.tgt_mask.to(tgt.device)
 
         x = self.pe(self.tgt_embed(tgt))
-        for _ in range(self.depth_recurrence):
+        for _ in range(self.tf_depth):
             x = self.decoder(x, memory, tgt_mask, x_length_mask=len_mask)
         decoded = self.final_ff(x)
         return decoded
