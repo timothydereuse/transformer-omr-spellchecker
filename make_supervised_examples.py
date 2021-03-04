@@ -179,6 +179,12 @@ def autoregressive_target(batch):
     return inp, tgt
 
 
+def autoregressive_inference_test(batch, num_indices=4):
+    tgt = batch[:, :-num_indices]
+    inp = batch[:, -num_indices:]
+    return inp, tgt
+
+
 if __name__ == '__main__':
     import data_loaders as dl
     dset = dl.MidiNoteTupleDataset(

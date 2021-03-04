@@ -6,7 +6,7 @@ import numpy as np
 class SequenceCopyDataset(Dataset):
     """meertens_tune_collection dataset."""
 
-    def __init__(self, num_feats, num_seqs, seq_length, seq_period, seq_type='sine'):
+    def __init__(self, num_feats, num_seqs, seq_length, seq_period, freq_vary=0.2, seq_type='sine'):
         """
         @dset_fname - path to hdf5 file created by make_hdf5.py
         """
@@ -22,14 +22,17 @@ class SequenceCopyDataset(Dataset):
         data[:] = np.tile(slope, [4, 1]).swapaxes(0, 1)
 
         additive = np.random.normal(0, 10, [num_seqs, num_feats])
-        data += np.repeat(additive[:, np.newaxis, :], seq_length, axis=1)
+        additive = np.repeat(additive[:, np.newaxis, :], seq_length, axis=1)
+        data += additive
 
-        mult = np.random.uniform(0.75, 1.25, [num_seqs])
-        mult = np.repeat(mult[:, np.newaxis], seq_length, axis=1)
-        mult = np.repeat(mult[:, :, np.newaxis], num_feats, axis=2)
+        mult = np.random.uniform(1 - freq_vary, 1 + freq_vary, [num_seqs, num_feats])
+        mult = np.repeat(mult[:, np.newaxis, :], seq_length, axis=1)
+
         data *= mult
 
-        data = np.sin(data / (2 * np.pi))
+        split_pt = num_feats // 2
+        data[:, :, split_pt:] = np.sin(data[:, :, split_pt:] * (2 * np.pi) / seq_period) / 2. + 1
+        data[:, :, :split_pt] = np.mod(data[:, :, :split_pt], seq_period) / seq_period
 
         self.data = data
 
@@ -43,7 +46,12 @@ if __name__ == '__main__':
 
     from torch.utils.data import DataLoader
 
-    dset = SequenceCopyDataset(4, 1000, 50, 'sine', 14)
+    dset = SequenceCopyDataset(
+        num_feats=4,
+        num_seqs=1200,
+        seq_length=100,
+        seq_period=12,
+        freq_vary=0.6)
 
     dloader = DataLoader(dset, 10)
 
