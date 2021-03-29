@@ -111,24 +111,27 @@ def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
                 note_val = 4
             pr[cur_time:cur_time + e[0], e[2]] = note_val
             cur_time += e[1]
+
+        pr = pr[:, np.any(pr > 0, axis=0)]
+
         return pr
 
     original_pr = make_pr(orig)
     real_corrected = make_pr(err, tgt_corr)
     pred_corrected = make_pr(err, pred_corr)
 
-    cmap = colors.ListedColormap(['black', 'gray', 'white', 'orange', 'cyan'])
+    cmap = colors.ListedColormap(['black', 'gray', 'yellow', 'red', 'blue'])
     bounds = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5]
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
     fig, axs = plt.subplots(3, 1, figsize=(12, 12))
-    axs[0].imshow(original_pr.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[0].imshow(original_pr.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
     axs[0].set_title('Real Music')
 
-    axs[1].imshow(real_corrected.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[1].imshow(real_corrected.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
     axs[1].set_title('Musical Input (real errors)')
 
-    axs[2].imshow(pred_corrected.T, aspect='auto', interpolation=None, cmap=cmap, norm=norm)
+    axs[2].imshow(pred_corrected.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
     axs[2].set_title('Musical Input (predicted errors)')
 
     # fig.savefig('test.png', bbox_inches='tight')

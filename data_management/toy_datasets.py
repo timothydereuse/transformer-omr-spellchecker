@@ -19,7 +19,7 @@ class SequenceCopyDataset(Dataset):
 
         data = np.zeros([num_seqs, seq_length, num_feats])
         slope = np.linspace(1, seq_length, seq_length)
-        data[:] = np.tile(slope, [4, 1]).swapaxes(0, 1)
+        data[:] = np.tile(slope, [num_feats, 1]).swapaxes(0, 1)
 
         additive = np.random.normal(0, 10, [num_seqs, num_feats])
         additive = np.repeat(additive[:, np.newaxis, :], seq_length, axis=1)
@@ -30,9 +30,10 @@ class SequenceCopyDataset(Dataset):
 
         data *= mult
 
-        split_pt = num_feats // 2
-        data[:, :, split_pt:] = np.sin(data[:, :, split_pt:] * (2 * np.pi) / seq_period) / 2. + 1
-        data[:, :, :split_pt] = np.mod(data[:, :, :split_pt], seq_period) / seq_period
+        split_pt = 0 # num_feats // 2
+        data[:, :, split_pt:] = np.sin(data[:, :, split_pt:] * (2 * np.pi) / seq_period)
+        data[:, :, split_pt:] = (data[:, :, split_pt:] + 1.) / 2.
+        # data[:, :, :split_pt] = np.mod(data[:, :, :split_pt], seq_period) / seq_period
 
         self.data = data
 

@@ -8,9 +8,11 @@ from torch.utils.data import DataLoader
 import models.LSTUT_model as lstut
 import model_params as params
 from importlib import reload
+import plot_outputs as po
 
 reload(params)
 reload(mse)
+reload(po)
 
 
 def f_measure(inps, targets, threshold=0.5):
@@ -71,7 +73,7 @@ def test_results(output, target, results_dict, threshold):
 
 
 if __name__ == '__main__':
-    model_path = r'lstut_best_2021-01-11 20-44_lstm-64-64-2_tf-64-64-32-1-5.pt'
+    model_path = r'trained_models\lstut_best_2021-01-14 11-28_lstm-128-128-2_tf-256-256-128-4-5.pt'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dset_path = params.dset_path
@@ -111,5 +113,19 @@ if __name__ == '__main__':
             output = tst_model(inp)
             results_dict = test_results(output, target, results_dict, best_thresh)
 
-    # epoch = checkpoint['epoch']
-    # loss = checkpoint['loss']
+    for k in results_dict.keys():
+        # for c in results_dict[k].keys():
+        #     results_dict[k][c] = np.sum(results_dict[k][c])
+        results_dict[k]['precision'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_pos'])
+        results_dict[k]['recall'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_neg'])
+        results_dict[k]['True positive rate'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_neg'])
+        results_dict[k]['True negative rate'] = results_dict[k]['t_neg'] / (results_dict[k]['t_neg'] + results_dict[k]['f_pos'])
+
+    print(results_dict)
+        # epoch = checkpoint['epoch']
+        # loss = checkpoint['loss']
+
+    ind = 93
+    fig, axs = po.plot_pianoroll_corrections(batch[ind], inp[ind], target[ind], output[ind], best_thresh)
+    # fg.show()
+    fig.savefig(f'./out_imgs/ind_{ind}.png', bbox_inches='tight')
