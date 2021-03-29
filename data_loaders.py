@@ -309,6 +309,12 @@ class MidiNoteTupleDataset(IterableDataset):
         means = batches.mean(0).numpy()
         return stds, means
 
+    def normalize_batch(self, item):
+        return (item - self.means) / self.stds
+
+    def unnormalize_batch(self, item):
+        return ((item * self.stds) + self.means).round()
+
     def __iter__(self):
         '''
         Main iteration function.
@@ -326,9 +332,6 @@ class MidiNoteTupleDataset(IterableDataset):
             programs = self.simplify_programs(x[:, 5])
             # notetuples = np.concatenate([x[:, 1:4], programs], 1)
             notetuples = np.concatenate([x[:, [0, 1, 3]], programs], 1)
-
-            # normalize mean and variance
-            notetuples = (notetuples - self.means) / self.stds
 
             # pad runlength encoding on both sides
             padded_nt = np.concatenate([

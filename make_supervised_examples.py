@@ -76,7 +76,7 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     return output, (inds_mask, inds_rand, inds_left)
 
 
-def error_indices(inp, for_autoregressive=False, num_indices=5):
+def error_indices(inp, num_indices=5):
     '''
     adding errors systematically to batches of notetuple-format data. should happen on cpu only.
     '''
@@ -85,17 +85,13 @@ def error_indices(inp, for_autoregressive=False, num_indices=5):
     batch_size = inp.shape[0]
     num_feats = inp.shape[-1]
     pad_seq = torch.tensor([params.notetuple_flags['pad'] for _ in range(seq_len)], dtype=inp.dtype)
-    output = inp.clone()
+    output = inp.clone().numpy()
 
-    means = inp.float().view(-1, num_feats).mean(0)
-    stds = inp.float().view(-1, num_feats).std(0)
-    # array to hold record of diff edits (three types: replace, insert, delete)
-    num_diff_types = 3
+    means = inp.float().view(-1, num_feats).mean(0).numpy()
+    stds = inp.float().view(-1, num_feats).std(0).numpy()
 
-    if not for_autoregressive:
-        errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
-    else:
-        errored_indices = []
+    # errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
+    errored_sets = []
 
     for i in range(batch_size):
         entry = output[i]
@@ -106,8 +102,9 @@ def error_indices(inp, for_autoregressive=False, num_indices=5):
         # errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = torch.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
-        entry[sel_inds] = errors.round().abs()
+        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
+        errors = np.abs(np.round(errors))
+        entry[sel_inds] = errors
 
         # delete masked entries
         mask = np.ones(len(entry), dtype='bool')
@@ -117,29 +114,23 @@ def error_indices(inp, for_autoregressive=False, num_indices=5):
 
         # more errors to insert instead of replace
         inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
-        errors = torch.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
+        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
+        errors = np.abs(np.round(errors))
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
-        error_alignment = get_notetuple_diff(entry, inp[i], for_autoregressive)
-        if not for_autoregressive:
-            errored_indices[i] = error_alignment
-        else:
-            errored_indices.append(error_alignment)
+        # error_alignment = get_notetuple_diff(entry, inp[i])
+        set_xor = error_set_xor(entry, inp[i].numpy())
+        # errored_indices[i] = error_alignment
+        errored_sets.append(set_xor)
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
         end = min(len(entry), output.shape[0])
-        entry = torch.cat([entry, pad_seq], 0)
+        entry = np.concatenate([entry, pad_seq], 0)
         output[i, :end] = entry[:end]
 
-    if for_autoregressive:
-        mat = np.zeros((batch_size, max(len(x) for x in errored_indices), num_diff_types))
-        for i in range(batch_size):
-            mat[i, :len(errored_indices[i])] = errored_indices[i]
-        errored_indices = mat
-
-    return output, torch.tensor(errored_indices, dtype=inp.dtype)
+    return torch.tensor(output), errored_sets
 
 
 def get_notetuple_diff(err, orig, for_autoregressive=False):
@@ -184,11 +175,12 @@ def autoregressive_target(batch, teacher_forcing=True, num_indices=10):
     return inp, tgt
 
 
-def autoregressive_inference_test(batch, num_indices=4):
-    tgt = batch[:, :-num_indices]
-    inp = batch[:, -num_indices:]
-    return inp, tgt
-
+def error_set_xor(err, orig):
+    err_set = set(map(tuple, err.astype('int')))
+    orig_set = set(map(tuple, orig.astype('int')))
+    x = err_set.symmetric_difference(orig_set)
+    x = np.array(list(x))
+    return x
 
 if __name__ == '__main__':
     import data_loaders as dl
@@ -199,14 +191,14 @@ if __name__ == '__main__':
         padding_amt=params.padding_amt,
         trial_run=params.trial_run)
 
-    dload = DataLoader(dset, batch_size=40)
+    dload = DataLoader(dset, batch_size=2)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)
         if i > 2:
             break
 
-    kw = {'num_indices': 5, 'for_autoregressive': True}
+    kw = {'num_indices': 5}
     errored, indices = error_indices(batch, **kw)
 
 
