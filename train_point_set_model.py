@@ -7,8 +7,8 @@ import data_management.toy_datasets as dl
 import factorizations as fcts
 import test_trained_model as ttm
 import models.transformer_autoregressive_model as tam
-import make_supervised_examples as mse
 import test_trained_notetuple_model as ttnm
+import training_helper_functions as tr_funcs
 from importlib import reload
 from torch.utils.data import DataLoader
 import plot_outputs as po
@@ -20,12 +20,12 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+reload(tr_funcs)
 reload(ttnm)
 reload(dl)
 reload(fcts)
 reload(tam)
 reload(params)
-reload(mse)
 reload(ttm)
 reload(po)
 
@@ -65,63 +65,8 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 
 criterion = nn.MSELoss(reduction='sum').to(device)
 
-prepare_batch = mse.autoregressive_target
-
-
-def log_gpu_info():
-    for i in range(torch.cuda.device_count()):
-        t = torch.cuda.get_device_properties(i)
-        c = torch.cuda.memory_cached(i) / (2 ** 10)
-        a = torch.cuda.memory_allocated(i) / (2 ** 10)
-        logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
-
-
-def run_epoch(model, dloader, train=False, log_each_batch=False):
-    num_seqs_used = 0
-    total_loss = 0.
-
-    for i, batch in enumerate(dloader):
-
-        teacher_forcing = True # (torch.rand(1)[0] > 0.5)
-
-        batch = batch.float().cpu()
-        inp, target = prepare_batch(batch, teacher_forcing=teacher_forcing, num_indices=10)
-
-        batch = batch.to(device)
-        inp = inp.to(device)
-        target = target.to(device)
-
-        if train:
-            optimizer.zero_grad()
-
-        if teacher_forcing:
-            output = model(inp, target)
-        else:
-            output = model.inference_decode(inp, tgt_length=9)
-
-        loss = criterion(
-            output.view(output.shape[0], -1),
-            target.view(target.shape[0], -1)
-            )
-
-        if train:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
-            optimizer.step()
-
-        batch_loss = loss.item()
-        total_loss += batch_loss
-        num_seqs_used += target.numel()
-
-        if log_each_batch:
-            logging.info(f'    batch {i}, loss {batch_loss / target.numel():3.7f}')
-
-    mean_loss = total_loss / num_seqs_used
-    return mean_loss, (inp, target, output)
-
-
 logging.info('beginning training')
-log_gpu_info()
+tr_funcs.log_gpu_info()
 start_time = time.time()
 val_losses = []
 best_model = None
@@ -129,15 +74,16 @@ for epoch in range(params.num_epochs):
 
     # perform training epoch
     model.train()
-    train_loss, tr_exs = run_epoch(model, dloader, train=True, log_each_batch=True)
-    # log_gpu_info()
+    train_loss, tr_exs = tr_funcs.run_epoch(model, dloader, optimizer,
+                                            criterion, device, train=True, log_each_batch=True)
 
     # test on validation set
     model.eval()
     num_entries = 0
     val_loss = 0.
     with torch.no_grad():
-        val_loss, val_exs = run_epoch(model, dloader_val, train=False, log_each_batch=False)
+        val_loss, val_exs = tr_funcs.run_epoch(model, dloader, optimizer,
+                                               criterion, device, train=False, log_each_batch=False)
 
     val_losses.append(val_loss)
 
@@ -150,7 +96,6 @@ for epoch in range(params.num_epochs):
     start_time = time.time()
 
     scheduler.step(val_loss)
-
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
