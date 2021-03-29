@@ -248,8 +248,8 @@ class MidiNoteTupleDataset(IterableDataset):
         (41, 128): 3
     }
 
-    def __init__(self, dset_fname, seq_length, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, trial_run=False):
+    def __init__(self, dset_fname, seq_length, num_feats=4, base=None, shuffle_files=True,
+                 padding_amt=None, random_offsets=True, estimate_stats_batches=10, trial_run=False):
         """
         @dset_root -
         @seq_length - number of units to chop sequences into
@@ -276,7 +276,7 @@ class MidiNoteTupleDataset(IterableDataset):
         if trial_run:
             self.fnames = self.fnames[:int(len(self.fnames) * trial_run)]
 
-        self.num_feats = 4
+        self.num_feats = num_feats
         padding_element = np.array(self.flags['pad'])
 
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
@@ -286,12 +286,28 @@ class MidiNoteTupleDataset(IterableDataset):
         self.sos_element = np.array([self.flags['sos']])
         self.eos_element = np.array([self.flags['eos']])
 
+        self.stds = np.ones(self.num_feats)
+        self.means = np.zeros(self.num_feats)
+        if estimate_stats_batches > 0:
+            self.stds, self.means = self.estimate_stats(estimate_stats_batches)
+
     def simplify_programs(self, programs):
         x = np.zeros(programs.shape)
         for k in self.program_ranges.keys():
             in_category = (k[0] < programs) * (programs <= k[1])
             x[in_category] = self.program_ranges[k]
         return np.expand_dims(x, 1)
+
+    def estimate_stats(self, num_batches=10):
+        batches = []
+        for i, x in enumerate(self.__iter__()):
+            batches.append(torch.tensor(x))
+            if i > num_batches:
+                break
+        batches = torch.cat(batches, 0).view(-1, 4)
+        stds = batches.std(0).numpy()
+        means = batches.mean(0).numpy()
+        return stds, means
 
     def __iter__(self):
         '''
@@ -308,8 +324,11 @@ class MidiNoteTupleDataset(IterableDataset):
             # no need to use a custom factorization, just extract the relevant columns
             # onset, duration, time to next onset, pitch, velocity, program
             programs = self.simplify_programs(x[:, 5])
-            # print(x[:, 1:4].shape, programs.shape)
-            notetuples = np.concatenate([x[:, 1:4], programs], 1)
+            # notetuples = np.concatenate([x[:, 1:4], programs], 1)
+            notetuples = np.concatenate([x[:, [0, 1, 3]], programs], 1)
+
+            # normalize mean and variance
+            notetuples = (notetuples - self.means) / self.stds
 
             # pad runlength encoding on both sides
             padded_nt = np.concatenate([
@@ -346,7 +365,9 @@ if __name__ == '__main__':
     dset = MidiNoteTupleDataset(fname, seq_len)
 
     dload = DataLoader(dset, batch_size=15)
+    batches = []
     for i, x in enumerate(dload):
         print(i, x.shape)
+        batches.append(x)
         if i > 2:
             break
