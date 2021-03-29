@@ -81,9 +81,10 @@ class TransformerEncoderDecoder(nn.Module):
         return decoded
 
     def inference_decode(self, src, tgt_length, src_len_mask=None):
-        memory = self.encode(src, len_mask=src_len_mask)
+        memory = self.encode(src[:, :-1], len_mask=src_len_mask)
 
-        decoded = torch.zeros(src.shape[0], 1, output_feats)
+        # decoded = torch.zeros(src.shape[0], 1, self.output_feats)
+        decoded = src[:, -1, :].unsqueeze(1)
 
         for i in range(tgt_length):
             decode_step = self.decode(decoded, memory, self.tgt_mask)
