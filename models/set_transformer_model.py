@@ -4,28 +4,38 @@ from fast_transformers.builders import TransformerEncoderBuilder
 from fast_transformers.attention.attention_layer import AttentionLayer
 from fast_transformers.attention.linear_attention import LinearAttention
 from fast_transformers.masking import FullMask, LengthMask
-import fast_transformers
 import time
 
 
 class SetTransformer(nn.Module):
 
-    def __init__(self, num_feats, num_output_points, n_layers, n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
+    def __init__(self, num_feats, num_output_points, n_layers_prepooling, n_layers_postpooling,
+                 n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
         super(SetTransformer, self).__init__()
 
-        self.input_feats = num_feats
-        self.output_feats = num_feats
+        self.num_feats = num_feats
         self.k = num_output_points
 
-        self.n_layers = n_layers
+        self.n_layers_prepooling = n_layers_prepooling
+        self.n_layers_postpooling = n_layers_postpooling
         self.n_heads = n_heads
         self.hidden_dim = hidden_dim
         self.ff_dim = ff_dim
         self.d_model = hidden_dim * n_heads
         self.tf_depth = tf_depth
 
-        encoder_builder = TransformerEncoderBuilder.from_kwargs(
-            n_layers=n_layers,
+        encoder_builder_pre = TransformerEncoderBuilder.from_kwargs(
+            n_layers=n_layers_prepooling,
+            n_heads=n_heads,
+            query_dimensions=hidden_dim,
+            value_dimensions=hidden_dim,
+            feed_forward_dimensions=ff_dim,
+            attention_type='linear',
+            dropout=dropout
+        )
+
+        encoder_builder_post = TransformerEncoderBuilder.from_kwargs(
+            n_layers=n_layers_postpooling,
             n_heads=n_heads,
             query_dimensions=hidden_dim,
             value_dimensions=hidden_dim,
@@ -35,12 +45,13 @@ class SetTransformer(nn.Module):
         )
 
         self.seeds = nn.Parameter(torch.rand(self.k, self.d_model))
-        self.encoder = encoder_builder.get()
+        self.encoder_pre = encoder_builder_pre.get()
+        self.encoder_post = encoder_builder_post.get()
 
         self.attn_pooling = AttentionLayer(LinearAttention(self.d_model), self.d_model, self.n_heads)
 
-        self.src_embed = nn.Linear(self.input_feats, self.d_model)
-        self.final_ff = nn.Linear(self.d_model, self.output_feats)
+        self.initial_ff = nn.Linear(self.num_feats, self.d_model)
+        self.final_ff = nn.Linear(self.d_model, self.num_feats)
 
         # init masks to meaningless values, doesn't matter what. these are all empty anyway.
         self.mask = FullMask(N=self.k, M=5)
@@ -49,9 +60,9 @@ class SetTransformer(nn.Module):
 
     def forward(self, src, src_len_mask=None):
 
-        x = src
+        x = self.initial_ff(src)
         # for _ in range(self.tf_depth):
-        x = self.encoder(x)
+        x = self.encoder_pre(x)
 
         # in case the input sequence length has changed
         set_size = src.shape[1]
@@ -61,14 +72,17 @@ class SetTransformer(nn.Module):
             self.kl_mask = LengthMask(torch.ones(batch_size) * set_size)
         # in case the batch size has changed
         if (self.ql_mask.shape[0] != batch_size) or (self.kl_mask.shape[0] != batch_size):
-            self.ql_mask = LengthMask(torch.ones(batch_size) * k)
+            self.ql_mask = LengthMask(torch.ones(batch_size) * self.k)
             self.kl_mask = LengthMask(torch.ones(batch_size) * set_size)
 
         # extend seeds to size of batch
-        S = self.seeds.unsqueeze(0).repeat(self.shape[0], 1, 1)
+        S = self.seeds.unsqueeze(0).repeat(batch_size, 1, 1)
 
         # perform pooling by multihead attention, reducing dimensionality of set
         x = self.attn_pooling(S, x, x, self.mask, self.ql_mask, self.kl_mask)
+
+        x = self.encoder_post(x)
+        x = self.final_ff(x)
 
         return x
 
@@ -76,43 +90,34 @@ class SetTransformer(nn.Module):
 if __name__ == '__main__':
 
     import model_params as params
+    from chamferdist import ChamferDistance
 
-    batch_size = params.batch_size
-    seq_len = params.seq_length
-    tgt_seq_len = 7
+    batch_size = 40
+    seq_len = 50
+    output_pts = 8
+    num_feats = 4
 
-    input_feats = params.transformer_ar_settings['input_feats']
-    output_feats = params.transformer_ar_settings['output_feats']
-    # n_layers = 2
-    # n_heads = 1
-    # hidden_dim = 64
-    # ff_dim = 64
+    X = torch.rand(batch_size, seq_len, num_feats)
+    tgt = torch.rand(batch_size, output_pts, num_feats)
 
-    X = torch.rand(batch_size, seq_len, input_feats)
-    tgt = torch.rand(batch_size, tgt_seq_len, output_feats)
+    model = SetTransformer(
+        num_feats=num_feats,
+        num_output_points=16,
+        n_layers_prepooling=2,
+        n_layers_postpooling=2,
+        n_heads=2,
+        hidden_dim=64,
+        ff_dim=64)
 
-    x_mask = fast_transformers.masking.TriangularCausalMask(tgt_seq_len)
-    lengths = torch.randint(seq_len, (batch_size,))
-    src_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=seq_len)
-    lengths = torch.randint(tgt_seq_len, (batch_size,))
-    tgt_len_mask = fast_transformers.masking.LengthMask(lengths, max_len=tgt_seq_len)
-
-    # query_dimensions = hidden_dim
-    # value_dimensions = hidden_dim
-    # attention_type = 'linear'
-    #
-    # d_model = value_dimensions * n_heads
-
-    # model = TransformerEncoderDecoder(input_feats, output_feats, n_layers, n_heads, hidden_dim, ff_dim)
-    model = TransformerEncoderDecoder(**params.transformer_ar_settings)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    criterion = nn.MSELoss(reduction='mean')
-
-    num_epochs = 10
+    res = model(X)
 
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    criterion = ChamferDistance()
+
+    num_epochs = 100
 
     model.train()
     epoch_loss = 0
@@ -121,9 +126,9 @@ if __name__ == '__main__':
         start_time = time.time()
         optimizer.zero_grad()
 
-        output = model(X, tgt, src_len_mask=src_len_mask, tgt_len_mask=tgt_len_mask)
+        output = model(X)
 
-        loss = criterion(output, tgt)
+        loss = criterion(tgt, output)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
@@ -133,8 +138,6 @@ if __name__ == '__main__':
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
     model.eval()
-    res = model.inference_decode(X, tgt_seq_len)
-
 
 # d_model = 32
 # k = 5
