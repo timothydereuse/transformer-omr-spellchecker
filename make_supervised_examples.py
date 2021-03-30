@@ -127,7 +127,10 @@ def error_indices(inp, num_indices=5, max_num_error_pts=25):
         entry = np.concatenate([entry, pad_seq], 0)
         output[i, :seq_len] = entry[:seq_len]
 
-    return torch.tensor(output), torch.tensor(errored_indices)
+    output = torch.tensor(output, dtype=inp.dtype)
+    errored_indices = torch.tensor(errored_indices, dtype=inp.dtype)
+
+    return output, errored_indices
 
 
 def get_notetuple_diff(err, orig, for_autoregressive=False):
@@ -178,6 +181,7 @@ def error_set_xor(err, orig):
     x = err_set.symmetric_difference(orig_set)
     x = np.array(list(x))
     return x
+
 
 if __name__ == '__main__':
     import data_loaders as dl
