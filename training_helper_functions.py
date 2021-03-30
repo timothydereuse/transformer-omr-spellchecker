@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
-        seq_length=params.seq_length,
+        seq_length=512,
         base='train',
         padding_amt=params.padding_amt,
         trial_run=params.trial_run)

@@ -249,7 +249,7 @@ class MidiNoteTupleDataset(IterableDataset):
     }
 
     def __init__(self, dset_fname, seq_length, num_feats=4, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, estimate_stats_batches=10, trial_run=False):
+                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, trial_run=False):
         """
         @dset_root -
         @seq_length - number of units to chop sequences into
@@ -289,7 +289,7 @@ class MidiNoteTupleDataset(IterableDataset):
         self.stds = np.ones(self.num_feats)
         self.means = np.zeros(self.num_feats)
         if estimate_stats_batches > 0:
-            self.stds, self.means = self.estimate_stats(estimate_stats_batches)
+            self.stds, self.means = self.estimate_stats()
 
     def simplify_programs(self, programs):
         x = np.zeros(programs.shape)
@@ -298,15 +298,21 @@ class MidiNoteTupleDataset(IterableDataset):
             x[in_category] = self.program_ranges[k]
         return np.expand_dims(x, 1)
 
-    def estimate_stats(self, num_batches=10):
-        batches = []
-        for i, x in enumerate(self.__iter__()):
-            batches.append(torch.tensor(x))
-            if i > num_batches:
+    def estimate_stats(self, num_vals=1e6):
+        M = 0
+        S = 0
+        k = 0
+        for i, seq in enumerate(self.__iter__()):
+            if k > num_vals:
                 break
-        batches = torch.cat(batches, 0).view(-1, 4)
-        stds = batches.std(0).numpy()
-        means = batches.mean(0).numpy()
+            for idx in range(seq.shape[0]):
+                k += 1
+                x = seq[idx]
+                oldM = M
+                M = M + (x - M) / k
+                S = S + (x - M) * (x - oldM)
+        means = M
+        stds = np.sqrt(S / (k-1))
         return stds, means
 
     def normalize_batch(self, item):
@@ -365,7 +371,7 @@ if __name__ == '__main__':
     num_dur_vals = 0
     seq_len = 500
     proportion = 0.2
-    dset = MidiNoteTupleDataset(fname, seq_len)
+    dset = MidiNoteTupleDataset(fname, seq_len, estimate_stats_batches=10)
 
     dload = DataLoader(dset, batch_size=15)
     batches = []
