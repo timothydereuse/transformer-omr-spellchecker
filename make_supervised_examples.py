@@ -76,7 +76,7 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     return output, (inds_mask, inds_rand, inds_left)
 
 
-def error_indices(inp, num_indices=5):
+def error_indices(inp, num_indices=5, max_num_error_pts=25):
     '''
     adding errors systematically to batches of notetuple-format data. should happen on cpu only.
     '''
@@ -84,14 +84,13 @@ def error_indices(inp, num_indices=5):
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
     num_feats = inp.shape[-1]
-    pad_seq = torch.tensor([params.notetuple_flags['pad'] for _ in range(seq_len)], dtype=inp.dtype)
+    pad_seq = np.array([params.notetuple_flags['pad'] for _ in range(seq_len)])
     output = inp.clone().numpy()
 
     means = inp.float().view(-1, num_feats).mean(0).numpy()
     stds = inp.float().view(-1, num_feats).std(0).numpy()
 
-    # errored_indices = np.zeros((batch_size, seq_len, num_diff_types))
-    errored_sets = []
+    errored_indices = np.zeros([batch_size, max_num_error_pts, num_feats])
 
     for i in range(batch_size):
         entry = output[i]
@@ -120,17 +119,15 @@ def error_indices(inp, num_indices=5):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
         set_xor = error_set_xor(entry, inp[i].numpy())
-        errored_sets.append(torch.tensor(set_xor))
-        # error_alignment = get_notetuple_diff(entry, inp[i])
-        # errored_indices[i] = error_alignment
+        set_xor = np.concatenate([set_xor, pad_seq], 0)
+        errored_indices[i] = set_xor[:max_num_error_pts]
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
-        end = min(len(entry), output.shape[0])
         entry = np.concatenate([entry, pad_seq], 0)
-        output[i, :end] = entry[:end]
+        output[i, :seq_len] = entry[:seq_len]
 
-    return torch.tensor(output), errored_sets
+    return torch.tensor(output), torch.tensor(errored_indices)
 
 
 def get_notetuple_diff(err, orig, for_autoregressive=False):
