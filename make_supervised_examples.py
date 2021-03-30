@@ -119,10 +119,10 @@ def error_indices(inp, num_indices=5):
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
-        # error_alignment = get_notetuple_diff(entry, inp[i])
         set_xor = error_set_xor(entry, inp[i].numpy())
+        errored_sets.append(torch.tensor(set_xor))
+        # error_alignment = get_notetuple_diff(entry, inp[i])
         # errored_indices[i] = error_alignment
-        errored_sets.append(set_xor)
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output

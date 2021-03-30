@@ -15,9 +15,9 @@ def log_gpu_info():
 def make_point_set_target(batch, dloader, device):
     dset = dloader.dataset
     errored_input, error_locs = mse.error_indices(batch)
-    errored_input = torch.tensor(dset.normalize_batch(errored_input)).to(device)
+    errored_input = dset.normalize_batch(errored_input).to(device)
     for i in range(len(error_locs)):
-        error_locs[i] = torch.tensor(dset.normalize_batch(error_locs[i])).to(device)
+        error_locs[i] = dset.normalize_batch(error_locs[i]).to(device)
     return errored_input, error_locs
 
 
@@ -61,3 +61,23 @@ def run_epoch(model, dloader, optimizer, criterion, device, train=True, log_each
 
     mean_loss = total_loss / num_seqs_used
     return mean_loss, (inp, target, output)
+
+
+if __name__ == '__main__':
+
+    import data_loaders as dl
+    from torch.utils.data import DataLoader
+
+    dset = dl.MidiNoteTupleDataset(
+        dset_fname=params.dset_path,
+        seq_length=params.seq_length,
+        base='train',
+        padding_amt=params.padding_amt,
+        trial_run=params.trial_run)
+
+    dload = DataLoader(dset, batch_size=10)
+    for i, batch in enumerate(dload):
+        batch = batch.float()
+        inp, target = make_point_set_target(batch, dload, device='cpu')
+        if i > 2:
+            break

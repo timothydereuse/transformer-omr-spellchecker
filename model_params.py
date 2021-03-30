@@ -8,22 +8,22 @@ padding_amt = 16    # max padding on both sides of a song
 # -- training parameters
 trial_run = 0.4               # reduces size of dataset
 num_epochs = 60                # number of epochs to train for
-lr = 0.002                    # initial learning rate
+lr = 0.001                      # initial learning rate
 batch_size = 1000               # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
-early_stopping_patience = 8    # abort training if it's been this long since best model
+early_stopping_patience = 20    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
 save_img_every = 4              # save a new test image from the validation set every X epochs
 
 # -- definition of autoregressive transformer model
 transformer_ar_settings = {
-    'input_feats': 4,
-    'output_feats': 4,
-    'n_layers': 1,
-    'n_heads': 2,
-    'hidden_dim': 64,
-    'ff_dim': 64,
-    'tf_depth': 2,
+    'input_feats': 1,
+    'output_feats': 1,
+    'n_layers': 2,
+    'n_heads': 1,
+    'hidden_dim': 32,
+    'ff_dim': 32,
+    'tf_depth': 1,
     'dropout': 0.15
 }
 
@@ -56,7 +56,7 @@ lstm_settings = {
 scheduler_settings = {
     'factor': 0.1,
     'patience': 3,
-    'threshold': 0.02,
+    'threshold': 0.01,
     'verbose': True
 }
 
