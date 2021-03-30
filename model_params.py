@@ -15,6 +15,18 @@ early_stopping_patience = 20    # abort training if it's been this long since be
 save_model_every = 29         # save a new model every X epochs
 save_img_every = 4              # save a new test image from the validation set every X epochs
 
+# -- definition of set transformer model
+set_transformer_settings = {
+    'num_feats': 4,
+    'num_output_points': 40,
+    'n_layers_prepooling': 2,
+    'n_layers_postpooling': 2,
+    'n_heads': 1,
+    'hidden_dim': 32,
+    'ff_dim': 32,
+    'dropout': 0.1
+}
+
 # -- definition of autoregressive transformer model
 transformer_ar_settings = {
     'input_feats': 1,
