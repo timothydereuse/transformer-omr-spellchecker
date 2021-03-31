@@ -286,8 +286,8 @@ class MidiNoteTupleDataset(IterableDataset):
         self.sos_element = np.array([self.flags['sos']])
         self.eos_element = np.array([self.flags['eos']])
 
-        self.stds = np.ones(self.num_feats)
-        self.means = np.zeros(self.num_feats)
+        self.stds = torch.ones(self.num_feats)
+        self.means = torch.zeros(self.num_feats)
         if estimate_stats_batches > 0:
             self.stds, self.means = self.estimate_stats()
 
@@ -313,7 +313,7 @@ class MidiNoteTupleDataset(IterableDataset):
                 S = S + (x - M) * (x - oldM)
         means = M
         stds = np.sqrt(S / (k-1))
-        return stds, means
+        return torch.tensor(stds, dtype=torch.float), torch.tensor(means, dtype=torch.float)
 
     def normalize_batch(self, item):
         return (item - self.means) / self.stds

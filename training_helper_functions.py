@@ -2,6 +2,7 @@ import torch
 import logging
 import make_supervised_examples as mse
 import model_params as params
+from chamferdist import ChamferDistance
 
 
 def log_gpu_info():
@@ -14,14 +15,13 @@ def log_gpu_info():
 
 def make_point_set_target(batch, dloader, device):
     dset = dloader.dataset
-    errored_input, error_locs = mse.error_indices(batch)
+    errored_input, error_locs = mse.error_indices(batch, num_indices=5, max_num_error_pts=40)
     errored_input = dset.normalize_batch(errored_input).to(device)
-    for i in range(len(error_locs)):
-        error_locs[i] = dset.normalize_batch(error_locs[i]).to(device)
+    error_locs = dset.normalize_batch(error_locs).to(device)
     return errored_input, error_locs
 
 
-def run_epoch(model, dloader, optimizer, criterion, device, train=True, log_each_batch=False, autoregressive=False):
+def run_epoch(model, dloader, optimizer, criterion, device='cpu', train=True, log_each_batch=False, autoregressive=False):
     num_seqs_used = 0
     total_loss = 0.
 
@@ -42,10 +42,7 @@ def run_epoch(model, dloader, optimizer, criterion, device, train=True, log_each
         else:
             output = model(inp)
 
-        loss = criterion(
-            output.view(output.shape[0], -1),
-            target.view(target.shape[0], -1)
-            )
+        loss = criterion(output, target)
 
         if train:
             loss.backward()
@@ -67,17 +64,35 @@ if __name__ == '__main__':
 
     import data_loaders as dl
     from torch.utils.data import DataLoader
+    from models.set_transformer_model import SetTransformer
 
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
         seq_length=512,
         base='train',
         padding_amt=params.padding_amt,
-        trial_run=params.trial_run)
+        trial_run=5)
 
-    dload = DataLoader(dset, batch_size=10)
+    dload = DataLoader(dset, batch_size=50)
     for i, batch in enumerate(dload):
         batch = batch.float()
         inp, target = make_point_set_target(batch, dload, device='cpu')
         if i > 2:
             break
+
+    set_transformer_settings = {
+        'num_feats': 4,
+        'num_output_points': 40,
+        'n_layers_prepooling': 2,
+        'n_layers_postpooling': 2,
+        'n_heads': 1,
+        'hidden_dim': 32,
+        'ff_dim': 32,
+        'dropout': 0.1
+    }
+
+    model = SetTransformer(**set_transformer_settings)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    criterion = ChamferDistance()
+
+    run_epoch(model, dload, optimizer, criterion, log_each_batch=True)

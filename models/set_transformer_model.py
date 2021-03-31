@@ -44,7 +44,7 @@ class SetTransformer(nn.Module):
             dropout=dropout
         )
 
-        self.seeds = nn.Parameter(torch.rand(self.k, self.d_model))
+        self.seeds = nn.Parameter(torch.zeros(self.k, self.d_model).fill_(0.1))
         self.encoder_pre = encoder_builder_pre.get()
         self.encoder_post = encoder_builder_post.get()
 
