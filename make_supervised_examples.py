@@ -203,7 +203,6 @@ if __name__ == '__main__':
     kw = {'num_indices': 5}
     errored, indices = error_indices(batch, **kw)
 
-
     # model = tfsm.TransformerModel(
     #     num_feats=dset.num_feats,
     #     nlayers=1

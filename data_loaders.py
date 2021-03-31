@@ -249,7 +249,7 @@ class MidiNoteTupleDataset(IterableDataset):
     }
 
     def __init__(self, dset_fname, seq_length, num_feats=4, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, trial_run=False):
+                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, trial_run=False, use_stats_from=None):
         """
         @dset_root -
         @seq_length - number of units to chop sequences into
@@ -288,7 +288,9 @@ class MidiNoteTupleDataset(IterableDataset):
 
         self.stds = torch.ones(self.num_feats)
         self.means = torch.zeros(self.num_feats)
-        if estimate_stats_batches > 0:
+        if use_stats_from is not None:
+            self.stds, self.means = use_stats_from.stds, use_stats_from.means
+        elif estimate_stats_batches > 0:
             self.stds, self.means = self.estimate_stats()
 
     def simplify_programs(self, programs):
