@@ -139,6 +139,22 @@ def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
     return fig, axs
 
 
+def plot_set(exs, dset, ind=0):
+    target = dset.unnormalize_batch(exs['target']).detach().numpy().astype(int)
+    output = dset.unnormalize_batch(exs['output']).detach().numpy().astype(int)
+    inp = dset.unnormalize_batch(exs['input']).detach().numpy().astype(int)
+
+    fig, axs = plt.subplots(3, 1, figsize=(9, 6))
+    max_pitch = np.max(inp[ind, :, 1])
+    max_time = np.max(inp[ind, :, 0])
+
+    for i, p in enumerate([inp, target, output]):
+        axs[i].set_title(('input', 'target', 'output')[i])
+        axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=p[ind, :, 2] / 2, c=p[ind, :, 3])
+        axs[i].set_xlim(0, max_time)
+        axs[i].set_ylim(0, max_pitch)
+
+    return fig, axs
 
 # pitch_data = data[:, :, :-num_dur_vals]
 # dur_data = data[:, :, -num_dur_vals:]
