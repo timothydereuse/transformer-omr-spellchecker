@@ -44,7 +44,7 @@ class SetTransformer(nn.Module):
             dropout=dropout
         )
 
-        self.seeds = nn.Parameter(torch.zeros(self.k, self.d_model).fill_(0.1))
+        self.seeds = nn.Parameter(torch.normal(0, 1, (self.k, self.d_model)))
         self.encoder_pre = encoder_builder_pre.get()
         self.encoder_post = encoder_builder_post.get()
 
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     import model_params as params
     from chamferdist import ChamferDistance
 
-    batch_size = 40
-    seq_len = 50
+    batch_size = 10
+    seq_len = 100
     output_pts = 8
     num_feats = 4
 
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     model = SetTransformer(
         num_feats=num_feats,
-        num_output_points=16,
+        num_output_points=32,
         n_layers_prepooling=2,
         n_layers_postpooling=2,
         n_heads=2,
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
     criterion = ChamferDistance()
 
     num_epochs = 100

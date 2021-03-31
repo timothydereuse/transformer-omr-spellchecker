@@ -42,7 +42,8 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu', train=True, lo
         else:
             output = model(inp)
 
-        loss = criterion(output, target)
+        # for chamfer distance, in this context, target should be first
+        loss = criterion(target, output)
 
         if train:
             loss.backward()
@@ -57,7 +58,8 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu', train=True, lo
             logging.info(f'    batch {i}, loss {batch_loss / target.numel():3.7f}')
 
     mean_loss = total_loss / num_seqs_used
-    return mean_loss, (inp, target, output)
+    example_dict = {'input': inp, 'target': target, 'output': output}
+    return mean_loss, example_dict
 
 
 if __name__ == '__main__':
@@ -71,7 +73,7 @@ if __name__ == '__main__':
         seq_length=512,
         base='train',
         padding_amt=params.padding_amt,
-        trial_run=5)
+        trial_run=0.01)
 
     dload = DataLoader(dset, batch_size=50)
     for i, batch in enumerate(dload):
@@ -95,4 +97,4 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = ChamferDistance()
 
-    run_epoch(model, dload, optimizer, criterion, log_each_batch=True)
+    loss, exs = run_epoch(model, dload, optimizer, criterion, log_each_batch=True)
