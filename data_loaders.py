@@ -363,7 +363,13 @@ class MidiNoteTupleDataset(IterableDataset):
             for i in range(int(num_seqs)):
                 st = i * self.seq_length + offset
                 end = (i+1) * self.seq_length + offset
-                yield padded_nt[st:end]
+                seq = padded_nt[st:end]
+
+                # recenter each individual batch to start at time = 0
+                min_time_offset = np.min(seq[:, 0])
+                seq[:, 0] -= min_time_offset
+
+                yield seq
 
 
 if __name__ == '__main__':
