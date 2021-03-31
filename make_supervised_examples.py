@@ -101,9 +101,9 @@ def error_indices(inp, num_indices=5, max_num_error_pts=25):
         # errored_indices[i, sel_inds] = 1
 
         # make errors from distribution of actual data
-        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
-        errors = np.abs(np.round(errors))
-        entry[sel_inds] = errors
+        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * (stds / 3)
+        errors = (np.round(errors))
+        entry[sel_inds] = entry[sel_inds] + errors
 
         # delete masked entries
         mask = np.ones(len(entry), dtype='bool')
@@ -115,6 +115,7 @@ def error_indices(inp, num_indices=5, max_num_error_pts=25):
         inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
         errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
         errors = np.abs(np.round(errors))
+        errors[:, 0] = errors[:, 0] % np.max(entry[:, 0])
         for n in range(num_indices):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
