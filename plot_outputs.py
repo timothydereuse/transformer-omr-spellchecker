@@ -151,8 +151,8 @@ def plot_set(exs, dset, ind=0):
     for i, p in enumerate([inp, target, output]):
         axs[i].set_title(('input', 'target', 'output')[i])
         axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=p[ind, :, 2] / 2, c=p[ind, :, 3])
-        axs[i].set_xlim(0, max_time)
-        axs[i].set_ylim(0, max_pitch)
+        axs[i].set_xlim(-5, max_time + 5)
+        axs[i].set_ylim(-5, max_pitch + 5)
 
     return fig, axs
 

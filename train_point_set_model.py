@@ -2,68 +2,65 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-# import data_loaders as dl
-import data_management.toy_datasets as dl
+import data_loaders as dl
 import factorizations as fcts
 import test_trained_model as ttm
-import models.transformer_autoregressive_model as tam
-import test_trained_notetuple_model as ttnm
+import models.set_transformer_model as stm
+# import test_trained_notetuple_model as ttnm
 import training_helper_functions as tr_funcs
-from importlib import reload
 from torch.utils.data import DataLoader
+from chamferdist import ChamferDistance
 import plot_outputs as po
 import model_params as params
 import logging
-import copy
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+from importlib import reload
 reload(tr_funcs)
 reload(ttnm)
 reload(dl)
 reload(fcts)
-reload(tam)
+reload(stm)
 reload(params)
 reload(ttm)
 reload(po)
 
-num_gpus = torch.cuda.device_count()
-if torch.cuda.is_available():
-    logging.info(f'found {num_gpus} gpus')
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
+device, num_gpus = tr_funcs.get_cuda_info()
 
 logging.info('defining datasets...')
-dset_tr = dl.SequenceCopyDataset(
-    num_feats=params.transformer_ar_settings['input_feats'],
-    num_seqs=1000,
-    seq_length=100,
-    seq_period=24,
-    freq_vary=0.4)
-dset_vl = dl.SequenceCopyDataset(
-    num_feats=params.transformer_ar_settings['input_feats'],
-    num_seqs=100,
-    seq_length=100,
-    seq_period=24,
-    freq_vary=0.4)
+dset_tr = dl.MidiNoteTupleDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='train',
+    padding_amt=params.padding_amt,
+    trial_run=params.trial_run)
+dset_vl = dl.MidiNoteTupleDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='validate',
+    padding_amt=params.padding_amt,
+    trial_run=params.trial_run,
+    use_stats_from=dset_tr)
+
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-model = tam.TransformerEncoderDecoder(**params.transformer_ar_settings).to(device)
+model = stm.SetTransformer(**params.set_transformer_settings).to(device)
 model_size = sum(p.numel() for p in model.parameters())
 
-# model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
+model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 logging.info(f'created model with n_params={model_size}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-criterion = nn.MSELoss(reduction='sum').to(device)
+criterion = ChamferDistance().to(device)
+# criterion = lambda x, y: cd(x, y, bidirectional=True)
 
 logging.info('beginning training')
 tr_funcs.log_gpu_info()
@@ -100,17 +97,8 @@ for epoch in range(params.num_epochs):
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
 
-        inference_test = val_exs[0]
-        res = model.inference_decode(inference_test, 25)
-        inferred = torch.cat((inference_test, res), 1).detach().numpy()
-
-        ind = np.random.choice(val_exs[0].shape[0])
-        # fig, axs = po.plot_notetuple(inp[ind], output[ind], target[ind], F1_thresh)
-        fig, axs = plt.subplots(3, 1, figsize=(6, 8))
-        for ft in range(val_exs[0].shape[-1]):
-            axs[0].plot(val_exs[2][ind, :, ft])
-            axs[1].plot(val_exs[1][ind, :, ft])
-            axs[2].plot(inferred[ind, :, ft])
+        ind = np.random.choice(tr_exs['input'].shape[0])
+        fig, axs = po.plot_set(tr_exs, dset_tr, ind)
         fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
         plt.clf()
         plt.close(fig)
