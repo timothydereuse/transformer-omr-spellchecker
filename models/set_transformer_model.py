@@ -68,12 +68,12 @@ class SetTransformer(nn.Module):
         set_size = src.shape[1]
         batch_size = src.shape[0]
         if self.mask.shape[1] != set_size:
-            self.mask = FullMask(N=self.k, M=set_size)
-            self.kl_mask = LengthMask(torch.ones(batch_size) * set_size)
+            self.mask = FullMask(N=self.k, M=set_size, device=src.device)
+            self.kl_mask = LengthMask(torch.ones(batch_size) * set_size, device=src.device)
         # in case the batch size has changed
         if (self.ql_mask.shape[0] != batch_size) or (self.kl_mask.shape[0] != batch_size):
-            self.ql_mask = LengthMask(torch.ones(batch_size) * self.k)
-            self.kl_mask = LengthMask(torch.ones(batch_size) * set_size)
+            self.ql_mask = LengthMask(torch.ones(batch_size) * self.k, device=src.device)
+            self.kl_mask = LengthMask(torch.ones(batch_size) * set_size, device=src.device)
 
         # extend seeds to size of batch
         S = self.seeds.unsqueeze(0).repeat(batch_size, 1, 1)
