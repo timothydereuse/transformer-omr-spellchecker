@@ -4,9 +4,7 @@ import torch
 import torch.nn as nn
 import data_loaders as dl
 import factorizations as fcts
-import test_trained_model as ttm
 import models.set_transformer_model as stm
-# import test_trained_notetuple_model as ttnm
 import training_helper_functions as tr_funcs
 from torch.utils.data import DataLoader
 from chamferdist import ChamferDistance
@@ -20,12 +18,10 @@ import matplotlib.pyplot as plt
 
 from importlib import reload
 reload(tr_funcs)
-reload(ttnm)
 reload(dl)
 reload(fcts)
 reload(stm)
 reload(params)
-reload(ttm)
 reload(po)
 
 device, num_gpus = tr_funcs.get_cuda_info()
