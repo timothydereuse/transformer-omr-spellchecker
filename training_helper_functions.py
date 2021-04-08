@@ -54,7 +54,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
         batch = batch.float().cpu()
         inp, target = make_point_set_target(batch, dloader, device)
 
-        batch = batch.to(device)
+        # batch = batch.to(device)
         inp = inp.to(device)
         target = target.to(device)
 

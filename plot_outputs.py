@@ -140,9 +140,9 @@ def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
 
 
 def plot_set(exs, dset, ind=0):
-    target = dset.unnormalize_batch(exs['target']).detach().numpy().astype(int)
-    output = dset.unnormalize_batch(exs['output']).detach().numpy().astype(int)
-    inp = dset.unnormalize_batch(exs['input']).detach().numpy().astype(int)
+    target = dset.unnormalize_batch(exs['target'].detach().cpu()).numpy().astype(int)
+    output = dset.unnormalize_batch(exs['output'].detach().cpu()).numpy().astype(int)
+    inp = dset.unnormalize_batch(exs['input'].detach().cpu()).numpy().astype(int)
 
     fig, axs = plt.subplots(3, 1, figsize=(9, 6))
     max_pitch = np.max(inp[ind, :, 1])
