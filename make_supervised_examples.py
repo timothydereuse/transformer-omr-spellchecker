@@ -186,7 +186,7 @@ def error_set_xor(err, orig):
 
 
 if __name__ == '__main__':
-    import data_loaders as dl
+    import point_set_dataloader as dl
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
         seq_length=params.seq_length,

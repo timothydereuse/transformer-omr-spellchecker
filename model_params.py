@@ -7,8 +7,8 @@ padding_amt = 4    # max padding on both sides of a song
 
 # -- training parameters
 trial_run = 0.3               # reduces size of dataset
-num_epochs = 60                # number of epochs to train for
-lr = 0.001                      # initial learning rate
+num_epochs = 100                # number of epochs to train for
+lr = 0.01                      # initial learning rate
 batch_size = 2048            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
@@ -17,7 +17,7 @@ save_img_every = 1              # save a new test image from the validation set 
 
 # -- definition of set transformer model
 set_transformer_settings = {
-    'num_feats': 4,
+    'num_feats': 3,
     'num_output_points': 35,
     'n_layers_prepooling': 6,
     'n_layers_postpooling': 2,

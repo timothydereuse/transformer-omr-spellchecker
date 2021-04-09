@@ -67,7 +67,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
             output = model(inp)
 
         # for chamfer distance, in this context, target should be first
-        loss = criterion(output, target)
+        loss = criterion(target, output)
 
         if train:
             loss.backward()
@@ -88,7 +88,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
 
 if __name__ == '__main__':
 
-    import data_loaders as dl
+    import point_set_dataloader as dl
     from torch.utils.data import DataLoader
     from models.set_transformer_model import SetTransformer
 
