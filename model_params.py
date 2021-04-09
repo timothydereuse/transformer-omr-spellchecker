@@ -1,29 +1,29 @@
 # name of this set of parameters:
-params_name = 'BASE_NHEAD-2'
+params_name = 'TESTING_POINTSET'
 
 # -- definition of symbolic music representation
-seq_length = 128     # length of song sequences
-padding_amt = 16    # max padding on both sides of a song
+seq_length = 256     # length of song sequences
+padding_amt = 4    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.4               # reduces size of dataset
+trial_run = 0.3               # reduces size of dataset
 num_epochs = 60                # number of epochs to train for
 lr = 0.001                      # initial learning rate
-batch_size = 1000               # size of each batch
+batch_size = 2048            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
-save_img_every = 4              # save a new test image from the validation set every X epochs
+save_img_every = 1              # save a new test image from the validation set every X epochs
 
 # -- definition of set transformer model
 set_transformer_settings = {
     'num_feats': 4,
-    'num_output_points': 40,
-    'n_layers_prepooling': 2,
+    'num_output_points': 35,
+    'n_layers_prepooling': 6,
     'n_layers_postpooling': 2,
-    'n_heads': 1,
-    'hidden_dim': 32,
-    'ff_dim': 32,
+    'n_heads': 6,
+    'hidden_dim': 64,
+    'ff_dim': 64,
     'dropout': 0.1
 }
 
@@ -68,7 +68,7 @@ lstm_settings = {
 scheduler_settings = {
     'factor': 0.1,
     'patience': 3,
-    'threshold': 0.01,
+    'threshold': 0.0001,
     'verbose': True
 }
 
@@ -81,7 +81,9 @@ mask_indices_settings = {
 }
 
 error_indices_settings = {
-    'num_indices': 4,
+    'num_insertions': 12,
+    'num_deletions': 4,
+    'num_replacements': 0
 }
 
 # -- paths to data

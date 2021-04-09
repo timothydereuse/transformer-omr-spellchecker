@@ -76,9 +76,10 @@ def mask_indices(inp, num_indices=5, prob_random=0.15, prob_same=0.15, continguo
     return output, (inds_mask, inds_rand, inds_left)
 
 
-def error_indices(inp, num_indices=5, max_num_error_pts=25):
+def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
     '''
-    adding errors systematically to batches of notetuple-format data. should happen on cpu only.
+    adding errors systematically to batches of notetuple-format or point-set format data.
+    should happen on cpu only.
     '''
 
     seq_len = inp.shape[1]
@@ -90,33 +91,33 @@ def error_indices(inp, num_indices=5, max_num_error_pts=25):
     means = inp.float().view(-1, num_feats).mean(0).numpy()
     stds = inp.float().view(-1, num_feats).std(0).numpy()
 
+    max_num_error_pts = num_deletions + num_insertions + (2 * num_replacements)
+
     errored_indices = np.zeros([batch_size, max_num_error_pts, num_feats])
 
     for i in range(batch_size):
         entry = output[i]
 
+        # replacements:
         inds = np.arange(seq_len)
         np.random.shuffle(inds)
-        sel_inds = inds[:num_indices]
-        # errored_indices[i, sel_inds] = 1
-
-        # make errors from distribution of actual data
-        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * (stds / 3)
+        sel_inds = inds[:num_replacements]
+        errors = np.random.normal(0.0, 1.0, (num_replacements, num_feats)) * (stds / 3)
         errors = (np.round(errors))
         entry[sel_inds] = entry[sel_inds] + errors
 
-        # delete masked entries
+        # deletions:
         mask = np.ones(len(entry), dtype='bool')
-        inds_delete = inds[num_indices:2*num_indices]
+        inds_delete = inds[num_replacements:num_replacements + num_deletions]
         mask[inds_delete] = False
         entry = entry[mask]
 
         # more errors to insert instead of replace
-        inds_insert = inds[2*num_indices:3*num_indices] % len(entry)
-        errors = np.random.normal(0.0, 1.0, (num_indices, num_feats)) * stds + means
+        inds_insert = inds[-num_insertions:] % len(entry)
+        errors = np.random.normal(0.0, 1.0, (num_insertions, num_feats)) * stds + means
         errors = np.abs(np.round(errors))
         errors[:, 0] = errors[:, 0] % np.max(entry[:, 0])
-        for n in range(num_indices):
+        for n in range(num_insertions):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
         set_xor = error_set_xor(entry, inp[i].numpy())
@@ -200,7 +201,7 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    kw = {'num_indices': 5}
+    kw = {'num_insertions': 12, 'num_deletions': 4, 'num_replacements': 0}
     errored, indices = error_indices(batch, **kw)
 
     # model = tfsm.TransformerModel(
