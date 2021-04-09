@@ -2,7 +2,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-import data_loaders as dl
+import point_set_dataloader as dl
 import factorizations as fcts
 import models.set_transformer_model as stm
 import training_helper_functions as tr_funcs

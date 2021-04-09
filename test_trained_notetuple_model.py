@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import data_loaders as dl
+import point_set_dataloader as dl
 import plot_outputs as po
 import numpy as np
 import make_supervised_examples as mse
