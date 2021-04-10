@@ -25,7 +25,7 @@ def log_gpu_info():
 
 def make_point_set_target(batch, dloader, device):
     dset = dloader.dataset
-    errored_input, error_locs = mse.error_indices(batch, num_indices=5, max_num_error_pts=40)
+    errored_input, error_locs = mse.error_indices(batch, **params.error_indices_settings)
     errored_input = dset.normalize_batch(errored_input).to(device)
     error_locs = dset.normalize_batch(error_locs).to(device)
     return errored_input, error_locs
@@ -96,6 +96,7 @@ if __name__ == '__main__':
         dset_fname=params.dset_path,
         seq_length=512,
         base='train',
+        num_feats=params.num_feats,
         padding_amt=params.padding_amt,
         trial_run=0.03)
 
@@ -107,7 +108,7 @@ if __name__ == '__main__':
             break
 
     set_transformer_settings = {
-        'num_feats': 4,
+        'num_feats': params.num_feats,
         'num_output_points': 40,
         'n_layers_prepooling': 2,
         'n_layers_postpooling': 2,

@@ -95,7 +95,7 @@ if __name__ == '__main__':
     batch_size = 10
     seq_len = 100
     output_pts = 8
-    num_feats = 4
+    num_feats = 3
 
     X = torch.rand(batch_size, seq_len, num_feats)
     tgt = torch.rand(batch_size, output_pts, num_feats)

@@ -85,7 +85,8 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
     num_feats = inp.shape[-1]
-    pad_seq = np.array([params.notetuple_flags['pad'] for _ in range(seq_len)])
+    pad_element = params.notetuple_flags['pad'][:num_feats]
+    pad_seq = np.array([pad_element for _ in range(seq_len)])
     output = inp.clone().numpy()
 
     means = inp.float().view(-1, num_feats).mean(0).numpy()
@@ -190,6 +191,7 @@ if __name__ == '__main__':
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
         seq_length=params.seq_length,
+        num_feats=params.num_feats,
         base='train',
         padding_amt=params.padding_amt,
         trial_run=params.trial_run)
