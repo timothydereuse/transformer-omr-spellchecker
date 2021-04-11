@@ -98,6 +98,7 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
 
     for i in range(batch_size):
         entry = output[i]
+        max_time = np.max(entry[:, 0])
 
         # replacements:
         inds = np.arange(seq_len)
@@ -117,9 +118,11 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
         inds_insert = inds[-num_insertions:] % len(entry)
         errors = np.random.normal(0.0, 1.0, (num_insertions, num_feats)) * stds + means
         errors = np.abs(np.round(errors))
-        errors[:, 0] = errors[:, 0] % np.max(entry[:, 0])
         for n in range(num_insertions):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
+
+        # wrap around anything too far forward in time
+        entry[:, 0] = entry[:, 0] % max_time
 
         set_xor = error_set_xor(entry, inp[i].numpy())
         set_xor = np.concatenate([set_xor, pad_seq], 0)
@@ -196,7 +199,7 @@ if __name__ == '__main__':
         padding_amt=params.padding_amt,
         trial_run=params.trial_run)
 
-    dload = DataLoader(dset, batch_size=2)
+    dload = DataLoader(dset, batch_size=9)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)

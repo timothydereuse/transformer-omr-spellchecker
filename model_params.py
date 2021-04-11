@@ -9,24 +9,37 @@ padding_amt = 4    # max padding on both sides of a song
 trial_run = 0.3               # reduces size of dataset
 num_epochs = 100                # number of epochs to train for
 lr = 0.01                      # initial learning rate
-batch_size = 128            # size of each batch
+batch_size = 512            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
 save_img_every = 1              # save a new test image from the validation set every X epochs
 num_feats = 3
 
+
 # -- definition of set transformer model
 set_transformer_settings = {
     'num_feats': num_feats,
     'num_output_points': 20,
-    'n_layers_prepooling': 2,
-    'n_layers_postpooling': 2,
-    'n_heads': 2,
+    'n_layers_prepooling': 6,
+    'n_layers_postpooling': 3,
+    'n_heads': 4,
     'hidden_dim': 64,
-    'ff_dim': 64,
+    'ff_dim': 128,
     'dropout': 0.1
 }
+
+# set_transformer_settings = {
+#     'num_feats': num_feats,
+#     'num_output_points': 20,
+#     'n_layers_prepooling': 2,
+#     'n_layers_postpooling': 2,
+#     'n_heads': 2,
+#     'hidden_dim': 32,
+#     'ff_dim': 32,
+#     'dropout': 0.1
+# }
+
 
 # -- definition of autoregressive transformer model
 transformer_ar_settings = {
@@ -83,8 +96,8 @@ mask_indices_settings = {
 
 error_indices_settings = {
     'num_insertions': 12,
-    'num_deletions': 4,
-    'num_replacements': 0
+    'num_deletions': 0,
+    'num_replacements': 2
 }
 
 # -- paths to data
