@@ -143,6 +143,7 @@ def plot_set(exs, dset, ind=0):
     target = dset.unnormalize_batch(exs['target'].detach().cpu()).numpy().astype(int)
     output = dset.unnormalize_batch(exs['output'].detach().cpu()).numpy().astype(int)
     inp = dset.unnormalize_batch(exs['input'].detach().cpu()).numpy().astype(int)
+    num_feats = inp.shape[-1]
 
     fig, axs = plt.subplots(3, 1, figsize=(9, 6))
     max_pitch = np.max(inp[ind, :, 1])
@@ -150,7 +151,13 @@ def plot_set(exs, dset, ind=0):
 
     for i, p in enumerate([inp, target, output]):
         axs[i].set_title(('input', 'target', 'output')[i])
-        axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=p[ind, :, 2] / 2, c=p[ind, :, 3])
+        if num_feats == 2:
+            s, c = (1, 'black')
+        elif num_feats == 3:
+            s, c = (p[ind, :, 2] / 2, 'black')
+        else:
+            s, c = (p[ind, :, 2] / 2, p[ind, :, 3])
+        axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=s, c=c)
         axs[i].set_xlim(-5, max_time + 5)
         axs[i].set_ylim(-5, max_pitch + 5)
 
