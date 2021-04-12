@@ -8,12 +8,12 @@ padding_amt = 4    # max padding on both sides of a song
 # -- training parameters
 trial_run = 0.3               # reduces size of dataset
 num_epochs = 100                # number of epochs to train for
-lr = 0.01                      # initial learning rate
-batch_size = 512            # size of each batch
+lr = 0.0001                      # initial learning rate
+batch_size = 256            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
-save_img_every = 1              # save a new test image from the validation set every X epochs
+save_img_every = 3              # save a new test image from the validation set every X epochs
 num_feats = 3
 
 
@@ -24,8 +24,8 @@ set_transformer_settings = {
     'n_layers_prepooling': 6,
     'n_layers_postpooling': 3,
     'n_heads': 4,
-    'hidden_dim': 64,
-    'ff_dim': 128,
+    'hidden_dim': 128,
+    'ff_dim': 256,
     'dropout': 0.1
 }
 
@@ -80,9 +80,9 @@ lstm_settings = {
 
 # -- learning rate plateau scheduler settings
 scheduler_settings = {
-    'factor': 0.1,
+    'factor': 0.25,
     'patience': 3,
-    'threshold': 0.0001,
+    'threshold': 0.001,
     'verbose': True
 }
 

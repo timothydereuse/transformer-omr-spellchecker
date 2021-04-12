@@ -83,11 +83,13 @@ for epoch in range(params.num_epochs):
     val_losses.append(val_loss)
 
     elapsed = time.time() - start_time
+    log_train_loss = np.log(train_loss)
+    log_val_loss = np.log(val_loss)
     logging.info(
         f'epoch {epoch:3d} | '
         f's/epoch {elapsed:3.5f} | '
-        f'train_loss {train_loss:3.7f} | '
-        f'val_loss {val_loss:3.7f} ')
+        f'train_loss {log_train_loss:2.7f} | '
+        f'val_loss {log_val_loss:2.7f} ')
     start_time = time.time()
 
     scheduler.step(val_loss)
