@@ -33,14 +33,15 @@ dset_tr = dl.MidiNoteTupleDataset(
     base='train',
     num_feats=params.num_feats,
     padding_amt=params.padding_amt,
-    trial_run=params.trial_run)
+    dataset_proportion=params.dataset_proportion,
+)
 dset_vl = dl.MidiNoteTupleDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
     base='validate',
     num_feats=params.num_feats,
     padding_amt=params.padding_amt,
-    trial_run=params.trial_run,
+    dataset_proportion=params.dataset_proportion,
     use_stats_from=dset_tr)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)

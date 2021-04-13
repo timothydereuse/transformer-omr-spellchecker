@@ -36,7 +36,7 @@ class MidiNoteTupleDataset(IterableDataset):
     }
 
     def __init__(self, dset_fname, seq_length, num_feats=4, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, trial_run=False,
+                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, dataset_proportion=False,
                  use_stats_from=None):
         """
         @dset_fname - the file name of the processed hdf5 dataset
@@ -49,7 +49,7 @@ class MidiNoteTupleDataset(IterableDataset):
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
         @estimate_stats_batches - number of batches to use for stat estimation
-        @trial_run - set to true to dramatically reduce size of dataset
+        @dataset_proportion - set to true to dramatically reduce size of dataset
         """
         super(MidiNoteTupleDataset).__init__()
 
@@ -58,15 +58,15 @@ class MidiNoteTupleDataset(IterableDataset):
         self.num_feats = num_feats
         self.random_offsets = random_offsets
         self.shuffle_files = shuffle_files
-        self.trial_run = trial_run
+        self.dataset_proportion = dataset_proportion
         self.flags = params.notetuple_flags
 
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
-        if trial_run:
-            self.fnames = self.fnames[:int(len(self.fnames) * trial_run)]
+        if dataset_proportion:
+            self.fnames = self.fnames[:int(len(self.fnames) * dataset_proportion)]
 
         self.num_feats = num_feats
         padding_element = np.array(self.flags['pad'])[:self.num_feats]

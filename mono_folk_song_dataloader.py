@@ -83,7 +83,7 @@ class MonoFolkSongDataset(IterableDataset):
 
     def __init__(self, dset_fname, seq_length, num_dur_vals, base=None, use_stats=None,
                  proportion_for_stats=0.5, shuffle_files=True, padding_amt=None,
-                 random_offsets=True, random_transpose=6, trial_run=False):
+                 random_offsets=True, random_transpose=6, dataset_proportion=False):
         """
         @dset_fname - path to hdf5 file created by make_hdf5.py
         @seq_length - number of units to chop sequences into
@@ -97,14 +97,14 @@ class MonoFolkSongDataset(IterableDataset):
         @padding_amt - amount of padding to add to beginning and end of each song (optional,
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
-        @trial_run - set to true to dramatically reduce size of dataset
+        @dataset_proportion - set to true to dramatically reduce size of dataset
         """
         super(MonoFolkSongDataset).__init__()
         self.dset_fname = dset_fname
         self.seq_length = seq_length
         self.random_offsets = random_offsets
         self.shuffle_files = shuffle_files
-        self.trial_run = trial_run
+        self.dataset_proportion = dataset_proportion
         self.random_transpose = random_transpose
 
         self.flags = params.flags
@@ -113,7 +113,7 @@ class MonoFolkSongDataset(IterableDataset):
         if base is not None:
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
-        if trial_run:
+        if dataset_proportion:
             self.fnames = self.fnames[:100]
 
         self.num_dur_vals = num_dur_vals

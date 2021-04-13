@@ -2,20 +2,20 @@
 params_name = 'TESTING_POINTSET'
 
 # -- definition of symbolic music representation
-seq_length = 128     # length of song sequences
+seq_length = 64     # length of song sequences
 padding_amt = 4    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.3              # reduces size of dataset
-num_epochs = 200                # number of epochs to train for
-lr = 0.0001                      # initial learning rate
-batch_size = 1024            # size of each batch
+trial_run = False
+dataset_proportion = 0.2       # reduces size of dataset
+num_epochs = 50                # number of epochs to train for
+lr = 0.001                      # initial learning rate
+batch_size = 256            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
-save_model_every = 29         # save a new model every X epochs
+save_model_every = 30         # save a new model every X epochs
 save_img_every = 3              # save a new test image from the validation set every X epochs
 num_feats = 3
-
 
 # -- definition of set transformer model
 set_transformer_settings = {
@@ -23,60 +23,30 @@ set_transformer_settings = {
     'num_output_points': 40,
     'n_layers': 1,
     'n_heads': 4,
-    'tf_depth': 4,
+    'tf_depth': (5, 2),
     'hidden_dim': 128,
-    'ff_dim': 128,
+    'ff_dim': 256,
     'dropout': 0.1
 }
 
-trial_run = 0.001
-set_transformer_settings = {
-    'num_feats': num_feats,
-    'num_output_points': 20,
-    'n_layers': 1,
-    'n_heads': 2,
-    'tf_depth': 3,
-    'hidden_dim': 32,
-    'ff_dim': 32,
-    'dropout': 0.1
-}
+if trial_run:
+    dataset_proportion = 0.001
+    set_transformer_settings = {
+        'num_feats': num_feats,
+        'num_output_points': 20,
+        'n_layers': 1,
+        'n_heads': 2,
+        'tf_depth': 2,
+        'hidden_dim': 32,
+        'ff_dim': 32,
+        'dropout': 0.1
+    }
 
-
-# -- definition of autoregressive transformer model
-transformer_ar_settings = {
-    'input_feats': 1,
-    'output_feats': 1,
-    'n_layers': 2,
-    'n_heads': 1,
-    'hidden_dim': 32,
-    'ff_dim': 32,
-    'tf_depth': 1,
-    'dropout': 0.15
-}
-
-# -- definition of LSTUT model
-lstut_settings = {
-    'seq_length': seq_length,
-    'num_feats': 4,
-    'lstm_inp': 128,
-    'lstm_hidden': 128,
-    'lstm_layers': 2,
-    'tf_inp': 256,
-    'tf_ff': 256,
-    'tf_k': 128,
-    'nhead': 4,
-    'tf_depth': 5,
-    'dim_out': 3,
-    'dropout': 0.15
-}
-
-# -- definition of LSTM model
-lstm_settings = {
-    'num_feats': 3,
-    'lstm_inp': 128,
-    'lstm_hidden': 128,
-    'lstm_layers': 4,
-    'dropout': 0.15
+# -- data augmentation
+error_indices_settings = {
+    'num_insertions': 12,
+    'num_deletions': 0,
+    'num_replacements': 2
 }
 
 # -- learning rate plateau scheduler settings
@@ -86,26 +56,6 @@ scheduler_settings = {
     'threshold': 0.001,
     'verbose': True
 }
-
-# -- data augmentation
-mask_indices_settings = {
-    'num_indices': int(seq_length * 0.05),
-    'prob_random': 0.00,
-    'prob_same': 0.15,
-    'continguous': False
-}
-
-error_indices_settings = {
-    'num_insertions': 12,
-    'num_deletions': 0,
-    'num_replacements': 2
-}
-
-# -- paths to data
-dset_path = r"lmd_cleansed.hdf5"
-beat_multiplier = 48  # duration values will be multiplied by this number and then rounded
-test_proportion = 0.1
-validate_proportion = 0.1
 
 # -- logging
 import logging, datetime
@@ -145,4 +95,48 @@ remove_indices_settings = {
 raw_data_paths = {
     'essen': r"D:\Documents\datasets\essen\europa",
     'meertens': r"D:\Documents\datasets\meertens_tune_collection\mtc-fs-1.0.tar\krn"
+}
+
+# -- definition of autoregressive transformer model
+transformer_ar_settings = {
+    'input_feats': 1,
+    'output_feats': 1,
+    'n_layers': 2,
+    'n_heads': 1,
+    'hidden_dim': 32,
+    'ff_dim': 32,
+    'tf_depth': 1,
+    'dropout': 0.15
+}
+
+# -- definition of LSTUT model
+lstut_settings = {
+    'seq_length': seq_length,
+    'num_feats': 4,
+    'lstm_inp': 128,
+    'lstm_hidden': 128,
+    'lstm_layers': 2,
+    'tf_inp': 256,
+    'tf_ff': 256,
+    'tf_k': 128,
+    'nhead': 4,
+    'tf_depth': 5,
+    'dim_out': 3,
+    'dropout': 0.15
+}
+
+# -- definition of LSTM model
+lstm_settings = {
+    'num_feats': 3,
+    'lstm_inp': 128,
+    'lstm_hidden': 128,
+    'lstm_layers': 4,
+    'dropout': 0.15
+}
+
+mask_indices_settings = {
+    'num_indices': int(seq_length * 0.05),
+    'prob_random': 0.00,
+    'prob_same': 0.15,
+    'continguous': False
 }

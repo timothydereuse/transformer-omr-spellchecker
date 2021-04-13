@@ -118,6 +118,7 @@ if __name__ == '__main__':
 
     res = model(X)
 
+    model = SetTransformer(**params.set_transformer_settings)
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
 
