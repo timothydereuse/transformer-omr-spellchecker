@@ -2,14 +2,14 @@
 params_name = 'TESTING_POINTSET'
 
 # -- definition of symbolic music representation
-seq_length = 256     # length of song sequences
+seq_length = 128     # length of song sequences
 padding_amt = 4    # max padding on both sides of a song
 
 # -- training parameters
-trial_run = 0.3               # reduces size of dataset
-num_epochs = 100                # number of epochs to train for
+trial_run = 0.3              # reduces size of dataset
+num_epochs = 200                # number of epochs to train for
 lr = 0.0001                      # initial learning rate
-batch_size = 256            # size of each batch
+batch_size = 1024            # size of each batch
 clip_gradient_norm = 0.5        # clip norm of gradient after each backprop
 early_stopping_patience = 20    # abort training if it's been this long since best model
 save_model_every = 29         # save a new model every X epochs
@@ -20,25 +20,26 @@ num_feats = 3
 # -- definition of set transformer model
 set_transformer_settings = {
     'num_feats': num_feats,
-    'num_output_points': 20,
-    'n_layers_prepooling': 6,
-    'n_layers_postpooling': 3,
+    'num_output_points': 40,
+    'n_layers': 1,
     'n_heads': 4,
+    'tf_depth': 4,
     'hidden_dim': 128,
-    'ff_dim': 256,
+    'ff_dim': 128,
     'dropout': 0.1
 }
 
-# set_transformer_settings = {
-#     'num_feats': num_feats,
-#     'num_output_points': 20,
-#     'n_layers_prepooling': 2,
-#     'n_layers_postpooling': 2,
-#     'n_heads': 2,
-#     'hidden_dim': 32,
-#     'ff_dim': 32,
-#     'dropout': 0.1
-# }
+trial_run = 0.001
+set_transformer_settings = {
+    'num_feats': num_feats,
+    'num_output_points': 20,
+    'n_layers': 1,
+    'n_heads': 2,
+    'tf_depth': 3,
+    'hidden_dim': 32,
+    'ff_dim': 32,
+    'dropout': 0.1
+}
 
 
 # -- definition of autoregressive transformer model

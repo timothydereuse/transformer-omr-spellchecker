@@ -9,49 +9,52 @@ import time
 
 class SetTransformer(nn.Module):
 
-    def __init__(self, num_feats, num_output_points, n_layers_prepooling, n_layers_postpooling,
+    def __init__(self, num_feats, num_output_points, n_layers,
                  n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
         super(SetTransformer, self).__init__()
 
         self.num_feats = num_feats
         self.k = num_output_points
 
-        self.n_layers_prepooling = n_layers_prepooling
-        self.n_layers_postpooling = n_layers_postpooling
-        self.n_heads = n_heads
-        self.hidden_dim = hidden_dim
-        self.ff_dim = ff_dim
-        self.d_model = hidden_dim * n_heads
-        self.tf_depth = tf_depth
+        def dup(x):
+            return (x, x) if type(x) == int else x
+
+        self.n_layers = dup(n_layers)
+        self.n_heads = dup(n_heads)
+        self.hidden_dim = dup(hidden_dim)
+        self.ff_dim = dup(ff_dim)
+        self.tf_depth = dup(tf_depth)
+
+        self.d_model = [self.hidden_dim[i] * self.n_heads[i] for i in [0, 1]]
 
         encoder_builder_pre = TransformerEncoderBuilder.from_kwargs(
-            n_layers=n_layers_prepooling,
-            n_heads=n_heads,
-            query_dimensions=hidden_dim,
-            value_dimensions=hidden_dim,
-            feed_forward_dimensions=ff_dim,
+            n_layers=self.n_layers[0],
+            n_heads=self.n_heads[0],
+            query_dimensions=self.hidden_dim[0],
+            value_dimensions=self.hidden_dim[0],
+            feed_forward_dimensions=self.ff_dim[0],
             attention_type='linear',
             dropout=dropout
         )
 
         encoder_builder_post = TransformerEncoderBuilder.from_kwargs(
-            n_layers=n_layers_postpooling,
-            n_heads=n_heads,
-            query_dimensions=hidden_dim,
-            value_dimensions=hidden_dim,
-            feed_forward_dimensions=ff_dim,
+            n_layers=self.n_layers[1],
+            n_heads=self.n_heads[1],
+            query_dimensions=self.hidden_dim[1],
+            value_dimensions=self.hidden_dim[1],
+            feed_forward_dimensions=self.ff_dim[1],
             attention_type='linear',
             dropout=dropout
         )
 
-        self.seeds = nn.Parameter(torch.normal(0, 1, (self.k, self.d_model)))
+        self.seeds = nn.Parameter(torch.normal(0, 1, (self.k, self.d_model[0])))
         self.encoder_pre = encoder_builder_pre.get()
         self.encoder_post = encoder_builder_post.get()
 
-        self.attn_pooling = AttentionLayer(LinearAttention(self.d_model), self.d_model, self.n_heads)
+        self.attn_pooling = AttentionLayer(LinearAttention(self.d_model[0]), self.d_model[0], self.n_heads[0])
 
-        self.initial_ff = nn.Linear(self.num_feats, self.d_model)
-        self.final_ff = nn.Linear(self.d_model, self.num_feats)
+        self.initial_ff = nn.Linear(self.num_feats, self.d_model[0])
+        self.final_ff = nn.Linear(self.d_model[1], self.num_feats)
 
         # init masks to meaningless values, doesn't matter what. these are all empty anyway.
         self.mask = FullMask(N=self.k, M=5)
@@ -62,7 +65,9 @@ class SetTransformer(nn.Module):
 
         x = self.initial_ff(src)
         # for _ in range(self.tf_depth):
-        x = self.encoder_pre(x)
+
+        for i in range(self.tf_depth[0]):
+            x = self.encoder_pre(x)
 
         # in case the input sequence length has changed
         set_size = src.shape[1]
@@ -81,7 +86,9 @@ class SetTransformer(nn.Module):
         # perform pooling by multihead attention, reducing dimensionality of set
         x = self.attn_pooling(S, x, x, self.mask, self.ql_mask, self.kl_mask)
 
-        x = self.encoder_post(x)
+        for i in range(self.tf_depth[1]):
+            x = self.encoder_post(x)
+
         x = self.final_ff(x)
 
         return x
@@ -103,8 +110,8 @@ if __name__ == '__main__':
     model = SetTransformer(
         num_feats=num_feats,
         num_output_points=32,
-        n_layers_prepooling=2,
-        n_layers_postpooling=2,
+        n_layers=1,
+        tf_depth=2,
         n_heads=2,
         hidden_dim=64,
         ff_dim=64)

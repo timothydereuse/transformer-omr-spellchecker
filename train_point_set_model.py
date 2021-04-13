@@ -57,8 +57,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-criterion = ChamferDistance().to(device)
-# criterion = lambda x, y: cd(x, y, bidirectional=True)
+cd = ChamferDistance().to(device)
+criterion = lambda x, y: cd(x, y, bidirectional=True)
 
 logging.info('beginning training')
 tr_funcs.log_gpu_info()

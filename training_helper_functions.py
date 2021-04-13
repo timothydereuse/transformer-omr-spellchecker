@@ -3,6 +3,7 @@ import logging
 import make_supervised_examples as mse
 import model_params as params
 from chamferdist import ChamferDistance
+import numpy as np
 
 
 def get_cuda_info():
