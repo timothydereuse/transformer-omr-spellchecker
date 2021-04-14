@@ -9,8 +9,9 @@ import training_helper_functions as tr_funcs
 from torch.utils.data import DataLoader
 from chamferdist import ChamferDistance
 import plot_outputs as po
-import model_params as params
+import model_params
 import logging
+import argparse
 
 import matplotlib
 matplotlib.use('Agg')
@@ -21,11 +22,19 @@ reload(tr_funcs)
 reload(dl)
 reload(fcts)
 reload(stm)
-reload(params)
+reload(model_params)
 reload(po)
 
-device, num_gpus = tr_funcs.get_cuda_info()
+parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
+parser.add_argument('parameters', default='default_params.json',
+                    help='Parameter file in .json format.')
+parser.add_argument('-m', '--mod_number', type=int, default=0,
+                    help='Index of specific modification to apply to given parameter set.')
+args = vars(parser.parse_args())
 
+params = model_params.Params(args['parameters'], args['mod_number'])
+
+device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
 dset_tr = dl.MidiNoteTupleDataset(
     dset_fname=params.dset_path,
@@ -49,9 +58,8 @@ dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
 model = stm.SetTransformer(**params.set_transformer_settings).to(device)
-model_size = sum(p.numel() for p in model.parameters())
-
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
+model_size = sum(p.numel() for p in model.parameters())
 logging.info(f'created model with n_params={model_size}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)

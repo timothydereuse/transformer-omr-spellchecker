@@ -1,0 +1,45 @@
+{
+    "params_name": "DEFAULT",
+    "num_epochs": 50,
+    "early_stopping_patience": 20,
+    "save_model_every": 30,
+    "save_img_every": 3,
+
+    "seq_length": 128,
+    "padding_amt": 4,
+    "lr": 0.001,
+    "batch_size": 1024,
+    "clip_gradient_norm": 0.5,
+    "num_feats": 3,
+    "dset_path": "lmd_cleansed.hdf5",
+    "dataset_proportion": 0.1,
+
+    "set_transformer_settings": {
+        "num_feats": 3,
+        "num_output_points": 20,
+        "n_layers": 1,
+        "n_heads": 2,
+        "tf_depth": 3,
+        "hidden_dim": 128,
+        "ff_dim": 256,
+        "dropout": 0.1
+    },
+    "error_indices_settings": {
+        "num_insertions": 4,
+        "num_deletions": 0,
+        "num_replacements": 2
+    },
+    "scheduler_settings": {
+        "factor": 0.25,
+        "patience": 3,
+        "threshold": 0.001,
+        "verbose": true
+    },
+    "parameter_searching":{
+        "set_transformer_settings.n_layers": [1, 2, [1, 2], [2, 1]],
+        "set_transformer_settings.tf_depth": [[3, 5], [5, 3], [1, 7], [7, 1], 4, 2],
+        "set_transformer_settings.ff_dim": [128, 512],
+        "set_transformer_settings.num_output_points": [16, 32, 64],
+        "seq_length": [64, 256, 512, 378]
+    }
+}

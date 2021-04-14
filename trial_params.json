@@ -1,0 +1,38 @@
+{
+    "params_name": "TRIAL_RUN",
+    "num_epochs": 5,
+    "early_stopping_patience": 20,
+    "save_model_every": 4,
+    "save_img_every": 4,
+
+    "seq_length": 64,
+    "padding_amt": 4,
+    "lr": 0.001,
+    "batch_size": 1024,
+    "clip_gradient_norm": 0.5,
+    "num_feats": 3,
+    "dset_path": "lmd_cleansed.hdf5",
+    "dataset_proportion": 0.0005,
+
+    "set_transformer_settings": {
+        "num_feats": 3,
+        "num_output_points": 15,
+        "n_layers": 1,
+        "n_heads": 2,
+        "tf_depth": 2,
+        "hidden_dim": 32,
+        "ff_dim": 32,
+        "dropout": 0.1
+    },
+    "error_indices_settings": {
+        "num_insertions": 4,
+        "num_deletions": 0,
+        "num_replacements": 2
+    },
+    "scheduler_settings": {
+        "factor": 0.25,
+        "patience": 3,
+        "threshold": 0.001,
+        "verbose": true
+    }
+}

@@ -24,16 +24,16 @@ def log_gpu_info():
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
-def make_point_set_target(batch, dloader, device):
+def make_point_set_target(batch, dloader, device, make_examples_settings={}):
     dset = dloader.dataset
-    errored_input, error_locs = mse.error_indices(batch, **params.error_indices_settings)
+    errored_input, error_locs = mse.error_indices(batch, **make_examples_settings)
     errored_input = dset.normalize_batch(errored_input).to(device)
     error_locs = dset.normalize_batch(error_locs).to(device)
     return errored_input, error_locs
 
 
 def run_epoch(model, dloader, optimizer, criterion, device='cpu',
-              train=True, log_each_batch=False, autoregressive=False):
+              train=True, log_each_batch=False, clip_grad_norm=0.5, autoregressive=False):
     '''
     Performs a training or validation epoch.
     @model: the model to use.
@@ -72,7 +72,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
 
         if train:
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), params.clip_gradient_norm)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
             optimizer.step()
 
         batch_loss = loss.item()
