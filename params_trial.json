@@ -34,5 +34,8 @@
         "patience": 3,
         "threshold": 0.001,
         "verbose": true
+    },
+    "parameter_searching":{
+        "seq_length": [64, 78, 256]
     }
 }
