@@ -7,7 +7,7 @@ class Params(object):
     contains all hyperparameters and logging information for a single training run.
     '''
 
-    def __init__(self, base_file='default_params.json', log_training=False, mod_num=0):
+    def __init__(self, base_file='params/default_params.json', log_training=False, mod_num=0):
         with open(base_file, 'r') as f:
             params = json.load(f)
 
