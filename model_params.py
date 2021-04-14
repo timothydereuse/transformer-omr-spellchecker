@@ -28,7 +28,7 @@ class Params(object):
             '{num_feats}-{num_output_points}-{n_layers}-'
             '{n_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.set_transformer_settings)
 
-        start_training_time = datetime.datetime.now().strftime("%Y-%m-%d %H-%M")
+        start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
         params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
         self.log_fname = f'./logs/training_{params_id_str}.log'
         self.results_fname = f'./logs/test_results_{params_id_str}.log'

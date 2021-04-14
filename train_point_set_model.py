@@ -30,9 +30,11 @@ parser.add_argument('parameters', default='default_params.json',
                     help='Parameter file in .json format.')
 parser.add_argument('-m', '--mod_number', type=int, default=0,
                     help='Index of specific modification to apply to given parameter set.')
+parser.add_argument('-l', '--logging', action='store_true',
+                    help='Whether or not to log training results to file.')
 args = vars(parser.parse_args())
 
-params = model_params.Params(args['parameters'], args['mod_number'])
+params = model_params.Params(args['parameters'], args['logging'], args['mod_number'])
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
