@@ -34,7 +34,7 @@ parser.add_argument('-l', '--logging', action='store_true',
                     help='Whether or not to log training results to file.')
 args = vars(parser.parse_args())
 
-params = model_params.Params(args['parameters'], args['logging'], args['mod_number'])
+params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
@@ -77,6 +77,7 @@ start_time = time.time()
 val_losses = []
 best_model = None
 for epoch in range(params.num_epochs):
+    epoch_start_time = time.time()
 
     # perform training epoch
     model.train()
@@ -92,18 +93,16 @@ for epoch in range(params.num_epochs):
                                                criterion, device, train=False, log_each_batch=False)
 
     val_losses.append(val_loss)
+    scheduler.step(val_loss)
 
-    elapsed = time.time() - start_time
+    epoch_end_time = time.time()
     log_train_loss = np.log(train_loss)
     log_val_loss = np.log(val_loss)
     logging.info(
         f'epoch {epoch:3d} | '
-        f's/epoch {elapsed:3.5f} | '
+        f's/epoch {(epoch_end_time - epoch_start_time):3.5f} | '
         f'train_loss {log_train_loss:2.7f} | '
         f'val_loss {log_val_loss:2.7f} ')
-    start_time = time.time()
-
-    scheduler.step(val_loss)
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
@@ -135,7 +134,12 @@ for epoch in range(params.num_epochs):
     # early stopping
     time_since_best = epoch - val_losses.index(min(val_losses))
     if time_since_best > params.early_stopping_patience:
-        logging.info(f'stopping early at epoch {epoch}')
+        logging.info(f'stopping early at epoch {epoch} because validation score stopped increasing')
+        break
+
+    elapsed = time.time() - start_time
+    if elapsed > (params.max_time_minutes * 60):
+        logging.info(f'stopping early at epoch {epoch} because of time limit')
         break
 
 # # if max_epochs reached, or early stopping condition reached, save best model

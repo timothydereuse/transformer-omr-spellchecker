@@ -96,8 +96,10 @@ class SetTransformer(nn.Module):
 
 if __name__ == '__main__':
 
-    import model_params as params
+    import model_params
     from chamferdist import ChamferDistance
+
+    params = model_params.Params(r'params_default.json', False, 0)
 
     batch_size = 10
     seq_len = 100
@@ -107,16 +109,16 @@ if __name__ == '__main__':
     X = torch.rand(batch_size, seq_len, num_feats)
     tgt = torch.rand(batch_size, output_pts, num_feats)
 
-    model = SetTransformer(
-        num_feats=num_feats,
-        num_output_points=32,
-        n_layers=1,
-        tf_depth=2,
-        n_heads=2,
-        hidden_dim=64,
-        ff_dim=64)
+    # model = SetTransformer(
+    #     num_feats=num_feats,
+    #     num_output_points=32,
+    #     n_layers=1,
+    #     tf_depth=2,
+    #     n_heads=2,
+    #     hidden_dim=64,
+    #     ff_dim=64)
 
-    res = model(X)
+    # res = model(X)
 
     model = SetTransformer(**params.set_transformer_settings)
     n_params = sum(p.numel() for p in model.parameters())

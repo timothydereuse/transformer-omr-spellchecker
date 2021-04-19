@@ -4,30 +4,31 @@
     "early_stopping_patience": 20,
     "save_model_every": 30,
     "save_img_every": 3,
+    "max_time_minutes": 40,
 
-    "seq_length": 128,
+    "seq_length": 1024,
     "padding_amt": 4,
-    "lr": 0.001,
-    "batch_size": 1024,
+    "lr": 0.0001,
+    "batch_size": 32,
     "clip_gradient_norm": 0.5,
     "num_feats": 3,
     "dset_path": "lmd_cleansed.hdf5",
-    "dataset_proportion": 0.1,
+    "dataset_proportion": 0.2,
 
     "set_transformer_settings": {
         "num_feats": 3,
-        "num_output_points": 20,
+        "num_output_points": 50,
         "n_layers": 1,
-        "n_heads": 2,
-        "tf_depth": 3,
+        "n_heads": 4,
+        "tf_depth": 5,
         "hidden_dim": 128,
         "ff_dim": 256,
         "dropout": 0.1
     },
     "error_indices_settings": {
-        "num_insertions": 4,
+        "num_insertions": 8,
         "num_deletions": 0,
-        "num_replacements": 2
+        "num_replacements": 0
     },
     "scheduler_settings": {
         "factor": 0.25,

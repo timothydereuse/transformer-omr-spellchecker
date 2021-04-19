@@ -1,9 +1,10 @@
 {
     "params_name": "TRIAL_RUN",
-    "num_epochs": 5,
+    "num_epochs": 50,
     "early_stopping_patience": 20,
     "save_model_every": 4,
     "save_img_every": 4,
+    "max_time_minutes": 2,
 
     "seq_length": 64,
     "padding_amt": 4,
@@ -17,11 +18,11 @@
     "set_transformer_settings": {
         "num_feats": 3,
         "num_output_points": 15,
-        "n_layers": 1,
+        "n_layers": 2,
         "n_heads": 2,
         "tf_depth": 2,
-        "hidden_dim": 32,
-        "ff_dim": 32,
+        "hidden_dim": 64,
+        "ff_dim": 64,
         "dropout": 0.1
     },
     "error_indices_settings": {
