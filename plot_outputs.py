@@ -154,9 +154,9 @@ def plot_set(exs, dset, ind=0):
         if num_feats == 2:
             s, c = (1, 'black')
         elif num_feats == 3:
-            s, c = (p[ind, :, 2] / 2, 'black')
+            s, c = (1, p[ind, :, 2])
         else:
-            s, c = (p[ind, :, 2] / 2, p[ind, :, 3])
+            s, c = (p[ind, :, 3] / 2, p[ind, :, 2])
         axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=s, c=c)
         axs[i].set_xlim(-5, max_time + 5)
         axs[i].set_ylim(-5, max_pitch + 5)

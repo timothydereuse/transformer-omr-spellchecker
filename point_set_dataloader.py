@@ -131,7 +131,7 @@ class MidiNoteTupleDataset(IterableDataset):
             # onset, duration, time to next onset, pitch, velocity, program
             programs = self.simplify_programs(x[:, 5])
             # notetuples = np.concatenate([x[:, 1:4], programs], 1)
-            notetuples = np.concatenate([x[:, [0, 1, 3]], programs], 1)
+            notetuples = np.concatenate([x[:, [0, 1]], programs, x[:, [2]]], 1)
             notetuples = notetuples[:, :self.num_feats]
 
             # pad runlength encoding on both sides
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     num_dur_vals = 0
     seq_len = 500
     proportion = 0.2
-    dset = MidiNoteTupleDataset(fname, seq_len, estimate_stats_batches=10, num_feats=2)
+    dset = MidiNoteTupleDataset(fname, seq_len, estimate_stats_batches=10, num_feats=3)
 
     dload = DataLoader(dset, batch_size=15)
     batches = []
