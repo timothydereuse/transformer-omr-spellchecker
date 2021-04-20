@@ -29,8 +29,8 @@ class PositionalEncoding(nn.Module):
 
 if __name__ == '__main__':
 
-    x = PositionalEncoding(4, max_len=500)
+    x = PositionalEncoding(2, max_len=500)
 
-    inp = torch.rand(50, 128, 4)
+    inp = torch.rand(50, 128, 2)
 
     x(inp)

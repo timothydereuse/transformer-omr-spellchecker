@@ -11,16 +11,16 @@
     "lr": 0.001,
     "batch_size": 1024,
     "clip_gradient_norm": 0.5,
-    "num_feats": 3,
+    "num_feats": 2,
     "dset_path": "lmd_cleansed.hdf5",
-    "dataset_proportion": 0.0005,
+    "dataset_proportion": 0.0006,
 
     "set_transformer_settings": {
-        "num_feats": 3,
+        "num_feats": 2,
         "num_output_points": 15,
-        "n_layers": 2,
-        "n_heads": 2,
-        "tf_depth": 2,
+        "n_layers": 1,
+        "n_heads": 1,
+        "tf_depth": 4,
         "hidden_dim": 64,
         "ff_dim": 64,
         "dropout": 0.1
@@ -28,7 +28,7 @@
     "error_indices_settings": {
         "num_insertions": 4,
         "num_deletions": 0,
-        "num_replacements": 2
+        "num_replacements": 0
     },
     "scheduler_settings": {
         "factor": 0.25,

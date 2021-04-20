@@ -4,12 +4,13 @@ from fast_transformers.builders import TransformerEncoderBuilder
 from fast_transformers.attention.attention_layer import AttentionLayer
 from fast_transformers.attention.linear_attention import LinearAttention
 from fast_transformers.masking import FullMask, LengthMask
+# from positional_encoding import PositionalEncoding
 import time
 
 
 class SetTransformer(nn.Module):
 
-    def __init__(self, num_feats, num_output_points, n_layers,
+    def __init__(self, num_feats, num_output_points, lstm_layers, n_layers,
                  n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
         super(SetTransformer, self).__init__()
 
@@ -19,6 +20,7 @@ class SetTransformer(nn.Module):
         def dup(x):
             return (x, x) if type(x) == int else x
 
+        self.lstm_layers = lstm_layers
         self.n_layers = dup(n_layers)
         self.n_heads = dup(n_heads)
         self.hidden_dim = dup(hidden_dim)
@@ -51,9 +53,10 @@ class SetTransformer(nn.Module):
         self.encoder_pre = encoder_builder_pre.get()
         self.encoder_post = encoder_builder_post.get()
 
-        self.attn_pooling = AttentionLayer(LinearAttention(self.d_model[0]), self.d_model[0], self.n_heads[0])
-
         self.initial_ff = nn.Linear(self.num_feats, self.d_model[0])
+        # self.pos_encoding = PositionalEncoding(self.d_model[0], dropout=dropout)
+        self.lstm = nn.LSTM(self.d_model[0], self.d_model[0], 2, batch_first=True, bidirectional=False)
+        self.attn_pooling = AttentionLayer(LinearAttention(self.d_model[0]), self.d_model[0], self.n_heads[0])
         self.final_ff = nn.Linear(self.d_model[1], self.num_feats)
 
         # init masks to meaningless values, doesn't matter what. these are all empty anyway.
@@ -64,7 +67,11 @@ class SetTransformer(nn.Module):
     def forward(self, src, src_len_mask=None):
 
         x = self.initial_ff(src)
-        # for _ in range(self.tf_depth):
+
+        # x = self.pos_encoding(x)
+
+        self.lstm.flatten_parameters()
+        x, _ = self.lstm(x)
 
         for i in range(self.tf_depth[0]):
             x = self.encoder_pre(x)
@@ -104,7 +111,7 @@ if __name__ == '__main__':
     batch_size = 10
     seq_len = 100
     output_pts = 8
-    num_feats = 3
+    num_feats = 2
 
     X = torch.rand(batch_size, seq_len, num_feats)
     tgt = torch.rand(batch_size, output_pts, num_feats)
@@ -124,7 +131,7 @@ if __name__ == '__main__':
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = ChamferDistance()
 
     num_epochs = 100
