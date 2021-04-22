@@ -131,8 +131,10 @@ if __name__ == '__main__':
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = ChamferDistance()
+
+    sched = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.1, verbose=False)
 
     num_epochs = 100
 
@@ -150,6 +152,7 @@ if __name__ == '__main__':
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
+        sched.step()
 
         elapsed = time.time() - start_time
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")

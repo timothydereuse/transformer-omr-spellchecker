@@ -1,140 +1,131 @@
-import time
-import math
-import numpy as np
 import torch
 import torch.nn as nn
-import model_params as params
-from linformer_pytorch import Linformer
-import copy
+from fast_transformers.builders import TransformerEncoderBuilder
+from fast_transformers.attention.attention_layer import AttentionLayer
+from fast_transformers.attention.linear_attention import LinearAttention
+from fast_transformers.masking import FullMask, LengthMask
+# from positional_encoding import PositionalEncoding
+import time
 
 
-class LSTUTModel(nn.Module):
-    def __init__(self, seq_length, num_feats, lstm_inp=64, lstm_hidden=200, lstm_layers=2, tf_inp=64, tf_ff=128, tf_depth=4, tf_k=128, nhead=4, dim_out=1, dropout=0.1):
-        super(LSTUTModel, self).__init__()
+class LSTUT(nn.Module):
 
-        self.seq_length = seq_length
+    def __init__(self, num_feats, output_feats, lstm_layers, n_layers,
+                 n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
+        super(LSTUT, self).__init__()
+
         self.num_feats = num_feats
-
-        self.lstm_inp = lstm_inp
-        self.lstm_hidden = lstm_hidden
+        self.output_feats = output_feats
         self.lstm_layers = lstm_layers
-        self.tf_inp = tf_inp
-        self.tf_ff = tf_ff
-        self.tf_k = tf_k
-        self.dim_out = dim_out
-
-        self.nhead = nhead
+        self.n_layers = n_layers
+        self.n_heads = n_heads
+        self.hidden_dim = hidden_dim
+        self.ff_dim = ff_dim
         self.tf_depth = tf_depth
-        self.dropout = dropout
+        self.d_model = self.hidden_dim * self.n_heads
 
-        # n.b. LSTM takes on the role of positional encoding - no need for it!
-        self.embedding_ff = nn.Linear(num_feats, lstm_inp)
-        self.gelu = nn.GELU()
-        # self.lstm1 = nn.LSTM(lstm_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=True)
-        # self.lstm_to_tf_ff = nn.Linear(lstm_hidden * 2, tf_inp)
-        self.lstm1 = nn.LSTM(lstm_inp, tf_inp, lstm_layers, batch_first=True, bidirectional=False)
-        # self.lstm_to_tf_ff = nn.Linear(lstm_hidden * 2, tf_inp)
-        self.transformer = Linformer(
-            input_size=seq_length,
-            channels=tf_inp,
-            dim_k=tf_k,
-            dim_ff=tf_ff,
-            dropout=dropout,
-            nhead=nhead,
-            depth=tf_depth,
-            parameter_sharing="layerwise",
-            )
-        self.norm = nn.LayerNorm(tf_inp)
-        self.lstm2 = nn.LSTM(tf_inp, lstm_hidden, lstm_layers, batch_first=True, bidirectional=False)
-        self.output_ff = nn.Linear(lstm_hidden, dim_out)
+        encoder_builder = TransformerEncoderBuilder.from_kwargs(
+            n_layers=self.n_layers,
+            n_heads=self.n_heads,
+            query_dimensions=self.hidden_dim,
+            value_dimensions=self.hidden_dim,
+            feed_forward_dimensions=self.ff_dim,
+            attention_type='linear',
+            dropout=dropout
+        )
 
-    def forward(self, inp):
-        # inp = torch.rand(num_seqs, seq_length, num_feats)
+        self.initial_ff = nn.Linear(self.num_feats, self.d_model)
+        self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+        self.encoder = encoder_builder.get()
+        self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+        self.final_ff = nn.Linear(self.d_model, self.output_feats)
+
+    def forward(self, src):
+
+        x = self.initial_ff(src)
 
         self.lstm1.flatten_parameters()
+        x, _ = self.lstm1(x)
+
+        for i in range(self.tf_depth):
+            x = self.encoder(x)
+
         self.lstm2.flatten_parameters()
-
-        x = self.gelu(self.embedding_ff(inp))
-        lstm_out, _ = self.lstm1(x)
-
-        # lstm_out = self.gelu(self.lstm_to_tf_ff(x))
-        x = lstm_out.clone()
-        x = self.transformer(x)
-        # x = self.norm(x + lstm_out)
         x, _ = self.lstm2(x)
-        out = self.output_ff(x)
 
+        x = self.final_ff(x)
 
+        return x
 
-        return out
 
 if __name__ == '__main__':
-    from itertools import product
-    import plot_outputs as po
-    import make_supervised_examples as mse
 
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    from importlib import reload
+    import model_params
 
-    reload(mse)
-    reload(po)
+    params = model_params.Params(r'params_default.json', False, 0)
 
-    seq_length = 20
+    batch_size = 10
+    seq_len = 100
+    output_pts = 1
     num_feats = 3
 
-    lstm_inp = 6
-    lstm_hidden = 6
-    lstm_layers = 1
-    tf_inp = 128
-    tf_ff = 128
-    tf_k = 128
+    X = torch.rand(batch_size, seq_len, num_feats)
+    tgt = (torch.rand(batch_size, seq_len, output_pts) - 0.4).round()
 
-    nhead = 4
-    tf_depth = 4
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTUTModel(
-        seq_length, num_feats, lstm_inp, lstm_hidden, lstm_layers, tf_inp, tf_ff, tf_depth, tf_k, nhead
-    ).to(device)
+    model = LSTUT(
+        num_feats=num_feats,
+        output_feats=output_pts,
+        lstm_layers=3,
+        n_layers=1,
+        tf_depth=2,
+        n_heads=2,
+        hidden_dim=64,
+        ff_dim=64)
 
     n_params = sum(p.numel() for p in model.parameters())
-    print(f'created model with n_params={n_params} on device {device}')
+    print(f'created model with n_params={n_params}')
 
-    num_sequences = 40
-    num_epochs = 201
+    res = model(X)
 
-    # inputs = torch.tensor(data[])
-    data = torch.rand(num_sequences, seq_length, num_feats).to(device)
-    targets = torch.round(torch.rand(num_sequences, seq_length) - 0.45).abs().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = torch.nn.BCEWithLogitsLoss()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    criterion = nn.BCEWithLogitsLoss(reduction='mean', weight=torch.ones(seq_length) * 20).to(device)
+    sched = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.1, verbose=False)
+
+    num_epochs = 100
 
     model.train()
     epoch_loss = 0
-
     for i in range(num_epochs):
 
         start_time = time.time()
         optimizer.zero_grad()
 
-        output = model(data)
-        output_dim = output.shape[-1]
+        output = model(X)
 
-        loss = criterion(output.squeeze(-1), targets)
+        loss = criterion(tgt, output)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
+        sched.step()
+
         elapsed = time.time() - start_time
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
-        # if not i % 20:
-        #     x = (output).detach().cpu().numpy().T
-        #     ind = n%rp.random.randint(targets.shape[0])
-        #     fig, axs = po.plot(output, targets, ind, num_dur_vals, errored=inputs)
-        #     fig.savefig(f'out_imgs/model_test_epoch_{i}.png')
-        #     plt.clf()
-        #     plt.close(fig)
+    model.eval()
+
+# d_model = 32
+# k = 5
+# b = 3
+# al = AttentionLayer(LinearAttention(d_model), d_model, 4, )
+# S = torch.rand(k, d_model)
+# S = S.unsqueeze(0).repeat(b, 1, 1)
+# Z = torch.rand(b, 40, d_model)
+#
+# # gotta make a bunch of masks that mask nothing
+# mask = FullMask(N=k, M=40)
+# ql_mask = LengthMask(torch.ones(b) * k)
+# kl_mask = LengthMask(torch.ones(b) * 40)
+#
+# res = al(S, Z, Z, mask, ql_mask, kl_mask)
