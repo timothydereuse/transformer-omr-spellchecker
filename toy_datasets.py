@@ -4,7 +4,6 @@ import numpy as np
 
 
 class SequenceCopyDataset(Dataset):
-    """meertens_tune_collection dataset."""
 
     def __init__(self, num_feats, num_seqs, seq_length, seq_period, freq_vary=0.2, seq_type='sine'):
         """
