@@ -56,22 +56,18 @@ def plot(outputs, targets, ind, num_dur_vals, errored=None):
     return fig, axs
 
 
-def plot_notetuple(inp, output, target, thresh=None):
+def plot_line_corrections(inp, output, target, thresh=None):
     fig, axs = plt.subplots(2, 1, figsize=(6, 8))
     inp = inp.cpu().detach().numpy()
 
     pr = np.zeros([inp.shape[0], 129])
-    # Iterate over note names, which will be converted to note number later
-    for i, n in enumerate(inp):
-        pitch = np.clip(n[2], 0, 127)
-        pr[i, int(pitch)] = 1
-        pr[i, -1] = int(n[1] == 0)
-
-    axs[0].imshow(pr.T, aspect='auto', interpolation=None)
+    # Iterate over number of features
+    for i in range(inp.shape[1]):
+        axs[0].plot(inp[:, i])
     axs[0].set_title('Input (with errors)')
 
     trg = target.cpu().detach().numpy()
-    opt = output.squeeze(-1).cpu().detach().numpy()
+    opt = output.cpu().detach().numpy()
 
     if thresh:
         opt = opt > thresh
@@ -152,9 +148,9 @@ def plot_set(exs, dset, ind=0):
     for i, p in enumerate([inp, target, output]):
         axs[i].set_title(('input', 'target', 'output')[i])
         if num_feats == 2:
-            s, c = (1, 'black')
+            s, c = (6, 'black')
         elif num_feats == 3:
-            s, c = (1, p[ind, :, 2])
+            s, c = (6, p[ind, :, 2])
         else:
             s, c = (p[ind, :, 3] / 2, p[ind, :, 2])
         axs[i].scatter(p[ind, :, 0], p[ind, :, 1], s=s, c=c)
