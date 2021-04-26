@@ -5,7 +5,7 @@
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
-import model_params as params
+import model_params
 from difflib import SequenceMatcher
 
 
@@ -85,20 +85,20 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
     seq_len = inp.shape[1]
     batch_size = inp.shape[0]
     num_feats = inp.shape[-1]
-    pad_element = params.notetuple_flags['pad'][:num_feats]
+    pad_element = model_params.notetuple_flags['pad'][:num_feats]
     pad_seq = np.array([pad_element for _ in range(seq_len)])
     output = inp.clone().numpy()
 
     means = inp.float().view(-1, num_feats).mean(0).numpy()
     stds = inp.float().view(-1, num_feats).std(0).numpy()
 
-    max_num_error_pts = num_deletions + num_insertions + (2 * num_replacements)
+    # max_num_error_pts = num_deletions + num_insertions + (2 * num_replacements)
 
-    errored_indices = np.zeros([batch_size, max_num_error_pts, num_feats])
+    errored_indices = np.zeros([batch_size, seq_len, 1])
 
     for i in range(batch_size):
         entry = output[i]
-        max_time = np.max(entry[:, 0])
+        # max_time = np.max(entry[:, 0])
 
         # replacements:
         inds = np.arange(seq_len)
@@ -121,17 +121,21 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
         for n in range(num_insertions):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
 
-        # wrap around anything too far forward in time
-        entry[:, 0] = entry[:, 0] % max_time
+        # # wrap around anything too far forward in time
+        # entry[:, 0] = entry[:, 0] % max_time
 
-        set_xor = error_set_xor(entry, inp[i].numpy())
-        set_xor = np.concatenate([set_xor, pad_seq], 0)
-        errored_indices[i] = set_xor[:max_num_error_pts]
+        # set_xor = error_set_xor(entry, inp[i].numpy())
+        # set_xor = np.concatenate([set_xor, pad_seq], 0)
+        # errored_indices[i] = set_xor[:max_num_error_pts]
+
+        diff = get_notetuple_diff(entry, inp[i].numpy())
 
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
         entry = np.concatenate([entry, pad_seq], 0)
         output[i, :seq_len] = entry[:seq_len]
+
+        errored_indices[i] = diff
 
     output = torch.tensor(output, dtype=inp.dtype)
     errored_indices = torch.tensor(errored_indices, dtype=inp.dtype)
@@ -140,8 +144,8 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
 
 
 def get_notetuple_diff(err, orig, for_autoregressive=False):
-    err = [tuple(x) for x in err.numpy()]
-    orig = [tuple(x) for x in orig.numpy()]
+    err = [tuple(x) for x in err]
+    orig = [tuple(x) for x in orig]
 
     s = SequenceMatcher(None, err, orig)
     ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
@@ -154,11 +158,10 @@ def get_notetuple_diff(err, orig, for_autoregressive=False):
     }
 
     if not for_autoregressive:
-        record = np.zeros([len(orig), 3])
+        record = np.zeros([len(orig), 1])
         for item in ops:
             end_index = max(item[2], item[1] + 1)
-            type_ind = mapping[item[0]]
-            record[item[1]:end_index, type_ind] = 1
+            record[item[1]:end_index, 0] = 1
     else:
         record = []
         for item in ops:
@@ -191,13 +194,15 @@ def error_set_xor(err, orig):
 
 if __name__ == '__main__':
     import point_set_dataloader as dl
+
+    params = model_params.Params()
+
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
         seq_length=params.seq_length,
         num_feats=params.num_feats,
         base='train',
-        padding_amt=params.padding_amt,
-        trial_run=params.trial_run)
+        padding_amt=params.padding_amt)
 
     dload = DataLoader(dset, batch_size=9)
     for i, batch in enumerate(dload):
@@ -206,7 +211,7 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    kw = {'num_insertions': 12, 'num_deletions': 4, 'num_replacements': 0}
+    kw = {'num_insertions': 3, 'num_deletions': 0, 'num_replacements': 15}
     errored, indices = error_indices(batch, **kw)
 
     # model = tfsm.TransformerModel(
