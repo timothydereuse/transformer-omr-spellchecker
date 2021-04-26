@@ -7,7 +7,7 @@ class Params(object):
     contains all hyperparameters and logging information for a single training run.
     '''
 
-    def __init__(self, base_file='params/default_params.json', log_training=False, mod_num=0):
+    def __init__(self, base_file='params_default.json', log_training=False, mod_num=0):
         with open(base_file, 'r') as f:
             params = json.load(f)
 
@@ -26,8 +26,8 @@ class Params(object):
 
         self.log_training = log_training
         self.model_summary = (
-            '{num_feats}-{num_output_points}-{n_layers}-'
-            '{n_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.set_transformer_settings)
+            '{num_feats}-{num_output_points}-{lstm_layers}-'
+            '{n_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
 
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
