@@ -2,7 +2,6 @@ import torch
 import logging
 import make_supervised_examples as mse
 import model_params as params
-from chamferdist import ChamferDistance
 import numpy as np
 
 
@@ -71,11 +70,11 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
         loss = criterion(target, output)
 
         if train:
-            loss.backward()
+            loss.sum().backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
             optimizer.step()
 
-        batch_loss = loss.item()
+        batch_loss = loss.sum().item()
         total_loss += batch_loss
         num_seqs_used += target.numel()
 
@@ -93,6 +92,8 @@ if __name__ == '__main__':
     import point_set_dataloader as dl
     from torch.utils.data import DataLoader
     from models.set_transformer_model import SetTransformer
+    from geomloss import SamplesLoss
+
 
     dset = dl.MidiNoteTupleDataset(
         dset_fname=params.dset_path,
@@ -122,7 +123,7 @@ if __name__ == '__main__':
 
     model = SetTransformer(**set_transformer_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = ChamferDistance()
+    criterion = SamplesLoss()
 
     loss, exs = run_epoch(model, dload, optimizer, criterion, log_each_batch=True)
 

@@ -7,7 +7,8 @@ import factorizations as fcts
 import models.set_transformer_model as stm
 import training_helper_functions as tr_funcs
 from torch.utils.data import DataLoader
-from chamferdist import ChamferDistance
+# from chamferdist import ChamferDistance
+from geomloss import SamplesLoss
 import plot_outputs as po
 import model_params
 import logging
@@ -68,21 +69,23 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-cd = ChamferDistance().to(device)
-criterion = lambda x, y: cd(x, y, bidirectional=True)
+# cd = ChamferDistance().to(device)
+# criterion = lambda x, y: cd(x, y, bidirectional=True)
+
+criterion = SamplesLoss(loss='sinkhorn', blur=0.001)
 
 logging.info('beginning training')
-tr_funcs.log_gpu_info()
 start_time = time.time()
 val_losses = []
 best_model = None
+tr_funcs.log_gpu_info()
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
 
     # perform training epoch
     model.train()
     train_loss, tr_exs = tr_funcs.run_epoch(model, dloader, optimizer,
-                                            criterion, device, train=True, log_each_batch=True)
+                                            criterion, device, train=True, log_each_batch=False)
 
     # test on validation set
     model.eval()
@@ -94,6 +97,7 @@ for epoch in range(params.num_epochs):
 
     val_losses.append(val_loss)
     scheduler.step(val_loss)
+    tr_funcs.log_gpu_info()
 
     epoch_end_time = time.time()
     log_train_loss = np.log(train_loss)
@@ -109,7 +113,8 @@ for epoch in range(params.num_epochs):
 
         ind = np.random.choice(tr_exs['input'].shape[0])
         fig, axs = po.plot_set(tr_exs, dset_tr, ind)
-        fig.savefig(f'./out_imgs/epoch_{epoch}.png', bbox_inches='tight')
+        img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
+        fig.savefig(img_fpath, bbox_inches='tight')
         plt.clf()
         plt.close(fig)
 
@@ -142,6 +147,7 @@ for epoch in range(params.num_epochs):
         logging.info(f'stopping early at epoch {epoch} because of time limit')
         break
 
+logging.info(f'Training over at epoch at epoch {epoch}.')
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']
 # m_name = (f'lstut_best_{params.start_training_time}_{params.lstut_summary_str}.pt')
