@@ -98,6 +98,7 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
 
     for i in range(batch_size):
         entry = output[i]
+        diff = np.zeros(seq_len)
         # max_time = np.max(entry[:, 0])
 
         # replacements:
@@ -105,21 +106,26 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
         np.random.shuffle(inds)
         sel_inds = inds[:num_replacements]
         errors = np.random.normal(0.0, 1.0, (num_replacements, num_feats)) * (stds / 3)
-        errors = (np.round(errors))
+        # errors = (np.round(errors))
         entry[sel_inds] = entry[sel_inds] + errors
+        diff[sel_inds] = 1
 
         # deletions:
         mask = np.ones(len(entry), dtype='bool')
         inds_delete = inds[num_replacements:num_replacements + num_deletions]
         mask[inds_delete] = False
         entry = entry[mask]
+        diff[inds_delete - 1] = 1
+        diff = diff[mask]
+
 
         # more errors to insert instead of replace
         inds_insert = inds[-num_insertions:] % len(entry)
         errors = np.random.normal(0.0, 1.0, (num_insertions, num_feats)) * stds + means
-        errors = np.abs(np.round(errors))
+        # errors = np.abs(np.round(errors))
         for n in range(num_insertions):
             entry = np.insert(entry, inds_insert[n], errors[n], 0)
+            diff = np.insert(diff, inds_insert[n], 1, 0)
 
         # # wrap around anything too far forward in time
         # entry[:, 0] = entry[:, 0] % max_time
@@ -128,14 +134,15 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
         # set_xor = np.concatenate([set_xor, pad_seq], 0)
         # errored_indices[i] = set_xor[:max_num_error_pts]
 
-        diff = get_notetuple_diff(entry, inp[i].numpy())
-
+        # diff = get_notetuple_diff(entry, inp[i].numpy())
+        #
         # add padding in case overall sequence length has changed, then cut down
         # to length of original output
         entry = np.concatenate([entry, pad_seq], 0)
         output[i, :seq_len] = entry[:seq_len]
 
-        errored_indices[i] = diff
+        diff = np.concatenate([diff, np.zeros(seq_len)], 0)
+        errored_indices[i] = diff[:seq_len, None]
 
     output = torch.tensor(output, dtype=inp.dtype)
     errored_indices = torch.tensor(errored_indices, dtype=inp.dtype)
@@ -146,7 +153,6 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
 def get_notetuple_diff(err, orig, for_autoregressive=False):
     err = [tuple(x) for x in err]
     orig = [tuple(x) for x in orig]
-    print(len(err), len(orig))
 
     s = SequenceMatcher(None, err, orig, autojunk=False)
     ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
@@ -198,24 +204,34 @@ def error_set_xor(err, orig):
 
 if __name__ == '__main__':
     import point_set_dataloader as dl
+    import toy_datasets as td
 
     params = model_params.Params()
 
-    dset = dl.MidiNoteTupleDataset(
-        dset_fname=params.dset_path,
-        seq_length=params.seq_length,
-        num_feats=params.num_feats,
-        base='train',
-        padding_amt=params.padding_amt)
+    # dset = dl.MidiNoteTupleDataset(
+    #     dset_fname=params.dset_path,
+    #     seq_length=params.seq_length,
+    #     num_feats=3,
+    #     base='train',
+    #     padding_amt=params.padding_amt)
 
-    dload = DataLoader(dset, batch_size=2)
+    dset_args = {
+        'num_feats': 1,
+        'num_seqs': 2000,
+        'seq_length': params.seq_length,
+        'seq_period': params.seq_length // 7,
+        'phase_vary': 0,
+        'freq_vary': 0}
+    dset = td.SequenceCopyDataset(**dset_args)
+
+    dload = DataLoader(dset, batch_size=20)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)
         if i > 2:
             break
 
-    kw = {'num_insertions': 3, 'num_deletions': 3, 'num_replacements': 3}
+    kw = {'num_insertions': 3, 'num_deletions': 9, 'num_replacements': 4}
     errored, indices = error_indices(batch, **kw)
 
     # model = tfsm.TransformerModel(

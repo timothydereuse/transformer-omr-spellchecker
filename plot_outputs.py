@@ -60,7 +60,6 @@ def plot_line_corrections(inp, output, target, thresh=None):
     fig, axs = plt.subplots(2, 1, figsize=(6, 8))
     inp = inp.cpu().detach().numpy()
 
-    pr = np.zeros([inp.shape[0], 129])
     # Iterate over number of features
     for i in range(inp.shape[1]):
         axs[0].plot(inp[:, i])
