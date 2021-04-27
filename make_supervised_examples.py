@@ -146,9 +146,11 @@ def error_indices(inp, num_deletions=5, num_insertions=5, num_replacements=5):
 def get_notetuple_diff(err, orig, for_autoregressive=False):
     err = [tuple(x) for x in err]
     orig = [tuple(x) for x in orig]
+    print(len(err), len(orig))
 
-    s = SequenceMatcher(None, err, orig)
+    s = SequenceMatcher(None, err, orig, autojunk=False)
     ops = [x for x in s.get_opcodes() if not x[0] == 'equal']
+    # ops = s.get_opcodes()
 
     # replace / insert / delete
     mapping = {
@@ -156,6 +158,8 @@ def get_notetuple_diff(err, orig, for_autoregressive=False):
         'insert': 1,
         'delete': 2
     }
+
+    print(ops)
 
     if not for_autoregressive:
         record = np.zeros([len(orig), 1])
@@ -204,14 +208,14 @@ if __name__ == '__main__':
         base='train',
         padding_amt=params.padding_amt)
 
-    dload = DataLoader(dset, batch_size=9)
+    dload = DataLoader(dset, batch_size=2)
     for i, batch in enumerate(dload):
         batch = batch.float()
         print(i, batch.shape)
         if i > 2:
             break
 
-    kw = {'num_insertions': 3, 'num_deletions': 0, 'num_replacements': 15}
+    kw = {'num_insertions': 3, 'num_deletions': 3, 'num_replacements': 3}
     errored, indices = error_indices(batch, **kw)
 
     # model = tfsm.TransformerModel(
