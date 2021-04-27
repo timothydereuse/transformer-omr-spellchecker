@@ -23,15 +23,15 @@ def log_gpu_info():
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
-def make_point_set_target(batch, dloader, device, make_examples_settings={}):
-    dset = dloader.dataset
+def make_point_set_target(batch, dloader, device='cpu', make_examples_settings={}):
     errored_input, error_locs = mse.error_indices(batch, **make_examples_settings)
-    errored_input = dset.normalize_batch(errored_input).to(device)
-    error_locs = dset.normalize_batch(error_locs).to(device)
+    # dset = dloader.dataset
+    # errored_input = dset.normalize_batch(errored_input).to(device)
+    # error_locs = dset.normalize_batch(error_locs).to(device)
     return errored_input, error_locs
 
 
-def run_epoch(model, dloader, optimizer, criterion, device='cpu',
+def run_epoch(model, dloader, optimizer, criterion, device='cpu', make_examples_settings={},
               train=True, log_each_batch=False, clip_grad_norm=0.5, autoregressive=False):
     '''
     Performs a training or validation epoch.
@@ -52,7 +52,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
     for i, batch in enumerate(dloader):
 
         batch = batch.float().cpu()
-        inp, target = make_point_set_target(batch, dloader, device)
+        inp, target = make_point_set_target(batch, dloader, device, make_examples_settings)
 
         # batch = batch.to(device)
         inp = inp.to(device)
@@ -66,11 +66,10 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
         else:
             output = model(inp)
 
-        # for chamfer distance, in this context, target should be first
-        loss = criterion(target, output)
+        loss = criterion(output, target)
 
         if train:
-            loss.sum().backward()
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
             optimizer.step()
 
@@ -79,7 +78,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
         num_seqs_used += target.numel()
 
         if log_each_batch:
-            log_loss = np.log(batch_loss / target.numel())
+            log_loss = (batch_loss / target.numel())
             logging.info(f'    batch {i}, loss {log_loss:2.7f}')
 
     mean_loss = total_loss / num_seqs_used
@@ -89,19 +88,19 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu',
 
 if __name__ == '__main__':
 
-    import point_set_dataloader as dl
+    import toy_datasets as td
     from torch.utils.data import DataLoader
-    from models.set_transformer_model import SetTransformer
-    from geomloss import SamplesLoss
+    from models.LSTUT_model import LSTUT
 
-
-    dset = dl.MidiNoteTupleDataset(
-        dset_fname=params.dset_path,
-        seq_length=512,
-        base='train',
-        num_feats=params.num_feats,
-        padding_amt=params.padding_amt,
-        trial_run=0.03)
+    dset_args = {
+        'num_feats': 1,
+        'num_seqs': 300,
+        'seq_length': 128,
+        'seq_period': 128 // 5,
+        'phase_vary': 0.01,
+        'freq_vary': 0.01
+    }
+    dset = td.SequenceCopyDataset(**dset_args)
 
     dload = DataLoader(dset, batch_size=50)
     for i, batch in enumerate(dload):
@@ -110,20 +109,21 @@ if __name__ == '__main__':
         if i > 2:
             break
 
-    set_transformer_settings = {
-        'num_feats': params.num_feats,
-        'num_output_points': 40,
-        'n_layers_prepooling': 2,
-        'n_layers_postpooling': 2,
-        'n_heads': 1,
-        'hidden_dim': 32,
-        'ff_dim': 32,
-        'dropout': 0.1
-    }
+    lstut_settings = {
+            "num_feats": 1,
+            "output_feats": 1,
+            "lstm_layers": 2,
+            "n_layers": 1,
+            "n_heads": 1,
+            "tf_depth": 2,
+            "hidden_dim": 32,
+            "ff_dim": 32,
+            "dropout": 0.1
+        }
 
-    model = SetTransformer(**set_transformer_settings)
+    model = LSTUT(**lstut_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = SamplesLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
 
     loss, exs = run_epoch(model, dload, optimizer, criterion, log_each_batch=True)
 

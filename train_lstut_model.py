@@ -60,8 +60,8 @@ dset_args = {
     'num_seqs': 1200,
     'seq_length': params.seq_length,
     'seq_period': params.seq_length // 5,
-    'phase_vary': 0.01,
-    'freq_vary': 0.01}
+    'phase_vary': 0,
+    'freq_vary': 0}
 dset_tr = td.SequenceCopyDataset(**dset_args)
 dset_args['num_seqs'] = dset_args['num_seqs'] // 5
 dset_vl = td.SequenceCopyDataset(**dset_args)
@@ -70,7 +70,7 @@ dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 num_feats = dset_tr.num_feats
 
-model = lstut.LSTUT(**params.LSTUT_settings).to(device)
+model = lstut.LSTUT(**params.lstut_settings).to(device)
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 model_size = sum(p.numel() for p in model.parameters())
 logging.info(f'created model with n_params={model_size}')
@@ -81,8 +81,8 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 
 # cd = ChamferDistance().to(device)
 # criterion = lambda x, y: cd(x, y, bidirectional=True)
-
-criterion = torch.nn.BCEWithLogitsLoss()
+class_ratio = params.seq_length // sum(list(params.error_indices_settings.values()))
+criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(class_ratio))
 
 logging.info('beginning training')
 start_time = time.time()
@@ -94,24 +94,40 @@ for epoch in range(params.num_epochs):
 
     # perform training epoch
     model.train()
-    train_loss, tr_exs = tr_funcs.run_epoch(model, dloader, optimizer,
-                                            criterion, device, train=True, log_each_batch=False)
+    train_loss, tr_exs = tr_funcs.run_epoch(
+        model=model,
+        dloader=dloader,
+        optimizer=optimizer,
+        criterion=criterion,
+        device=device,
+        make_examples_settings=params.error_indices_settings,
+        train=True,
+        log_each_batch=True
+    )
 
     # test on validation set
     model.eval()
     num_entries = 0
     val_loss = 0.
     with torch.no_grad():
-        val_loss, val_exs = tr_funcs.run_epoch(model, dloader, optimizer,
-                                               criterion, device, train=False, log_each_batch=False)
+        val_loss, val_exs = tr_funcs.run_epoch(
+            model=model,
+            dloader=dloader_val,
+            optimizer=optimizer,
+            criterion=criterion,
+            device=device,
+            make_examples_settings=params.error_indices_settings,
+            train=False,
+            log_each_batch=False
+        )
 
     val_losses.append(val_loss)
     scheduler.step(val_loss)
     tr_funcs.log_gpu_info()
 
     epoch_end_time = time.time()
-    log_train_loss = np.log(train_loss)
-    log_val_loss = np.log(val_loss)
+    log_train_loss = (train_loss)
+    log_val_loss = (val_loss)
     logging.info(
         f'epoch {epoch:3d} | '
         f's/epoch {(epoch_end_time - epoch_start_time):3.5f} | '
@@ -122,7 +138,10 @@ for epoch in range(params.num_epochs):
     if not epoch % params.save_img_every and epoch > 0:
 
         ind = np.random.choice(tr_exs['input'].shape[0])
-        fig, axs = po.plot_set(tr_exs, dset_tr, ind)
+        inp = tr_exs['input'][ind]
+        output = tr_exs['output'][ind]
+        target = tr_exs['target'][ind]
+        fig, axs = po.plot_line_corrections(inp, output, target)
         img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
         fig.savefig(img_fpath, bbox_inches='tight')
         plt.clf()
