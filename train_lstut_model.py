@@ -57,11 +57,11 @@ logging.info('defining datasets...')
 
 dset_args = {
     'num_feats': params.num_feats,
-    'num_seqs': 512,
     'seq_length': params.seq_length,
-    'seq_period': params.seq_length // 7,
-    'phase_vary': 0,
-    'freq_vary': 0}
+    'seq_period': params.seq_length // 7
+}
+dset_args.update(params.toy_dataset_args)
+
 dset_tr = td.SequenceCopyDataset(**dset_args)
 dset_args['num_seqs'] = dset_args['num_seqs'] // 5
 dset_vl = td.SequenceCopyDataset(**dset_args)
@@ -127,13 +127,11 @@ for epoch in range(params.num_epochs):
     val_f1 = ttnm.f_measure(val_exs['output'], val_exs['target'], tr_thresh)
 
     epoch_end_time = time.time()
-    log_train_loss = (train_loss)
-    log_val_loss = (val_loss)
     logging.info(
         f'epoch {epoch:3d} | '
         f's/epoch    {(epoch_end_time - epoch_start_time):3.5f} | '
-        f'train_loss {log_train_loss:2.5f} | '
-        f'val_loss   {log_val_loss:2.5f} |\n'
+        f'train_loss {train_loss:1.6f} | '
+        f'val_loss   {val_loss:1.6f} |\n'
         f'          | '
         f'tr_thresh  {tr_thresh:1.5f} | '
         f'tr_f1      {tr_f1:1.6f} | '
