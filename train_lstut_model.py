@@ -57,9 +57,9 @@ logging.info('defining datasets...')
 
 dset_args = {
     'num_feats': params.num_feats,
-    'num_seqs': 1200,
+    'num_seqs': 2000,
     'seq_length': params.seq_length,
-    'seq_period': params.seq_length // 5,
+    'seq_period': params.seq_length // 7,
     'phase_vary': 0,
     'freq_vary': 0}
 dset_tr = td.SequenceCopyDataset(**dset_args)

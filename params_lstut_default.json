@@ -1,5 +1,5 @@
 {
-    "params_name": "TRIAL_RUN",
+    "params_name": "LSTUT_BASE",
     "num_epochs": 50,
     "early_stopping_patience": 20,
     "save_model_every": 4,
