@@ -66,10 +66,12 @@ def plot_line_corrections(inp, output, target, thresh=None):
     axs[0].set_title('Input (with errors)')
 
     trg = target.cpu().detach().numpy()
-    opt = output.cpu().detach().numpy()
 
     if thresh:
-        opt = opt > thresh
+        output = output > thresh
+    else:
+        output = torch.sigmoid(output)
+    opt = output.cpu().detach().numpy()
 
     locs = np.concatenate([trg, opt], 1)
     # repeat entries a bunch of times because matplotlib doesn't

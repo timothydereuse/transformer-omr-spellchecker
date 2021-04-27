@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 # import models.LSTUT_model as lstut
 import model_params as params
 from importlib import reload
-import plot_outputs as po
 
 reload(params)
 reload(mse)
@@ -32,7 +31,7 @@ def f_measure(inps, targets, threshold=0.5):
 
 
 def multilabel_thresholding(output, target, num_trials=1000):
-    output = output.cpu().detach().numpy().reshape(-1)
+    output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)
 
     thresholds = np.linspace(min(output), max(output), num_trials)

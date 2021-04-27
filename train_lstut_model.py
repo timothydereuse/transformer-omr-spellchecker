@@ -2,9 +2,9 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-import point_set_dataloader as dl
+# import point_set_dataloader as dl
 import toy_datasets as td
-import factorizations as fcts
+import test_trained_notetuple_model as ttnm
 import models.LSTUT_model as lstut
 import training_helper_functions as tr_funcs
 from torch.utils.data import DataLoader
@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 
 from importlib import reload
 reload(tr_funcs)
-reload(dl)
-reload(fcts)
+reload(ttnm)
+reload(td)
 reload(lstut)
 reload(model_params)
 reload(po)
@@ -57,7 +57,7 @@ logging.info('defining datasets...')
 
 dset_args = {
     'num_feats': params.num_feats,
-    'num_seqs': 2000,
+    'num_seqs': 512,
     'seq_length': params.seq_length,
     'seq_period': params.seq_length // 7,
     'phase_vary': 0,
@@ -79,8 +79,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-# cd = ChamferDistance().to(device)
-# criterion = lambda x, y: cd(x, y, bidirectional=True)
 class_ratio = params.seq_length // sum(list(params.error_indices_settings.values()))
 criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(class_ratio))
 
@@ -125,14 +123,22 @@ for epoch in range(params.num_epochs):
     scheduler.step(val_loss)
     tr_funcs.log_gpu_info()
 
+    tr_f1, tr_thresh = ttnm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
+    val_f1 = ttnm.f_measure(val_exs['output'], val_exs['target'], tr_thresh)
+
     epoch_end_time = time.time()
     log_train_loss = (train_loss)
     log_val_loss = (val_loss)
     logging.info(
         f'epoch {epoch:3d} | '
-        f's/epoch {(epoch_end_time - epoch_start_time):3.5f} | '
-        f'train_loss {log_train_loss:2.7f} | '
-        f'val_loss {log_val_loss:2.7f} ')
+        f's/epoch    {(epoch_end_time - epoch_start_time):3.5f} | '
+        f'train_loss {log_train_loss:2.5f} | '
+        f'val_loss   {log_val_loss:2.5f} |\n'
+        f'          | '
+        f'tr_thresh  {tr_thresh:1.5f} | '
+        f'tr_f1      {tr_f1:1.6f} | '
+        f'val_f1     {val_f1:1.6f} | '
+    )
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
