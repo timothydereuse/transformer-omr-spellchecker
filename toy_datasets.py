@@ -17,7 +17,7 @@ class SequenceCopyDataset(Dataset):
         slope = np.linspace(1, seq_length, seq_length)
         data[:] = np.tile(slope, [num_feats, 1]).swapaxes(0, 1)
 
-        additive = np.random.normal(0, phase_vary, [num_seqs, num_feats])
+        additive = np.random.normal(0, phase_vary * seq_length, [num_seqs, num_feats])
         additive = np.repeat(additive[:, np.newaxis, :], seq_length, axis=1)
         data += additive
 
