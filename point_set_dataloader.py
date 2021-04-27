@@ -1,5 +1,4 @@
 from torch.utils.data import IterableDataset, DataLoader
-import factorizations as fcts
 from importlib import reload
 import torch
 import os
@@ -7,8 +6,6 @@ import numpy as np
 import h5py
 import logging
 import model_params as params
-reload(fcts)
-
 
 def all_hdf5_keys(obj):
     '''
