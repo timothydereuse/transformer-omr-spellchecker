@@ -26,7 +26,7 @@ class Params(object):
 
         self.log_training = log_training
         self.model_summary = (
-            '{num_feats}-{num_output_points}-{lstm_layers}-'
+            '{num_feats}-{output_feats}-{lstm_layers}-'
             '{n_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
 
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")

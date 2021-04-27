@@ -17,7 +17,7 @@
 
     "lstut_settings": {
         "num_feats": 1,
-        "num_output_points": 1,
+        "output_feats": 1,
         "lstm_layers": 3,
         "n_layers": 1,
         "n_heads": 2,

@@ -16,14 +16,14 @@
     "dataset_proportion": 0.0006,
 
     "lstut_settings": {
-        "num_feats": 2,
-        "num_output_points": 10,
-        "lstm_layers": 3,
+        "num_feats": 3,
+        "output_feats": 1,
+        "lstm_layers": 2,
         "n_layers": 1,
-        "n_heads": 2,
-        "tf_depth": 4,
+        "n_heads": 1,
+        "tf_depth": 3,
         "hidden_dim": 128,
-        "ff_dim": 256,
+        "ff_dim": 128,
         "dropout": 0.1
     },
     "error_indices_settings": {
