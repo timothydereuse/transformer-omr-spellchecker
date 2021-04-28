@@ -22,7 +22,7 @@ class Params(object):
             for k in self.parameter_searching:
                 for i in self.parameter_searching[k]:
                     self.modifications.append((k, i))
-                self.apply_mod(mod_num - 1)
+            self.apply_mod(mod_num - 1)
 
         self.log_training = log_training
         self.model_summary = (

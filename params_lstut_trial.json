@@ -3,20 +3,20 @@
     "num_epochs": 50,
     "early_stopping_patience": 20,
     "save_model_every": 4,
-    "save_img_every": 4,
+    "save_img_every": 3334,
     "max_time_minutes": 30,
 
     "seq_length": 64,
     "padding_amt": 4,
-    "lr": 0.0003,
-    "batch_size": 512,
+    "lr": 0.0001,
+    "batch_size": 256,
     "clip_gradient_norm": 0.5,
-    "num_feats": 2,
+    "num_feats": 1,
     "dset_path": "lmd_cleansed.hdf5",
     "dataset_proportion": 0.0006,
 
     "lstut_settings": {
-        "num_feats": 2,
+        "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 2,
         "n_layers": 1,
@@ -26,18 +26,27 @@
         "ff_dim": 64,
         "dropout": 0.1
     },
+    "toy_dataset_args": {
+        "num_seqs": 512,
+        "phase_vary": 0.2,
+        "freq_vary": 0.1
+    },
     "error_indices_settings": {
-        "num_insertions": 4,
+        "num_insertions": 3,
         "num_deletions": 0,
-        "num_replacements": 2
+        "num_replacements": 1
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 5,
+        "patience": 8,
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching":{
-        "seq_length": [64, 78, 256]
+    "parameter_searching": {
+        "seq_length": [128, 64],
+        "toy_dataset_args.phase_vary": [0.2, 1],
+        "toy_dataset_args.freq_vary": [0.1, 0.4, 0.9],
+        "error_indices_settings.num_replacements": [5, 10, 20],
+        "error_indices_settings.num_deletions": [5, 10, 20]
     }
 }
