@@ -1,8 +1,12 @@
 import torch
 import logging
 import make_supervised_examples as mse
-import model_params as params
 import numpy as np
+import plot_outputs as po
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
 def get_cuda_info():
@@ -13,6 +17,18 @@ def get_cuda_info():
     else:
         device = torch.device("cpu")
     return device, num_gpus
+
+
+def save_img(exs, fname, ind=-1):
+    if ind < 0:
+        ind = np.random.choice(exs['input'].shape[0])
+    inp = exs['input'][ind]
+    output = exs['output'][ind]
+    target = exs['target'][ind]
+    fig, axs = po.plot_line_corrections(inp, output, target)
+    fig.savefig(fname, bbox_inches='tight')
+    plt.clf()
+    plt.close(fig)
 
 
 def log_gpu_info():

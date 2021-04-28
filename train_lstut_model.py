@@ -13,10 +13,6 @@ import model_params
 import logging
 import argparse
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 from importlib import reload
 reload(tr_funcs)
 reload(ttnm)
@@ -35,6 +31,8 @@ parser.add_argument('-l', '--logging', action='store_true',
 args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
+
+assert 1 == 4
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
@@ -58,7 +56,7 @@ logging.info('defining datasets...')
 dset_args = {
     'num_feats': params.num_feats,
     'seq_length': params.seq_length,
-    'seq_period': params.seq_length // 7
+    'seq_period': params.seq_length // 5
 }
 dset_args.update(params.toy_dataset_args)
 
@@ -124,7 +122,7 @@ for epoch in range(params.num_epochs):
     tr_funcs.log_gpu_info()
 
     tr_f1, tr_thresh = ttnm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
-    val_f1 = ttnm.f_measure(val_exs['output'], val_exs['target'], tr_thresh)
+    val_f1 = ttnm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
 
     epoch_end_time = time.time()
     logging.info(
@@ -140,16 +138,8 @@ for epoch in range(params.num_epochs):
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
-
-        ind = np.random.choice(tr_exs['input'].shape[0])
-        inp = tr_exs['input'][ind]
-        output = tr_exs['output'][ind]
-        target = tr_exs['target'][ind]
-        fig, axs = po.plot_line_corrections(inp, output, target)
         img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
-        fig.savefig(img_fpath, bbox_inches='tight')
-        plt.clf()
-        plt.close(fig)
+        tr_funcs.save_img(tr_exs, img_fpath)
 
     # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
@@ -181,6 +171,11 @@ for epoch in range(params.num_epochs):
         break
 
 logging.info(f'Training over at epoch at epoch {epoch}.')
+
+for i in range(3):
+    img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.png'
+    tr_funcs.save_img(tr_exs, img_fpath)
+
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']
 # m_name = (f'lstut_best_{params.start_training_time}_{params.lstut_summary_str}.pt')
