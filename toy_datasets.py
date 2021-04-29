@@ -33,12 +33,12 @@ class SequenceCopyDataset(Dataset):
         if sine and self.num_feats > 1:
             s = num_feats // 2
             # data = np.sin(data * (2 * np.pi) / seq_period)
-            data[:, :, :s] = np.sin(data[:, :, :s] * (2 * np.pi) * seq_freq) * 0.5 + 0.5
-            data[:, :, s:] = np.mod(data[:, :, s:], seq_length / seq_freq) * seq_freq
+            data[:, :, :s] = np.sin(data[:, :, :s] * (2 * np.pi) / self.seq_period) * 0.5 + 0.5
+            data[:, :, s:] = np.mod(data[:, :, s:], self.seq_period) / self.seq_period
         elif sine and self.num_feats == 1:
-            data = np.sin(data[:, :, :s] * (2 * np.pi) * seq_freq) * 0.5 + 0.5
+            data = np.sin(data * (2 * np.pi) / self.seq_period) * 0.5 + 0.5
         else:
-            data = np.mod(data, seq_length / seq_freq) * seq_freq
+            data = np.mod(data, self.seq_period) / self.seq_period
 
         # apply power
         logp = np.log(power_vary)
@@ -67,11 +67,11 @@ if __name__ == '__main__':
         num_feats=num_feats,
         num_seqs=1200,
         seq_length=256,
-        seq_freq=2,
-        phase_vary=0.1,
-        freq_vary=1.001,
-        power_vary=5,
-        sine=False)
+        seq_freq=5,
+        phase_vary=1,
+        freq_vary=1,
+        power_vary=1,
+        sine=True)
 
     dloader = DataLoader(dset, 40)
 
