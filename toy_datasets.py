@@ -5,11 +5,12 @@ import numpy as np
 
 class SequenceCopyDataset(Dataset):
 
-    def __init__(self, num_feats, num_seqs, seq_length, seq_period, phase_vary=0, freq_vary=0, sine=False):
+    def __init__(self, num_feats, num_seqs, seq_length, seq_freq, phase_vary=0, freq_vary=1, power_vary=1, sine=False):
 
         super(SequenceCopyDataset).__init__()
         self.seq_length = seq_length
-        self.seq_period = seq_period
+        self.seq_freq = seq_freq
+        self.seq_period = seq_length / seq_freq
         self.num_feats = num_feats
         self.num_seqs = num_seqs
 
@@ -17,19 +18,34 @@ class SequenceCopyDataset(Dataset):
         slope = np.linspace(1, seq_length, seq_length)
         data[:] = np.tile(slope, [num_feats, 1]).swapaxes(0, 1)
 
-        additive = np.random.normal(0, phase_vary * seq_length, [num_seqs, num_feats])
+        add_amt = phase_vary * seq_length
+        additive = np.random.uniform(0, add_amt, [num_seqs, num_feats])
         additive = np.repeat(additive[:, np.newaxis, :], seq_length, axis=1)
         data += additive
 
-        mult = np.random.uniform(-freq_vary, freq_vary, [num_seqs, num_feats]) + 1
-        mult = np.repeat(mult[:, np.newaxis, :], seq_length, axis=1)
+        logv = np.log(freq_vary)
+        mult = np.random.uniform(-logv, logv, [num_seqs])
+        mult = np.exp(mult)
+        mult = np.repeat(mult[:, np.newaxis], seq_length, axis=1)
+        mult = np.repeat(mult[:, :, np.newaxis], num_feats, axis=2)
         data *= mult
 
-        if sine:
-            data = np.sin(data * (2 * np.pi) / seq_period)
-        # data[:, :, split_pt:] = (data[:, :, split_pt:] + 1.) / 2.
+        if sine and self.num_feats > 1:
+            s = num_feats // 2
+            # data = np.sin(data * (2 * np.pi) / seq_period)
+            data[:, :, :s] = np.sin(data[:, :, :s] * (2 * np.pi) * seq_freq) * 0.5 + 0.5
+            data[:, :, s:] = np.mod(data[:, :, s:], seq_length / seq_freq) * seq_freq
+        elif sine and self.num_feats == 1:
+            data = np.sin(data[:, :, :s] * (2 * np.pi) * seq_freq) * 0.5 + 0.5
         else:
-            data = np.mod(data, seq_period) / seq_period
+            data = np.mod(data, seq_length / seq_freq) * seq_freq
+
+        # apply power
+        logp = np.log(power_vary)
+        power = np.random.uniform(-logp, logp, [num_seqs, num_feats])
+        power = np.exp(power)
+        power = np.repeat(power[:, np.newaxis, :], seq_length, axis=1)
+        data = data ** power
 
         self.data = data
 
@@ -45,20 +61,24 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     import matplotlib.pyplot as plt
 
-    dset = SequenceCopyDataset(
-        num_feats=1,
-        num_seqs=1200,
-        seq_length=128,
-        seq_period=30,
-        phase_vary=0.01,
-        freq_vary=0.01)
+    num_feats = 1
 
-    dloader = DataLoader(dset, 10)
+    dset = SequenceCopyDataset(
+        num_feats=num_feats,
+        num_seqs=1200,
+        seq_length=256,
+        seq_freq=2,
+        phase_vary=0.1,
+        freq_vary=1.001,
+        power_vary=5,
+        sine=False)
+
+    dloader = DataLoader(dset, 40)
 
     for batch in dloader:
         print(batch.shape)
 
     x = batch.numpy()
-    for i in range(4):
-        plt.plot(x[i], label="line {i}")
+    for i in range(num_feats):
+        plt.plot(x[0, :, i], label="line {i}")
     plt.show()

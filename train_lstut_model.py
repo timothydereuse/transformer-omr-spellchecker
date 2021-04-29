@@ -32,8 +32,6 @@ args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 
-assert 1 == 4
-
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
 # dset_tr = dl.MidiNoteTupleDataset(
@@ -56,7 +54,6 @@ logging.info('defining datasets...')
 dset_args = {
     'num_feats': params.num_feats,
     'seq_length': params.seq_length,
-    'seq_period': params.seq_length // 5
 }
 dset_args.update(params.toy_dataset_args)
 
@@ -98,7 +95,7 @@ for epoch in range(params.num_epochs):
         device=device,
         make_examples_settings=params.error_indices_settings,
         train=True,
-        log_each_batch=True
+        log_each_batch=False
     )
 
     # test on validation set
@@ -119,7 +116,7 @@ for epoch in range(params.num_epochs):
 
     val_losses.append(val_loss)
     scheduler.step(val_loss)
-    tr_funcs.log_gpu_info()
+    # tr_funcs.log_gpu_info()
 
     tr_f1, tr_thresh = ttnm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
     val_f1 = ttnm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
@@ -170,7 +167,11 @@ for epoch in range(params.num_epochs):
         logging.info(f'stopping early at epoch {epoch} because of time limit')
         break
 
-logging.info(f'Training over at epoch at epoch {epoch}.')
+end_time = time.time()
+logging.info(
+    f'Training over at epoch at epoch {epoch}.\n'
+    f'Total training time: {end_time - start_time} s.'
+)
 
 for i in range(3):
     img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.png'
