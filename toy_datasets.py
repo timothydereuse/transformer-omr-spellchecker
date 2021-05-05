@@ -14,7 +14,6 @@ class SequenceCopyDataset(Dataset):
         if not rand_freq:
             rand_freq = int((seq_length / seq_freq) // 4)
 
-
         super(SequenceCopyDataset).__init__()
         self.seq_length = seq_length
         self.seq_freq = seq_freq
@@ -47,7 +46,8 @@ class SequenceCopyDataset(Dataset):
                 data[:, :, i] = np.mod(data[:, :, i], self.seq_period) / self.seq_period
                 x = np.linspace(0, 1, rand_freq)
                 for s in range(self.num_seqs):
-                    y = np.random.uniform(0, 1, [rand_freq])
+                    y = np.linspace(0, 1, rand_freq)
+                    np.random.shuffle(y)
                     data[s, :, i] = np.interp(data[s, :, i], x, y)
 
         # apply power
@@ -71,13 +71,13 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     import matplotlib.pyplot as plt
 
-    num_feats = 1
+    num_feats = 3
 
     dset = SequenceCopyDataset(
         num_feats=num_feats,
         num_seqs=1200,
         seq_length=256,
-        seq_freq=4,
+        seq_freq=8,
         phase_vary=1,
         freq_vary=1,
         power_vary=1,
