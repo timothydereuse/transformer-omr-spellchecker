@@ -28,9 +28,12 @@ parser.add_argument('-m', '--mod_number', type=int, default=0,
                     help='Index of specific modification to apply to given parameter set.')
 parser.add_argument('-l', '--logging', action='store_true',
                     help='Whether or not to log training results to file.')
+parser.add_argument('-d', '--dryrun', action='store_true',
+                    help='Halts execution immediately before training begins.')
 args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
+dry_run = args['dryrun']
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
@@ -82,6 +85,10 @@ start_time = time.time()
 val_losses = []
 best_model = None
 tr_funcs.log_gpu_info()
+
+if dry_run:
+    assert False, "Dry run successful"
+
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
 
