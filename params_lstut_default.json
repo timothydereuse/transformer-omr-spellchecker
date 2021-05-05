@@ -1,22 +1,22 @@
 {
     "params_name": "LSTUT_BASE",
-    "num_epochs": 100,
+    "num_epochs": 151,
     "early_stopping_patience": 20,
     "save_model_every": 4,
-    "save_img_every": 4,
-    "max_time_minutes": 4000,
+    "save_img_every": 49,
+    "max_time_minutes": 20,
 
     "seq_length": 256,
     "padding_amt": 4,
-    "lr": 0.0003,
-    "batch_size": 512,
+    "lr": 0.0002,
+    "batch_size": 256,
     "clip_gradient_norm": 0.5,
-    "num_feats": 2,
+    "num_feats": 1,
     "dset_path": "lmd_cleansed.hdf5",
     "dataset_proportion": 0.0006,
 
     "lstut_settings": {
-        "num_feats": 2,
+        "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 3,
         "n_layers": 1,
@@ -27,12 +27,12 @@
         "dropout": 0.1
     },
     "error_indices_settings": {
-        "num_insertions": 4,
+        "num_insertions": 7,
         "num_deletions": 0,
-        "num_replacements": 2
+        "num_replacements": 0
     },
     "toy_dataset_args": {
-        "num_seqs": 1024,
+        "num_seqs": 2048,
         "phase_vary": 0.0,
         "freq_vary": 0.0
     },

@@ -5,7 +5,15 @@ import numpy as np
 
 class SequenceCopyDataset(Dataset):
 
-    def __init__(self, num_feats, num_seqs, seq_length, seq_freq, phase_vary=0, freq_vary=1, power_vary=1, sine=False):
+    def __init__(self, num_feats, num_seqs, seq_length, seq_freq, phase_vary=0, freq_vary=1, power_vary=1, seq_type='sine', rand_freq=None):
+
+        if type(seq_type) == list and len(seq_type) != num_feats:
+            raise ValueError("List of sequence types must have same length as number of features")
+        if type(seq_type) == str:
+            seq_type = [seq_type for _ in range(num_feats)]
+        if not rand_freq:
+            rand_freq = int((seq_length / seq_freq) // 4)
+
 
         super(SequenceCopyDataset).__init__()
         self.seq_length = seq_length
@@ -30,15 +38,17 @@ class SequenceCopyDataset(Dataset):
         mult = np.repeat(mult[:, :, np.newaxis], num_feats, axis=2)
         data *= mult
 
-        if sine and self.num_feats > 1:
-            s = num_feats // 2
-            # data = np.sin(data * (2 * np.pi) / seq_period)
-            data[:, :, :s] = np.sin(data[:, :, :s] * (2 * np.pi) / self.seq_period) * 0.5 + 0.5
-            data[:, :, s:] = np.mod(data[:, :, s:], self.seq_period) / self.seq_period
-        elif sine and self.num_feats == 1:
-            data = np.sin(data * (2 * np.pi) / self.seq_period) * 0.5 + 0.5
-        else:
-            data = np.mod(data, self.seq_period) / self.seq_period
+        for i in range(num_feats):
+            if seq_type[i] == 'saw':
+                data[:, :, i] = np.mod(data[:, :, i], self.seq_period) / self.seq_period
+            elif seq_type[i] == 'sine':
+                data[:, :, i] = np.sin(data[:, :, i] * (2 * np.pi) / self.seq_period) * 0.5 + 0.5
+            elif seq_type[i] == 'rand':
+                data[:, :, i] = np.mod(data[:, :, i], self.seq_period) / self.seq_period
+                x = np.linspace(0, 1, rand_freq)
+                for s in range(self.num_seqs):
+                    y = np.random.uniform(0, 1, [rand_freq])
+                    data[s, :, i] = np.interp(data[s, :, i], x, y)
 
         # apply power
         logp = np.log(power_vary)
@@ -67,11 +77,11 @@ if __name__ == '__main__':
         num_feats=num_feats,
         num_seqs=1200,
         seq_length=256,
-        seq_freq=5,
+        seq_freq=4,
         phase_vary=1,
         freq_vary=1,
         power_vary=1,
-        sine=True)
+        seq_type='rand')
 
     dloader = DataLoader(dset, 40)
 

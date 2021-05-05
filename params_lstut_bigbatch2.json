@@ -3,12 +3,12 @@
     "num_epochs": 151,
     "early_stopping_patience": 20,
     "save_model_every": 4,
-    "save_img_every": 49,
-    "max_time_minutes": 15,
+    "save_img_every": 200,
+    "max_time_minutes": 20,
 
     "seq_length": 256,
     "padding_amt": 4,
-    "lr": 0.0002,
+    "lr": 0.0003,
     "batch_size": 768,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
@@ -35,8 +35,8 @@
         "num_seqs": 2048,
         "seq_freq": 6,
         "phase_vary": 0.0,
-        "freq_vary": 1.0,
-        "power_vary": 1.0
+        "freq_vary": 1.5,
+        "power_vary": 1.5
     },
     "scheduler_settings": {
         "factor": 0.25,
@@ -45,9 +45,10 @@
         "verbose": true
     },
     "parameter_searching":{
-        "toy_datasets_args.seq_freq": [2, 8, 16]
+        "toy_datasets_args.seq_freq": [2, 8, 16],
         "toy_dataset_args.phase_vary": [0.1, 1],
-        "toy_dataset_args.power_vary": [2, 8],
+        "toy_dataset_args.power_vary": [1],
+        "toy_dataset_args.freq_vary": [1],
         "error_indices_settings.num_replacements": [5, 10, 20],
         "error_indices_settings.num_deletions": [5, 10, 20]
     }

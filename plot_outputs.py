@@ -70,7 +70,7 @@ def plot_line_corrections(inp, output, target, thresh=None):
     if thresh:
         output = output > thresh
     else:
-        output = torch.sigmoid(output)
+        output = output  # torch.sigmoid(output)
     opt = output.cpu().detach().numpy()
 
     locs = np.concatenate([trg, opt], 1)

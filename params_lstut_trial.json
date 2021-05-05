@@ -26,26 +26,30 @@
         "ff_dim": 64,
         "dropout": 0.1
     },
-    "toy_dataset_args": {
-        "num_seqs": 512,
-        "phase_vary": 0.2,
-        "freq_vary": 0.1
-    },
     "error_indices_settings": {
-        "num_insertions": 3,
+        "num_insertions": 7,
         "num_deletions": 0,
-        "num_replacements": 1
+        "num_replacements": 0
+    },
+    "toy_dataset_args": {
+        "num_seqs": 2048,
+        "seq_freq": 6,
+        "phase_vary": 0.0,
+        "freq_vary": 1.0,
+        "power_vary": 1.5,
+        "seq_type": "rand"
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 8,
+        "patience": 20,
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching": {
-        "seq_length": [128, 64],
-        "toy_dataset_args.phase_vary": [0.2, 1],
-        "toy_dataset_args.freq_vary": [0.1, 0.4, 0.9],
+    "parameter_searching":{
+        "toy_dataset_args.seq_type": ["rand", ["rand", "saw"]],
+        "toy_datasets_args.seq_freq": [2, 8, 16],
+        "toy_dataset_args.phase_vary": [0.1, 1],
+        "toy_dataset_args.power_vary": [2, 8],
         "error_indices_settings.num_replacements": [5, 10, 20],
         "error_indices_settings.num_deletions": [5, 10, 20]
     }
