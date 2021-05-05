@@ -14,16 +14,6 @@ class Params(object):
         for k in params.keys():
             self.__dict__[k] = params[k]
 
-        self.modifications = []
-        if mod_num > 0:
-            if not hasattr(self, 'parameter_searching'):
-                raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
-                                 'but the Params class was passed mod number {mod_num}.')
-            for k in self.parameter_searching:
-                for i in self.parameter_searching[k]:
-                    self.modifications.append((k, i))
-            self.apply_mod(mod_num - 1)
-
         self.log_training = log_training
         self.model_summary = (
             '{num_feats}-{output_feats}-{lstm_layers}-'
@@ -39,8 +29,20 @@ class Params(object):
             if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
                 logging.getLogger().addHandler(logging.StreamHandler())
 
-    def apply_mod(self, num):
-        name, val = self.modifications[num]
+        self.modifications = []
+        if mod_num > 0:
+            if not hasattr(self, 'parameter_searching'):
+                raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
+                                 'but the Params class was passed mod number {mod_num}.')
+            for k in self.parameter_searching:
+                for i in self.parameter_searching[k]:
+                    self.modifications.append((k, i))
+            m = self.modifications[mod_num - 1]
+            logging.info(f'applying modification {m} to parameters.')
+            self.apply_mod(m)
+
+    def apply_mod(self, mod):
+        name, val = mod
         if not name:
             return
         elif '.' not in name:
