@@ -12,6 +12,10 @@ import model_params
 import logging
 import argparse
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from importlib import reload
 reload(tr_funcs)
 reload(ttnm)
@@ -82,6 +86,7 @@ criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(
 logging.info('beginning training')
 start_time = time.time()
 val_losses = []
+train_losses = []
 best_model = None
 tr_funcs.log_gpu_info()
 
@@ -121,6 +126,8 @@ for epoch in range(params.num_epochs):
         )
 
     val_losses.append(val_loss)
+    train_losses.append(train_loss)
+
     scheduler.step(val_loss)
     # tr_funcs.log_gpu_info()
 
@@ -141,7 +148,10 @@ for epoch in range(params.num_epochs):
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
         img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
-        tr_funcs.save_img(tr_exs, img_fpath)
+        fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
+        fig.savefig(img_fpath, bbox_inches='tight')
+        plt.clf()
+        plt.close(fig)
 
     # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
@@ -180,7 +190,11 @@ logging.info(
 
 for i in range(3):
     img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.png'
-    tr_funcs.save_img(tr_exs, img_fpath)
+    fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
+    fig.savefig(img_fpath, bbox_inches='tight')
+    plt.clf()
+    plt.close(fig)
+
 
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']

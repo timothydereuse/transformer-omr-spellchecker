@@ -4,11 +4,6 @@ import make_supervised_examples as mse
 import numpy as np
 import plot_outputs as po
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
     if torch.cuda.is_available():
@@ -17,19 +12,6 @@ def get_cuda_info():
     else:
         device = torch.device("cpu")
     return device, num_gpus
-
-
-def save_img(exs, fname, ind=-1):
-    if ind < 0:
-        ind = np.random.choice(exs['input'].shape[0])
-    inp = exs['input'][ind]
-    output = exs['output'][ind]
-    target = exs['target'][ind]
-    fig, axs = po.plot_line_corrections(inp, output, target)
-    fig.savefig(fname, bbox_inches='tight')
-    plt.clf()
-    plt.close(fig)
-
 
 def log_gpu_info():
     for i in range(torch.cuda.device_count()):
@@ -98,7 +80,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu', make_examples_
             logging.info(f'    batch {i}, loss {log_loss:2.7f}')
 
     mean_loss = total_loss / num_seqs_used
-    example_dict = {'input': inp, 'target': target, 'output': output}
+    example_dict = {'orig': batch, 'input': inp, 'target': target, 'output': output}
     return mean_loss, example_dict
 
 

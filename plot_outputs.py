@@ -83,13 +83,17 @@ def plot_line_corrections(inp, output, target, thresh=None):
     return fig, axs
 
 
-def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
-    orig = orig.cpu().numpy().round().astype('int')
-    err = err.cpu().numpy().round().astype('int')
-    tgt_corr = tgt_corr.cpu().numpy().astype('int')
-    pred_corr = (pred_corr.cpu().numpy() > thresh).astype('int')
+def plot_pianoroll_corrections(exs, dset, thresh, ind=-1):
+    if ind < 0:
+        ind = np.random.choice(exs['input'].shape[0])
+    target = exs['target'][ind].detach().cpu().numpy().astype('int')
+    output = (exs['output'][ind].detach().cpu().numpy() > thresh).astype('int')
+    # input = dset.unnormalize_batch(exs['input'][ind].detach().cpu()).numpy().astype('int')
+    # orig = dset.unnormalize_batch(exs['orig'][ind].detach().cpu()).numpy().astype('int')
+    orig = exs['orig'][ind].detach().cpu().numpy().astype('int')
+    input = exs['input'][ind].detach().cpu().numpy().astype('int')
 
-    pr_length = max(orig[:, 1].sum(), err[:, 1].sum())
+    pr_length = max(orig[:, 1].sum(), input[:, 1].sum()) + 1
 
     def make_pr(notes, corr=None):
         pr = np.zeros([pr_length, 128])
@@ -100,24 +104,24 @@ def plot_pianoroll_corrections(orig, err, tgt_corr, pred_corr, thresh):
                 continue
             elif corr is None:
                 pass
-            elif corr[i, 0]:
-                note_val = 2
-            elif corr[i, 1]:
+            elif corr[i]:
                 note_val = 3
-            elif corr[i, 2]:
-                note_val = 4
             pr[cur_time:cur_time + e[0], e[2]] = note_val
+            pr[cur_time, e[2]] = note_val + 1
             cur_time += e[1]
 
-        pr = pr[:, np.any(pr > 0, axis=0)]
+        # pr = pr[:, np.any(pr > 0, axis=0)]
+        used_notes = np.sum(pr, axis=0).nonzero()[0]
+        lower, upper = (int(used_notes[0]), int(used_notes[-1]))
+        pr = pr[:, lower:upper+1]
 
         return pr
 
     original_pr = make_pr(orig)
-    real_corrected = make_pr(err, tgt_corr)
-    pred_corrected = make_pr(err, pred_corr)
+    real_corrected = make_pr(input, target)
+    pred_corrected = make_pr(input, output)
 
-    cmap = colors.ListedColormap(['black', 'gray', 'yellow', 'red', 'blue'])
+    cmap = colors.ListedColormap(['black', 'gray', 'white', 'orange', 'yellow'])
     bounds = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5]
     norm = colors.BoundaryNorm(bounds, cmap.N)
 
