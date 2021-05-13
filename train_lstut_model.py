@@ -2,8 +2,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-# import point_set_dataloader as dl
-import toy_datasets as td
+import point_set_dataloader as dl
 import test_trained_notetuple_model as ttnm
 import models.LSTUT_model as lstut
 import training_helper_functions as tr_funcs
@@ -16,7 +15,7 @@ import argparse
 from importlib import reload
 reload(tr_funcs)
 reload(ttnm)
-reload(td)
+reload(dl)
 reload(lstut)
 reload(model_params)
 reload(po)
@@ -37,32 +36,32 @@ dry_run = args['dryrun']
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
-# dset_tr = dl.MidiNoteTupleDataset(
-#     dset_fname=params.dset_path,
-#     seq_length=params.seq_length,
-#     base='train',
-#     num_feats=params.num_feats,
-#     padding_amt=params.padding_amt,
-#     dataset_proportion=params.dataset_proportion,
-# )
-# dset_vl = dl.MidiNoteTupleDataset(
-#     dset_fname=params.dset_path,
-#     seq_length=params.seq_length,
-#     base='validate',
-#     num_feats=params.num_feats,
-#     padding_amt=params.padding_amt,
-#     dataset_proportion=params.dataset_proportion,
-#     use_stats_from=dset_tr)
+dset_tr = dl.MidiNoteTupleDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='train',
+    num_feats=params.num_feats,
+    padding_amt=params.padding_amt,
+    dataset_proportion=params.dataset_proportion,
+)
+dset_vl = dl.MidiNoteTupleDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='validate',
+    num_feats=params.num_feats,
+    padding_amt=params.padding_amt,
+    dataset_proportion=params.dataset_proportion,
+    use_stats_from=dset_tr)
 
-dset_args = {
-    'num_feats': params.num_feats,
-    'seq_length': params.seq_length,
-}
-dset_args.update(params.toy_dataset_args)
-
-dset_tr = td.SequenceCopyDataset(**dset_args)
-dset_args['num_seqs'] = dset_args['num_seqs'] // 5
-dset_vl = td.SequenceCopyDataset(**dset_args)
+# dset_args = {
+#     'num_feats': params.num_feats,
+#     'seq_length': params.seq_length,
+# }
+# dset_args.update(params.toy_dataset_args)
+#
+# dset_tr = td.SequenceCopyDataset(**dset_args)
+# dset_args['num_seqs'] = dset_args['num_seqs'] // 5
+# dset_vl = td.SequenceCopyDataset(**dset_args)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
@@ -133,8 +132,7 @@ for epoch in range(params.num_epochs):
         f'epoch {epoch:3d} | '
         f's/epoch    {(epoch_end_time - epoch_start_time):3.5f} | '
         f'train_loss {train_loss:1.6f} | '
-        f'val_loss   {val_loss:1.6f} |\n'
-        f'          | '
+        f'val_loss   {val_loss:1.6f} | '
         f'tr_thresh  {tr_thresh:1.5f} | '
         f'tr_f1      {tr_f1:1.6f} | '
         f'val_f1     {val_f1:1.6f} | '
