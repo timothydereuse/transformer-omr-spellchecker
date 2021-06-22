@@ -1,17 +1,11 @@
 import h5py
 import numpy as np
-import difflib
+import data_management.needleman_wunsch_alignment as align
+from numba import njit
 
 dset_path = r'./felix_comparison.h5'
 # voice, start, duration, midi_pitch, notated_pitch, accidental
 inds_subset = np.array([0, 2, 4, 5])
-
-
-class HashableNote(object):
-    def __init__(self, arr):
-        self.arr = arr
-    def __hash__(self):
-        return hash(tuple(self.arr))
 
 with h5py.File(dset_path, 'a') as f:
 
@@ -21,15 +15,24 @@ with h5py.File(dset_path, 'a') as f:
     correct_dset = [f[x][:, inds_subset] for x in correct_fnames]
     error_dset = [f[x][:, inds_subset] for x in error_fnames]
 
+ind = 7
 
-ind = 5
+correct_seq = [x for x in correct_dset[ind]]
+error_seq = [x for x in error_dset[ind]]
+# correct_seq = correct_dset[ind]
+# error_seq = error_dset[ind]
 
-correct_seq = [HashableNote(x) for x in correct_dset[ind]]
-error_seq = [HashableNote(x) for x in error_dset[ind]]
-
-s = difflib.SequenceMatcher(None, correct_seq, error_seq)
-s.get_opcodes()
-
-
+a, b, r, score = align.perform_alignment(correct_seq[:1000], error_seq[:1000], match_weights=[4, -1], gap_penalties=[-1, -1, -2, -2])
 
 
+sa = ''
+sb = ''
+
+for n in range(len(a)):
+    spacing = str(max(len(a[n]), len(b[n])))
+    sa += (f'{str(a[n]):4}')
+    sb += (f'{str(a[n]):4}')
+
+print(sa)
+print(sb)
+print(''.join(r))
