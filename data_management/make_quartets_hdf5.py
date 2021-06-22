@@ -6,18 +6,20 @@ import h5py
 
 test_proportion = 0.1
 validate_proportion = 0.1
-dset_path = r'./quartets_dset.h5'
+dset_path = r'./felix_comparison.h5'
 beat_multiplier = 48
 quartets_root = r"D:\Documents\datasets\just_quartets"
+train_val_test_split = False
 
-keys = ['ABC', 'felix', 'kernscores']
+keys = ['felix', 'felix_errors']
 c = m21.converter.Converter()
 
 with h5py.File(dset_path, 'a') as f:
     f.attrs['beat_multiplier'] = beat_multiplier
-    train_grp = f.create_group('train')
-    test_grp = f.create_group('test')
-    validate_grp = f.create_group('validate')
+    if train_val_test_split:
+        train_grp = f.create_group('train')
+        test_grp = f.create_group('test')
+        validate_grp = f.create_group('validate')
 
 # voice, start, duration, midi_pitch, notated_pitch, accidental
 
@@ -72,7 +74,9 @@ for k in keys:
         arr = np.array(notes)
 
         with h5py.File(dset_path, 'a') as f:
-            if i <= split_test:
+            if not train_val_test_split:
+                selected_subgrp = f
+            elif i <= split_test:
                 selected_subgrp = f['test']
             elif i <= split_validate:
                 selected_subgrp = f['validate']
