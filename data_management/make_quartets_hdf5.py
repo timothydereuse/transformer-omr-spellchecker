@@ -6,7 +6,7 @@ import h5py
 
 test_proportion = 0.1
 validate_proportion = 0.1
-dset_path = r'./felix_comparison.h5'
+dset_path = r'./quartets_felix_omr.h5'
 beat_multiplier = 48
 quartets_root = r"D:\Documents\datasets\just_quartets"
 train_val_test_split = False
@@ -73,7 +73,12 @@ for k in keys:
                 notes.extend(m21_note_to_tuple(item, i, prev_note_offset))
                 prev_note_offset = notes[-1][1]
 
+        # we want each note to have "time to NEXT onset" in index 2. this is a pain to calculate on the fly.
+        # so we calculate "time since previous onset" and just shift all these indices one step back.
         arr = np.array(notes)
+        arr[:, 2] = np.roll(arr[:, 2], -1)
+
+
 
         with h5py.File(dset_path, 'a') as f:
             if not train_val_test_split:
