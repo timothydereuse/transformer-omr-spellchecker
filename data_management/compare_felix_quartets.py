@@ -2,10 +2,11 @@ import h5py
 import numpy as np
 import data_management.needleman_wunsch_alignment as align
 from numba import njit
+from collections import Counter
 
-dset_path = r'./felix_comparison.h5'
-# voice, start, duration, midi_pitch, notated_pitch, accidental
-inds_subset = np.array([0, 2, 4, 5])
+dset_path = r'./quartets_felix_omr.h5'
+# voice, onset, time_to_next_onset, duration, midi_pitch, notated_pitch, accidental
+inds_subset = np.array([0, 2, 3, 4])
 
 with h5py.File(dset_path, 'a') as f:
 
@@ -15,24 +16,103 @@ with h5py.File(dset_path, 'a') as f:
     correct_dset = [f[x][:, inds_subset] for x in correct_fnames]
     error_dset = [f[x][:, inds_subset] for x in error_fnames]
 
-ind = 7
 
-correct_seq = [x for x in correct_dset[ind]]
-error_seq = [x for x in error_dset[ind]]
-# correct_seq = correct_dset[ind]
-# error_seq = error_dset[ind]
-
-a, b, r, score = align.perform_alignment(correct_seq[:1000], error_seq[:1000], match_weights=[4, -1], gap_penalties=[-1, -1, -2, -2])
+error_accum = {x:[] for x in ['replace', 'replace_mod', 'delete', 'insert', 'insert_mod']}
+correct_seqs_all = []
 
 
-sa = ''
-sb = ''
+for ind in range(len(correct_dset)):
+        
+    print(f'aligning {correct_fnames[ind]}...' )
+    correct_seq = [x for x in correct_dset[ind]]
+    error_seq = [x for x in error_dset[ind]]
+    correct_align, error_align, r, score = align.perform_alignment(correct_seq, error_seq, match_weights=[1, -1], gap_penalties=[-4, -4, -3, -3])
 
-for n in range(len(a)):
-    spacing = str(max(len(a[n]), len(b[n])))
-    sa += (f'{str(a[n]):4}')
-    sb += (f'{str(a[n]):4}')
+    # sa = ''
+    # sb = ''
+    # for n in range(len(correct_align)):
+    #     spacing = str(max(len(correct_align[n]), len(error_align[n])))
+    #     sa += (f'{str(correct_align[n]):4}')
+    #     sb += (f'{str(error_align[n]):4}')
+    # print(sa)
+    # print(sb)
+    print(''.join(r))
 
-print(sa)
-print(sb)
-print(''.join(r))
+    correct_seqs_all.extend(correct_seq)
+    errors = []
+    current_error = []
+    for i, t in enumerate(r):
+        if t == 'O' and len(current_error) > 0:
+            errors.append(np.array(current_error))
+            current_error = []
+            continue
+        elif t == 'O':
+            continue
+        current_error.append(i)
+
+    for e in np.array(errors):
+        prev_correct_note = np.zeros(inds_subset.shape)
+        for i in e:
+            error_note = error_align[i]
+            correct_note = correct_align[i]
+            if r[i] == '~':
+                res = correct_note - error_note
+                error_accum['replace'].append(correct_note)
+                error_accum['replace_mod'].append(res)
+            elif type(error_note) == str:
+                error_accum['delete'].append(correct_note)
+            elif type(correct_note) == str:
+                error_accum['insert'].append(prev_correct_note)
+                error_accum['insert_mod'].append(error_note)
+
+            if not type(correct_note) == str:
+                prev_correct_note = correct_note
+
+# we want to know, given that there are (for example) N eighth notes in the corrected piece, how many of them are deleted (on average)
+# by the OMR process? what is the likelihood that an eighth note will be added?
+# how likely is it that a given note will be deleted?
+
+en = [(1, 'dur'), (2, 'iot'), (3, 'pitch')]
+
+counts = {}
+counts['cor'] = {k: Counter([x[i] for x in correct_seqs_all]) for i, k in en}
+counts['del'] = {k: Counter([x[i] for x in error_accum['delete']]) for i, k in en}
+counts['ins'] = {k: Counter([x[i] for x in error_accum['insert']]) for i, k in en}
+counts['repl'] = {k: Counter([x[i] for x in error_accum['replace']]) for i, k in en}
+counts['repl_mod'] = {k: Counter([x[i] for x in error_accum['replace_mod']]) for i, k in en}
+counts['ins_mod'] = {k: Counter([x[i] for x in error_accum['insert_mod']]) for i, k in en}
+
+# if there are Np notes of pitch p, and Mp of them were deleted, then every note with pitch p has an (Mp / Np) probability of
+# getting removed by the OMR on the basis of pitch alone. 
+# if there are Ni notes of iot i and Mi of them were deleted, every note with iot i has a (Mi / Ni) probability of getting
+# removed by the OMR on the basis of OMR alone.
+# so what an we say about a note with pitch p AND iot i? well, assuming independence of these two factors (which is definitely
+# not the case, but just roll with it for now) the chance of that note being selected for deletion is
+# 1 - (1 - Mp/Np)(1 - Mi/Ni)
+#
+# so we need to calculate this (Mx/Nx) quantity for every type of operation X every feature index.
+
+stats = {}
+for op_name in counts.keys():
+    if op_name == 'cor':
+        continue
+    stats[op_name] = {}
+    for feat in counts[op_name].keys():
+        stats[op_name][feat] = {}
+        for item in counts['cor'][feat].keys():
+            if op_name in ['ins_mod', 'repl_mod']:
+                N = sum(counts[op_name][feat].values())
+            else:
+                N = counts['cor'][feat][item]
+            M = counts[op_name][feat][item]
+            stats[op_name][feat][item] = (M / N)
+
+# a replacement, under this model, is just a deletion followed immediately by an insertion.
+
+# def prob_that_note_is_modified(n, stats):
+
+# return prob
+
+
+        
+            
