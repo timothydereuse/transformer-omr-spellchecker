@@ -62,7 +62,7 @@ for ind in range(len(correct_dset)):
             elif type(error_note) == str:
                 error_accum['delete'].append(correct_note)
             elif type(correct_note) == str:
-                error_accum['insert'].append(prev_correct_note)
+                error_accum['insert'].append(prev_correct_note) # THIS LINE IS THE PROBLEM
                 error_accum['insert_mod'].append(error_note)
 
             if not type(correct_note) == str:
@@ -107,11 +107,56 @@ for op_name in counts.keys():
             M = counts[op_name][feat][item]
             stats[op_name][feat][item] = (M / N)
 
-# a replacement, under this model, is just a deletion followed immediately by an insertion.
+def probs_that_note_is_modified(note, stats):
+    en = [(1, 'dur'), (2, 'iot'), (3, 'pitch')]
+    ops = ['del', 'ins', 'repl']
+    probs = {}
+    for op in ops:
+        feat_probs = []
+        for f_ind, feat in en:
+            feat_probs.append(stats[op][feat][note[f_ind]])
+        prob = 1 - np.product([1 - x for x in feat_probs])
+        probs[op] = prob
+    probs['nop'] = 1 - sum(list(probs.values()))
+    return probs
 
-# def prob_that_note_is_modified(n, stats):
+def generate_note(orig_note, t, stats):
+    note = np.array(orig_note)
+    en = [(1, 'dur'), (2, 'iot'), (3, 'pitch')]
+    for f_ind, feat in en:
+        d = stats[t][feat]
+        p = np.array(list(d.values()))
+        mod_select = np.random.choice(list(d.keys()), 1, p=p / np.sum(p))
+        if t == 'ins_mod':
+            note[f_ind] = mod_select
+        elif t == 'repl_mod':
+            note[f_ind] = mod_select + note[f_ind]
+    return note
 
-# return prob
+def add_errors_to_note_sequence(seq, stats):
+    new_seq = np.array(seq)
+    i = 0
+    while i < len(new_seq):
+        probs = probs_that_note_is_modified(new_seq[i], stats)
+        mod_select = np.random.choice(list(probs.keys()), 1, p=list(probs.values()))
+        if mod_select == 'nop':
+            i += 1
+            continue
+        elif mod_select == 'del':
+            new_seq = np.delete(new_seq, i, 0)
+            continue
+        elif mod_select == 'ins':
+            new_note = generate_note(new_seq[i], 'ins_mod', stats)
+            new_seq = np.insert(new_seq, i + 1, new_note, 0)
+            i += 2
+        elif mod_select == 'repl':
+            new_seq[i] = generate_note(new_seq[i], 'repl_mod', stats)
+            i += 1
+
+        if i > 2 * len(seq):
+            print('something has gone wrong')
+            break
+    return new_seq
 
 
         
