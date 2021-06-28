@@ -66,19 +66,30 @@ for k in keys:
             continue
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
 
-        notes = []
+
         prev_note_offset = 0
+        all_notes = []
         for i, p in enumerate(parts):
-            for item in p.flat.notesAndRests:
-                notes.extend(m21_note_to_tuple(item, i, prev_note_offset))
-                prev_note_offset = notes[-1][1]
+            all_notes.extend([(n, i) for n in p.flat.notesAndRests])
+        # sort notes by offset, then voice number, then pitch
+        all_notes = sorted(all_notes, key=lambda x: (
+          x[0].offset, x[1], 0 if x[0].isRest else x[0].pitches[0].midi, 
+        ))
+
+        notes = []
+        for item in all_notes:
+            notes.extend(m21_note_to_tuple(item[0], item[1], prev_note_offset))
+            prev_note_offset = notes[-1][1]
+
+        # for i, p in enumerate(parts):
+        #     for item in p.flat.notesAndRests:
+        #         notes.extend(m21_note_to_tuple(item, i, prev_note_offset))
+        #         prev_note_offset = notes[-1][1]
 
         # we want each note to have "time to NEXT onset" in index 2. this is a pain to calculate on the fly.
         # so we calculate "time since previous onset" and just shift all these indices one step back.
         arr = np.array(notes)
         arr[:, 2] = np.roll(arr[:, 2], -1)
-
-
 
         with h5py.File(dset_path, 'a') as f:
             if not train_val_test_split:
