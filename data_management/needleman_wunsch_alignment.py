@@ -167,7 +167,7 @@ def perform_alignment(transcript, ocr, match_weights=None, gap_penalties=None, i
             ocr_align.append('_')
             # added_text = str(transcript[xpt - 1]) + ' _'
 
-            align_record.append(' ')
+            align_record.append('-')
             mpt = x_mat_ptr[xpt][ypt]
             xpt -= 1
 
@@ -177,7 +177,7 @@ def perform_alignment(transcript, ocr, match_weights=None, gap_penalties=None, i
             ocr_align.append(ocr[ypt - 1])
             # added_text = '_ ' + str(ocr[ypt - 1])
 
-            align_record.append(' ')
+            align_record.append('+')
             mpt = y_mat_ptr[xpt][ypt]
             ypt -= 1
 
@@ -191,13 +191,13 @@ def perform_alignment(transcript, ocr, match_weights=None, gap_penalties=None, i
     while ypt > 0:
         tra_align.append('_')
         ocr_align.append(ocr[ypt - 1])
-        align_record.append(' ')
+        align_record.append('-')
         ypt -= 1
 
     while xpt > 0:
         ocr_align.append('_')
         tra_align.append(transcript[xpt - 1])
-        align_record.append(' ')
+        align_record.append('+')
         xpt -= 1
 
     # reverse all records, since we obtained them by traversing the matrices from the bottom-right
