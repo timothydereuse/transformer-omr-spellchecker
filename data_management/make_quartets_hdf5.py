@@ -6,12 +6,13 @@ import h5py
 
 test_proportion = 0.1
 validate_proportion = 0.1
-dset_path = r'./quartets_felix_omr.h5'
+# dset_path = r'./quartets_felix_omr.h5'
+dset_path = r'./all_string_quartets.h5'
 beat_multiplier = 48
 quartets_root = r"D:\Documents\datasets\just_quartets"
-train_val_test_split = False
+train_val_test_split = True
 
-keys = ['felix', 'felix_errors']
+keys = ['ABC', 'kernscores', 'felix']
 c = m21.converter.Converter()
 
 with h5py.File(dset_path, 'a') as f:
@@ -70,10 +71,11 @@ for k in keys:
         prev_note_offset = 0
         all_notes = []
         for i, p in enumerate(parts):
-            all_notes.extend([(n, i) for n in p.flat.notesAndRests])
+            all_notes.extend([(n, i) for n in p.flat.notesAndRests if
+            n.isNote or (n.isChord and len(n.pitches) > 0) or n.isRest])
         # sort notes by offset, then voice number, then pitch
         all_notes = sorted(all_notes, key=lambda x: (
-          x[0].offset, x[1], 0 if x[0].isRest else x[0].pitches[0].midi, 
+           x[1], x[0].offset, 0 if x[0].isRest else x[0].pitches[0].midi, 
         ))
 
         notes = []
