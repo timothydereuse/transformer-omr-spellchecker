@@ -2,7 +2,7 @@ from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
 from joblib import dump, load
-import data_management.needleman_wunsch_alignment as align
+import data_augmentation.needleman_wunsch_alignment as align
 import numpy as np
 
 class ErrorGenerator(object):
