@@ -2,6 +2,7 @@ from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
 from joblib import dump, load
+import data_management.needleman_wunsch_alignment as align
 import numpy as np
 
 class ErrorGenerator(object):
@@ -12,29 +13,27 @@ class ErrorGenerator(object):
     delete_index = 3
 
     def __init__(self, ngram, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
-
+        self.ngram = ngram
         if labeled_data is None and ins_samples is None and repl_samples is None:
-            models = joblib.load(models_fpath)
+            models = load(models_fpath)
             self.enc = models['one_hot_encoder']
             self.regression = models['logistic_regression']
-            self.ins_samples = ['insert_samples']
-            self.repl_samples = ['replace_samples']
+            self.ins_samples = models['insert_samples']
+            self.repl_samples = models['replace_samples']
         elif models_fpath is None:
             X, Y = labeled_data
             self.enc = preprocessing.OneHotEncoder(sparse=True)
             self.enc.fit(X)
             X_one_hot = self.enc.transform(X)
             self.regression = LogisticRegression(max_iter=5000).fit(X_one_hot, Y)
-            self.ngram = ngram
             self.ins_samples = ins_samples
             self.repl_samples = repl_samples
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
 
     def get_synthetic_error_sequence(self, seq):
-        num_ops = 4
 
-        seq = np.array(seq)
+        num_ops = 4
         errored_seq = []
         gen_labels = [0 for _ in range(self.ngram)]
 
@@ -72,14 +71,62 @@ class ErrorGenerator(object):
             'insert_samples': self.ins_samples,
             'replace_samples': self.repl_samples
         }
-        joblib.dump(d, fpath)
+        dump(d, fpath)
 
     def err_seq_string(self, labels):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
+    def add_errors_to_batch(self, inp):
 
-    # pad = np.zeros((seq.shape[0], 3)) # because trigrams
-    # seq_arr = np.concatenate([pad, seq], 1)
+        X_out = np.zeros(inp.shape)
+        Y_out = np.zeros((inp.shape[0], inp.shape[1]))
+        inp = inp.numpy()
+
+        for n in range(X_out.shape[0]):
+            orig_seq = list(inp[n])
+            err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
+
+            _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
+
+            # put 'deletion' markers in front of entries in alignment record r that record deletions
+            res = np.zeros(len(err_seq))
+            i = 0
+            while i < len(r) and i < Y_out.shape[1]:
+                if r[i] == '-':
+                    # r[i - 1] = 'D'
+                    Y_out[n][i - 1] = 1
+                    del r[i]
+                elif r[i] == '~' or r[i] == '+':
+                    Y_out[n][i] = 1
+                    i += 1
+                else:
+                    i += 1 
+
+        return X_out, Y_out
+
+if __name__ == "__main__":
+
+    from point_set_dataloader import MidiNoteTupleDataset
+    from torch.utils.data import DataLoader
 
 
+    fname = 'all_string_quartets.h5'
+    seq_len = 500
+    proportion = 0.2
+    dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4)
+
+    dload = DataLoader(dset, batch_size=15)
+    batches = []
+    for i, x in enumerate(dload):
+        print(i, x.shape)
+        batches.append(x)
+        if i > 2:
+            break
+
+    e = ErrorGenerator(ngram=5, models_fpath='savemodels.joblib')
+
+    asdf = e.get_synthetic_error_sequence(x[0])
+
+    print('adding errors to entire batch...')
+    X, Y = e.add_errors_to_batch(x)
