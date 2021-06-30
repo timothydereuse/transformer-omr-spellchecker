@@ -77,33 +77,51 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_batch(self, inp):
+    def add_errors_to_batch_parallel(self, batch, n_jobs=3, verbose=0):
+        x = batch.numpy()
+        out = Parallel(n_jobs=n_jobs, verbose=verbose)(
+            delayed(self.add_errors_to_seq)(x[i]) for i in range(x.shape[0])
+            )
 
+        X = np.stack([np.array(x[0]) for x in out], 0)
+        Y = np.stack([np.array(x[1]) for x in out], 1)
+
+        return X, Y
+
+
+    def add_errors_to_seq(self, inp):
+
+        seq_len = inp.shape[0]
         X_out = np.zeros(inp.shape)
-        Y_out = np.zeros((inp.shape[0], inp.shape[1]))
-        inp = inp.numpy()
+        # Y_out = np.zeros((inp.shape[0], inp.shape[1]))
+        # inp = inp.numpy()
 
-        for n in range(X_out.shape[0]):
-            orig_seq = list(inp[n])
-            err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
+        Y_out = np.zeros(seq_len)
+        pad_seq = np.zeros(inp.shape)
 
-            _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
+        # for n in range(X_out.shape[0]):
+        orig_seq = list(inp)
+        err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
 
-            # put 'deletion' markers in front of entries in alignment record r that record deletions
-            res = np.zeros(len(err_seq))
-            i = 0
-            while i < len(r) and i < Y_out.shape[1]:
-                if r[i] == '-':
-                    # r[i - 1] = 'D'
-                    Y_out[n][i - 1] = 1
-                    del r[i]
-                elif r[i] == '~' or r[i] == '+':
-                    Y_out[n][i] = 1
-                    i += 1
-                else:
-                    i += 1 
+        _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
 
-        return X_out, Y_out
+        # put 'deletion' markers in front of entries in alignment record r that record deletions
+        res = np.zeros(seq_len)
+        i = 0
+        while i < len(r) and i < Y_out.shape[0]:
+            if r[i] == '-':
+                # r[i - 1] = 'D'
+                Y_out[i - 1] = 1
+                del r[i]
+            elif r[i] == '~' or r[i] == '+':
+                Y_out[i] = 1
+                i += 1
+            else:
+                i += 1
+
+        padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len, :]
+
+        return padded_seq, Y_out
 
 if __name__ == "__main__":
 
@@ -126,7 +144,9 @@ if __name__ == "__main__":
 
     e = ErrorGenerator(ngram=5, models_fpath='savemodels.joblib')
 
-    asdf = e.get_synthetic_error_sequence(x[0])
+    asdf = e.add_errors_to_seq(x[0].numpy())
 
-    print('adding errors to entire batch...')
-    X, Y = e.add_errors_to_batch(x)
+    from joblib import Parallel, delayed
+
+    # print('adding errors to entire batch...')
+    X, Y = e.add_errors_to_batch_parallel(x)
