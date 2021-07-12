@@ -52,8 +52,8 @@ for k in keys:
     files = os.listdir(os.path.join(quartets_root, k))
     np.random.shuffle(files)
 
-    split_test = np.round(test_proportion * len(files))
-    split_validate = np.round(validate_proportion * len(files)) + split_test
+    split_test = int(np.round(test_proportion * len(files)))
+    split_validate = int(np.round(validate_proportion * len(files)) + split_test)
 
     for i, fname in enumerate(files):
 
@@ -70,8 +70,8 @@ for k in keys:
 
         prev_note_offset = 0
         all_notes = []
-        for i, p in enumerate(parts):
-            all_notes.extend([(n, i) for n in p.flat.notesAndRests if
+        for j, p in enumerate(parts):
+            all_notes.extend([(n, j) for n in p.flat.notesAndRests if
             n.isNote or (n.isChord and len(n.pitches) > 0) or n.isRest])
         # sort notes by offset, then voice number, then pitch
         all_notes = sorted(all_notes, key=lambda x: (
