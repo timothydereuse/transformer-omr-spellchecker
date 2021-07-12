@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-import data_management.needleman_wunsch_alignment as align
+import data_augmentation.needleman_wunsch_alignment as align
 from numba import njit
 from collections import Counter
 import error_gen_logistic_regression as elgr
@@ -61,5 +61,6 @@ for ind in range(len(correct_dset)):
         X.append(sample)
         Y.append(label)
 
-asdf = elgr.ErrorGenerator(ngram, labeled_data=[X,Y], repl_samples=error_notes['replace_mod'], ins_samples=error_notes['insert_mod'])
+err_gen = elgr.ErrorGenerator(ngram, labeled_data=[X,Y], repl_samples=error_notes['replace_mod'], ins_samples=error_notes['insert_mod'])
+err_gen.save_models('./quartet_omr_error_models.joblib')
 

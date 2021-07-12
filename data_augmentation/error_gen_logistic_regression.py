@@ -22,7 +22,7 @@ class ErrorGenerator(object):
             self.repl_samples = models['replace_samples']
         elif models_fpath is None:
             X, Y = labeled_data
-            self.enc = preprocessing.OneHotEncoder(sparse=True)
+            self.enc = preprocessing.OneHotEncoder(sparse=True, handle_unknown="ignore")
             self.enc.fit(X)
             X_one_hot = self.enc.transform(X)
             self.regression = LogisticRegression(max_iter=5000).fit(X_one_hot, Y)
@@ -84,7 +84,7 @@ class ErrorGenerator(object):
             )
 
         X = np.stack([np.array(x[0]) for x in out], 0)
-        Y = np.stack([np.array(x[1]) for x in out], 1)
+        Y = np.stack([np.array(x[1]) for x in out], 0)
 
         return X, Y
 
@@ -149,4 +149,6 @@ if __name__ == "__main__":
     from joblib import Parallel, delayed
 
     # print('adding errors to entire batch...')
-    X, Y = e.add_errors_to_batch_parallel(x)
+    for i in range(10):
+        X, Y = e.add_errors_to_batch_parallel(x)
+        print(X.shape, Y.shape)
