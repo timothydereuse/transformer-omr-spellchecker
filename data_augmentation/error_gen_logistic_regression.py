@@ -1,7 +1,7 @@
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
-from joblib import dump, load
+from joblib import dump, load, Parallel, delayed
 import data_augmentation.needleman_wunsch_alignment as align
 import numpy as np
 
@@ -40,7 +40,7 @@ class ErrorGenerator(object):
         ins_samples = self.ins_samples
         repl_samples = self.repl_samples
 
-        # assemble note to run regression on: one note from the sequence and 3 previous labels
+        # assemble note to run regression on: one note from the sequence and [ngram] previous labels
         
         i = 0
         while i < len(seq):
@@ -50,15 +50,15 @@ class ErrorGenerator(object):
             gen_labels.append(next_label)
 
             if next_label == self.match_idx: # MATCH
-                errored_seq.append(seq[i])
+                errored_seq.append(seq[i].astype('float32'))
                 i += 1
             elif next_label == self.replace_idx: # REPLACE
                 rand_mod = repl_samples[np.random.randint(len(repl_samples))]
-                errored_seq.append(seq[i] + rand_mod)
+                errored_seq.append((seq[i] + rand_mod).astype('float32'))
                 i += 1
             elif next_label == self.insert_idx: # INSERT
                 rand_ins = ins_samples[np.random.randint(len(ins_samples))]
-                errored_seq.append(rand_ins)
+                errored_seq.append(rand_ins.astype('float32'))
             elif next_label == self.delete_index: # DELETE
                 i += 1
         
@@ -77,11 +77,15 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_batch_parallel(self, batch, n_jobs=3, verbose=0):
-        x = batch.numpy()
-        out = Parallel(n_jobs=n_jobs, verbose=verbose)(
-            delayed(self.add_errors_to_seq)(x[i]) for i in range(x.shape[0])
-            )
+    def add_errors_to_batch(self, batch, parallel=1, verbose=0):
+        b = batch.astype('float32')
+        
+        if parallel >= 2:
+            out = Parallel(n_jobs=parallel, verbose=verbose)(
+                delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
+                )
+        else:
+            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
 
         X = np.stack([np.array(x[0]) for x in out], 0)
         Y = np.stack([np.array(x[1]) for x in out], 0)
@@ -90,9 +94,10 @@ class ErrorGenerator(object):
 
 
     def add_errors_to_seq(self, inp):
+        inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
-        X_out = np.zeros(inp.shape)
+        # X_out = np.zeros(inp.shape)
         # Y_out = np.zeros((inp.shape[0], inp.shape[1]))
         # inp = inp.numpy()
 
@@ -142,13 +147,10 @@ if __name__ == "__main__":
         if i > 2:
             break
 
-    e = ErrorGenerator(ngram=5, models_fpath='savemodels.joblib')
+    e = ErrorGenerator(ngram=5, models_fpath='quartet_omr_error_models.joblib')
 
     asdf = e.add_errors_to_seq(x[0].numpy())
-
-    from joblib import Parallel, delayed
-
     # print('adding errors to entire batch...')
-    for i in range(10):
-        X, Y = e.add_errors_to_batch_parallel(x)
+    for i in range(2):
+        X, Y = e.add_errors_to_batch(x.numpy(), parallel=3)
         print(X.shape, Y.shape)

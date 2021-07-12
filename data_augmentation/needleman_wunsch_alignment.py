@@ -116,8 +116,6 @@ def perform_alignment(transcript, ocr, match_weights=None, gap_penalties=None, i
     ocr = ocr + [ocr[-1]]
 
     # changing everything to numba's typed list, since python untyped lists will be deprecated
-    # transcript_numba = numbaList([np.array([ord(x), 4]) for x in transcript])
-    # ocr_numba = numbaList([np.array([ord(x), 4]) for x in ocr])
     transcript_numba = numbaList(transcript)
     ocr_numba = numbaList(ocr)
     match_weights = numbaList(match_weights)
