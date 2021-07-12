@@ -78,6 +78,8 @@ class ErrorGenerator(object):
         return ''.join(err_to_class[x] for x in labels)
 
     def add_errors_to_batch(self, batch, parallel=1, verbose=0):
+        if not (type(batch) == np.ndarray):
+            batch = batch.numpy()
         b = batch.astype('float32')
         
         if parallel >= 2:
@@ -101,8 +103,8 @@ class ErrorGenerator(object):
         # Y_out = np.zeros((inp.shape[0], inp.shape[1]))
         # inp = inp.numpy()
 
-        Y_out = np.zeros(seq_len)
-        pad_seq = np.zeros(inp.shape)
+        Y_out = np.zeros(seq_len, dtype='float32')
+        pad_seq = np.zeros(inp.shape, dtype='float32')
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)

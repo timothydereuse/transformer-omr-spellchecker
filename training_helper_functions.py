@@ -1,6 +1,5 @@
 import torch
 import logging
-import make_supervised_examples as mse
 import numpy as np
 import plot_outputs as po
 
@@ -21,15 +20,15 @@ def log_gpu_info():
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
-def make_point_set_target(batch, dloader, device='cpu', make_examples_settings={}):
-    errored_input, error_locs = mse.error_indices(batch, **make_examples_settings)
-    # dset = dloader.dataset
-    # errored_input = dset.normalize_batch(errored_input).to(device)
-    # error_locs = dset.normalize_batch(error_locs).to(device)
-    return errored_input, error_locs
+# def make_point_set_target(batch, dloader, device='cpu', make_examples_settings={}):
+#     errored_input, error_locs = mse.error_indices(batch, **make_examples_settings)
+#     # dset = dloader.dataset
+#     # errored_input = dset.normalize_batch(errored_input).to(device)
+#     # error_locs = dset.normalize_batch(error_locs).to(device)
+#     return errored_input, error_locs
 
 
-def run_epoch(model, dloader, optimizer, criterion, device='cpu', make_examples_settings={},
+def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
               train=True, log_each_batch=False, clip_grad_norm=0.5, autoregressive=False):
     '''
     Performs a training or validation epoch.
@@ -50,11 +49,11 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu', make_examples_
     for i, batch in enumerate(dloader):
 
         batch = batch.float().cpu()
-        inp, target = make_point_set_target(batch, dloader, device, make_examples_settings)
+        inp, target = example_generator.add_errors_to_batch(batch, 1)
 
         # batch = batch.to(device)
-        inp = inp.to(device)
-        target = target.to(device)
+        inp = torch.tensor(inp, device=device)
+        target = torch.tensor(target, device=device)
 
         if train:
             optimizer.zero_grad()
@@ -64,7 +63,7 @@ def run_epoch(model, dloader, optimizer, criterion, device='cpu', make_examples_
         else:
             output = model(inp)
 
-        loss = criterion(output, target)
+        loss = criterion(output.squeeze(-1), target)
 
         if train:
             loss.backward()

@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import point_set_dataloader as dl
-import test_trained_notetuple_model as ttnm
+# import test_trained_notetuple_model as ttnm
 import models.LSTUT_model as lstut
+import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
 from torch.utils.data import DataLoader
 import plot_outputs as po
@@ -18,11 +19,11 @@ import matplotlib.pyplot as plt
 
 from importlib import reload
 reload(tr_funcs)
-reload(ttnm)
 reload(dl)
 reload(lstut)
 reload(model_params)
 reload(po)
+reload(err_gen)
 
 parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
 parser.add_argument('parameters', default='default_params.json',
@@ -57,15 +58,7 @@ dset_vl = dl.MidiNoteTupleDataset(
     dataset_proportion=params.dataset_proportion,
     use_stats_from=dset_tr)
 
-# dset_args = {
-#     'num_feats': params.num_feats,
-#     'seq_length': params.seq_length,
-# }
-# dset_args.update(params.toy_dataset_args)
-#
-# dset_tr = td.SequenceCopyDataset(**dset_args)
-# dset_args['num_seqs'] = dset_args['num_seqs'] // 5
-# dset_vl = td.SequenceCopyDataset(**dset_args)
+error_generator = err_gen.ErrorGenerator(ngram=5, models_fpath=params.error_model)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
@@ -73,6 +66,7 @@ num_feats = dset_tr.num_feats
 
 model = lstut.LSTUT(**params.lstut_settings).to(device)
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
+model = model.float()
 model_size = sum(p.numel() for p in model.parameters())
 logging.info(f'created model with n_params={model_size}')
 
@@ -104,7 +98,7 @@ for epoch in range(params.num_epochs):
         optimizer=optimizer,
         criterion=criterion,
         device=device,
-        make_examples_settings=params.error_indices_settings,
+        example_generator=error_generator,
         train=True,
         log_each_batch=False
     )
@@ -120,7 +114,7 @@ for epoch in range(params.num_epochs):
             optimizer=optimizer,
             criterion=criterion,
             device=device,
-            make_examples_settings=params.error_indices_settings,
+            example_generator=error_generator,
             train=False,
             log_each_batch=False
         )
@@ -172,7 +166,7 @@ for epoch in range(params.num_epochs):
     #     best_model = copy.deepcopy(cur_model)
 
     # early stopping
-    time_since_best = epoch - val_losses.index(min(val_losses))
+    time_since_best = epoch - train_losses.index(min(train_losses))
     if time_since_best > params.early_stopping_patience:
         logging.info(f'stopping early at epoch {epoch} because validation score stopped increasing')
         break

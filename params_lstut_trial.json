@@ -1,55 +1,48 @@
 {
-    "params_name": "TRIAL_RUN",
-    "num_epochs": 50,
+    "params_name": "LSTUT_FELIX_DEFAULT",
+    "num_epochs": 10,
     "early_stopping_patience": 20,
-    "save_model_every": 4,
-    "save_img_every": 3334,
-    "max_time_minutes": 30,
+    "save_model_every": 400,
+    "save_img_every": 11,
+    "max_time_minutes": 2,
 
     "seq_length": 64,
     "padding_amt": 4,
-    "lr": 0.0001,
-    "batch_size": 256,
+    "lr": 0.0003,
+    "batch_size": 5,
     "clip_gradient_norm": 0.5,
-    "num_feats": 1,
-    "dset_path": "lmd_cleansed.hdf5",
-    "dataset_proportion": 0.0006,
+    "num_feats": 4,
+    "dset_path": "all_string_quartets.h5",
+    "error_model": "quartet_omr_error_models.joblib",
+    "dataset_proportion": 0.05,
 
     "lstut_settings": {
-        "num_feats": 1,
+        "num_feats": 4,
         "output_feats": 1,
         "lstm_layers": 2,
         "n_layers": 1,
-        "n_heads": 1,
-        "tf_depth": 3,
-        "hidden_dim": 64,
-        "ff_dim": 64,
+        "n_heads": 2,
+        "tf_depth": 2,
+        "hidden_dim": 32,
+        "ff_dim": 32,
         "dropout": 0.1
     },
     "error_indices_settings": {
-        "num_insertions": 7,
+        "num_insertions": 10,
         "num_deletions": 0,
         "num_replacements": 0
     },
-    "toy_dataset_args": {
-        "num_seqs": 2048,
-        "seq_freq": 6,
-        "phase_vary": 0.0,
-        "freq_vary": 1.0,
-        "power_vary": 1.5,
-        "seq_type": "rand"
-    },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 20,
+        "patience": 10,
         "threshold": 0.001,
         "verbose": true
     },
     "parameter_searching":{
-        "toy_dataset_args.seq_type": ["rand", ["rand", "saw"]],
         "toy_datasets_args.seq_freq": [2, 8, 16],
         "toy_dataset_args.phase_vary": [0.1, 1],
-        "toy_dataset_args.power_vary": [2, 8],
+        "toy_dataset_args.power_vary": [1],
+        "toy_dataset_args.freq_vary": [1],
         "error_indices_settings.num_replacements": [5, 10, 20],
         "error_indices_settings.num_deletions": [5, 10, 20]
     }

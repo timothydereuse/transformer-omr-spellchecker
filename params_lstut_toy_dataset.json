@@ -1,15 +1,15 @@
 {
-    "params_name": "LSTUT_ODDSEQS",
-    "num_epochs": 151,
+    "params_name": "LSTUT_TOY_LONGTEST",
+    "num_epochs": 250,
     "early_stopping_patience": 20,
     "save_model_every": 4,
-    "save_img_every": 200,
-    "max_time_minutes": 20,
+    "save_img_every": 15,
+    "max_time_minutes": 90,
 
     "seq_length": 256,
     "padding_amt": 4,
     "lr": 0.0003,
-    "batch_size": 768,
+    "batch_size": 64,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
     "dset_path": "lmd_cleansed.hdf5",
@@ -20,7 +20,7 @@
         "output_feats": 1,
         "lstm_layers": 3,
         "n_layers": 1,
-        "n_heads": 2,
+        "n_heads": 4,
         "tf_depth": 5,
         "hidden_dim": 128,
         "ff_dim": 128,
@@ -32,11 +32,12 @@
         "num_replacements": 0
     },
     "toy_dataset_args": {
-        "num_seqs": 2048,
-        "seq_freq": 6,
+        "num_seqs": 8192,
+        "seq_freq": 8,
         "phase_vary": 0.0,
-        "freq_vary": 1.5,
-        "power_vary": 1.5
+        "freq_vary": 2,
+        "power_vary": 2,
+        "seq_type": "rand"
     },
     "scheduler_settings": {
         "factor": 0.25,
