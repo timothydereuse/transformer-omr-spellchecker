@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import point_set_dataloader as dl
-# import test_trained_notetuple_model as ttnm
+import test_trained_notetuple_model as ttnm
 import models.LSTUT_model as lstut
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
@@ -24,6 +24,7 @@ reload(lstut)
 reload(model_params)
 reload(po)
 reload(err_gen)
+reload(ttnm)
 
 parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
 parser.add_argument('parameters', default='default_params.json',
@@ -100,7 +101,7 @@ for epoch in range(params.num_epochs):
         device=device,
         example_generator=error_generator,
         train=True,
-        log_each_batch=False
+        log_each_batch=True
     )
 
     # test on validation set

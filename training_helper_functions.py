@@ -59,11 +59,11 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             optimizer.zero_grad()
 
         if autoregressive:
-            output = model(inp, target)
+            output = model(inp, target).squeeze(-1)
         else:
-            output = model(inp)
+            output = model(inp).squeeze(-1)
 
-        loss = criterion(output.squeeze(-1), target)
+        loss = criterion(output, target)
 
         if train:
             loss.backward()
