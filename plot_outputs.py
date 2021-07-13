@@ -84,6 +84,13 @@ def plot_line_corrections(inp, output, target, thresh=None):
 
 
 def plot_pianoroll_corrections(exs, dset, thresh, ind=-1):
+
+    # currently VOICE, ONSET, DURATION, PITCH
+    INDVOICE = 0
+    INDONSET = 1
+    INDDUR = 2
+    INDPITCH = 3
+    
     if ind < 0:
         ind = np.random.choice(exs['input'].shape[0])
     target = exs['target'][ind].detach().cpu().numpy().astype('int')
@@ -93,22 +100,23 @@ def plot_pianoroll_corrections(exs, dset, thresh, ind=-1):
     orig = exs['orig'][ind].detach().cpu().numpy().astype('int')
     input = exs['input'][ind].detach().cpu().numpy().astype('int')
 
-    pr_length = max(orig[:, 1].sum(), input[:, 1].sum()) + 1
+    pr_length = max(orig[:, INDONSET].sum(), input[:, INDONSET].sum())
+    pr_length += int(max(orig[:, INDDUR]) + max(input[:, INDDUR]))
 
     def make_pr(notes, corr=None):
         pr = np.zeros([pr_length, 128])
         cur_time = 0
         for i, e in enumerate(notes):
             note_val = 1
-            if e[2] > 127:
+            if e[INDPITCH] > 127:
                 continue
             elif corr is None:
                 pass
             elif corr[i]:
                 note_val = 3
-            pr[cur_time:cur_time + e[0], e[2]] = note_val
-            pr[cur_time, e[2]] = note_val + 1
-            cur_time += e[1]
+            pr[cur_time:cur_time + e[INDDUR], e[INDPITCH]] = note_val
+            pr[cur_time, e[INDPITCH]] = note_val + 1
+            cur_time += e[INDONSET]
 
         # pr = pr[:, np.any(pr > 0, axis=0)]
         used_notes = np.sum(pr, axis=0).nonzero()[0]

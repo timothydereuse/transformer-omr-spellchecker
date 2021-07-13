@@ -3,10 +3,10 @@
     "num_epochs": 10,
     "early_stopping_patience": 20,
     "save_model_every": 400,
-    "save_img_every": 11,
+    "save_img_every": 1,
     "max_time_minutes": 2,
 
-    "seq_length": 64,
+    "seq_length": 128,
     "padding_amt": 4,
     "lr": 0.0003,
     "batch_size": 5,
@@ -14,7 +14,7 @@
     "num_feats": 4,
     "dset_path": "all_string_quartets.h5",
     "error_model": "quartet_omr_error_models.joblib",
-    "dataset_proportion": 0.05,
+    "dataset_proportion": 0.005,
 
     "lstut_settings": {
         "num_feats": 4,
