@@ -12,8 +12,10 @@ class ErrorGenerator(object):
     insert_idx = 2
     delete_index = 3
 
-    def __init__(self, ngram, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
+    def __init__(self, ngram, smoothing=1, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
         self.ngram = ngram
+        self.smoothing = smoothing
+
         if labeled_data is None and ins_samples is None and repl_samples is None:
             models = load(models_fpath)
             self.enc = models['one_hot_encoder']
@@ -31,8 +33,7 @@ class ErrorGenerator(object):
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
 
-    def get_synthetic_error_sequence(self, seq, smooth_amt):
-
+    def get_synthetic_error_sequence(self, seq):
         num_ops = 4
         errored_seq = []
         gen_labels = [0 for _ in range(self.ngram)]
@@ -48,7 +49,7 @@ class ErrorGenerator(object):
             predictions = self.regression.predict_proba(self.enc.transform(next_note.reshape(1, -1)))[0]
 
             # smooth predictions to reduce overall chance of errors
-            smooth_dist = (1 - predictions[0]) * (1 - smooth_amt)
+            smooth_dist = (1 - predictions[0]) * (1 - self.smoothing)
             predictions[0] += smooth_dist
 
             error_target = 1 - predictions[0]
@@ -87,17 +88,17 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_batch(self, batch, parallel=1, smoothing=1, verbose=0):
+    def add_errors_to_batch(self, batch, parallel=1, verbose=0):
         if not (type(batch) == np.ndarray):
             batch = batch.numpy()
         b = batch.astype('float32')
         
         if parallel >= 2:
             out = Parallel(n_jobs=parallel, verbose=verbose)(
-                delayed(self.add_errors_to_seq)(b[i], smoothing) for i in range(b.shape[0])
+                delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
                 )
         else:
-            out = [self.add_errors_to_seq(b[i], smoothing) for i in range(b.shape[0])]
+            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
 
         X = np.stack([np.array(x[0]) for x in out], 0)
         Y = np.stack([np.array(x[1]) for x in out], 0)
@@ -105,7 +106,7 @@ class ErrorGenerator(object):
         return X, Y
 
 
-    def add_errors_to_seq(self, inp, smoothing=3):
+    def add_errors_to_seq(self, inp):
         inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
@@ -118,7 +119,7 @@ class ErrorGenerator(object):
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
-        err_seq, _ = self.get_synthetic_error_sequence(orig_seq, smoothing)
+        err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
 
         _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
 
@@ -160,12 +161,12 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(ngram=5, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
+    e = ErrorGenerator(ngram=5, smoothing=0.7, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
 
-    asdf = e.add_errors_to_seq(x[0].numpy(), smoothing=0.7)
+    asdf = e.add_errors_to_seq(x[0].numpy())
     print(asdf[1])
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
-        X, Y = e.add_errors_to_batch(x.numpy(), smoothing=0.75, parallel=2)
+        X, Y = e.add_errors_to_batch(x.numpy(), parallel=2)
         print(X.shape, Y.shape)
