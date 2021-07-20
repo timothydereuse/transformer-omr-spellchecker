@@ -59,7 +59,7 @@ dset_vl = dl.MidiNoteTupleDataset(
     dataset_proportion=params.dataset_proportion,
     use_stats_from=dset_tr)
 
-error_generator = err_gen.ErrorGenerator(ngram=5, models_fpath=params.error_model)
+error_generator = err_gen.ErrorGenerator(ngram=5, smoothing=params.error_gen_smoothing, models_fpath=params.error_model)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
