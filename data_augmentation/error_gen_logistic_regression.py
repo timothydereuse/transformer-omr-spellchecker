@@ -31,7 +31,7 @@ class ErrorGenerator(object):
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
 
-    def get_synthetic_error_sequence(self, seq):
+    def get_synthetic_error_sequence(self, seq, smooth_amt):
 
         num_ops = 4
         errored_seq = []
@@ -46,6 +46,16 @@ class ErrorGenerator(object):
         while i < len(seq):
             next_note = np.concatenate([gen_labels[-self.ngram:], seq[i]])
             predictions = self.regression.predict_proba(self.enc.transform(next_note.reshape(1, -1)))[0]
+
+            # smooth predictions to reduce overall chance of errors
+            smooth_dist = (1 - predictions[0]) * (1 - smooth_amt)
+            predictions[0] += smooth_dist
+
+            error_target = 1 - predictions[0]
+            pred_sum = sum(predictions[1:])
+            for j in range(1, len(predictions)):
+                predictions[j] = predictions[j] / pred_sum * error_target
+
             next_label = np.random.choice(len(predictions), p=predictions)
             gen_labels.append(next_label)
 
@@ -77,17 +87,17 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_batch(self, batch, parallel=1, verbose=0):
+    def add_errors_to_batch(self, batch, parallel=1, smoothing=1, verbose=0):
         if not (type(batch) == np.ndarray):
             batch = batch.numpy()
         b = batch.astype('float32')
         
         if parallel >= 2:
             out = Parallel(n_jobs=parallel, verbose=verbose)(
-                delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
+                delayed(self.add_errors_to_seq)(b[i], smoothing) for i in range(b.shape[0])
                 )
         else:
-            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
+            out = [self.add_errors_to_seq(b[i], smoothing) for i in range(b.shape[0])]
 
         X = np.stack([np.array(x[0]) for x in out], 0)
         Y = np.stack([np.array(x[1]) for x in out], 0)
@@ -95,7 +105,7 @@ class ErrorGenerator(object):
         return X, Y
 
 
-    def add_errors_to_seq(self, inp):
+    def add_errors_to_seq(self, inp, smoothing=3):
         inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
@@ -108,7 +118,7 @@ class ErrorGenerator(object):
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
-        err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
+        err_seq, _ = self.get_synthetic_error_sequence(orig_seq, smoothing)
 
         _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
 
@@ -137,11 +147,11 @@ if __name__ == "__main__":
 
 
     fname = 'all_string_quartets.h5'
-    seq_len = 500
+    seq_len = 50
     proportion = 0.2
     dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4)
 
-    dload = DataLoader(dset, batch_size=15)
+    dload = DataLoader(dset, batch_size=5)
     batches = []
     for i, x in enumerate(dload):
         print(i, x.shape)
@@ -149,10 +159,13 @@ if __name__ == "__main__":
         if i > 2:
             break
 
-    e = ErrorGenerator(ngram=5, models_fpath='quartet_omr_error_models.joblib')
+    print('creating error generator')
+    e = ErrorGenerator(ngram=5, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
 
-    asdf = e.add_errors_to_seq(x[0].numpy())
-    # print('adding errors to entire batch...')
+    asdf = e.add_errors_to_seq(x[0].numpy(), smoothing=0.7)
+    print(asdf[1])
+    print('adding errors to entire batch...')
     for i in range(2):
-        X, Y = e.add_errors_to_batch(x.numpy(), parallel=3)
+        print(i)
+        X, Y = e.add_errors_to_batch(x.numpy(), smoothing=0.75, parallel=2)
         print(X.shape, Y.shape)
