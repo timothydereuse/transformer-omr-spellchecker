@@ -122,8 +122,8 @@ class MidiNoteTupleDataset(IterableDataset):
 
         # iterate through all given fnames, breaking them into chunks of seq_length...
         for fname in self.fnames:
-            # x = self.f[fname]
-            x = self.f[self.fnames[0]]
+            x = self.f[fname]
+            # x = self.f[self.fnames[0]]
 
             # no need to use a custom factorization, just extract the relevant columns
             # onset, duration, time to next onset, pitch, velocity, program
@@ -167,15 +167,14 @@ if __name__ == '__main__':
     fname = 'all_string_quartets.h5'
     seq_len = 500
     proportion = 0.2
-    dset = MidiNoteTupleDataset(fname, seq_len, estimate_stats_batches=10, num_feats=4)
+    dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4, dataset_proportion=1, shuffle_files=False)
 
     dload = DataLoader(dset, batch_size=15)
-    batches = []
-    for i, x in enumerate(dload):
-        print(i, x.shape)
-        batches.append(x)
-        if i > 2:
-            break
-
+    for j in range(10):
+        batches = []
+        for i, x in enumerate(dload):
+            # print(i, x.shape)
+            batches.append(x)
+        print(i, len(batches))
 
 
