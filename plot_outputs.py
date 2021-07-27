@@ -122,6 +122,7 @@ def plot_pianoroll_corrections(exs, dset, thresh, ind=-1):
         used_notes = np.sum(pr, axis=0).nonzero()[0]
         lower, upper = (int(used_notes[0]), int(used_notes[-1]))
         pr = pr[:, lower:upper+1]
+        # pr = np.flip(pr, 1) # flip so that rests (0) are on the bottom
 
         return pr
 
@@ -135,12 +136,15 @@ def plot_pianoroll_corrections(exs, dset, thresh, ind=-1):
 
     fig, axs = plt.subplots(3, 1, figsize=(12, 12))
     axs[0].imshow(original_pr.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
+    axs[0].invert_yaxis()
     axs[0].set_title('Real Music')
 
     axs[1].imshow(real_corrected.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
+    axs[1].invert_yaxis()
     axs[1].set_title('Musical Input (real errors)')
 
     axs[2].imshow(pred_corrected.T, aspect='auto', interpolation='Nearest', cmap=cmap, norm=norm)
+    axs[2].invert_yaxis()
     axs[2].set_title('Musical Input (predicted errors)')
 
     # fig.savefig('test.png', bbox_inches='tight')
