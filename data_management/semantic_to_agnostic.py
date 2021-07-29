@@ -1,20 +1,19 @@
 import music21 as m21
 
-fpath = r"D:\Documents\datasets\just_quartets\felix_errors\5_op44iii_4_omr.musicxml"
+# fpath = r"D:\Documents\datasets\just_quartets\felix_errors\5_op44iii_4_omr.musicxml"
+fpath = r"D:\Documents\datasets\just_quartets\kernscores\46072_op20n6-01.krn"
 parsed_file = m21.converter.parse(fpath)
 parts = list(parsed_file.getElementsByClass(m21.stream.Part))
 part = parts[0].getElementsByClass(m21.stream.Measure)
 
-default_pitch_status = {x: 0 for x in list('ABCDEFG')}
 
+DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
 def get_reset_pitch_status(current_key_sig):
-    cps = dict(default_pitch_status)
+    cps = dict(DEFAULT_PITCH_STATUS)
     for p in current_key_sig.alteredPitches:
         cps[p.name[0]] = int(p.alter)
     return cps
 
-# types of things we want to deal with:
-# notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
 
 def resolve_accidentals(p, current_pitch_status):
 
@@ -58,7 +57,7 @@ def resolve_note(e, is_chord, current_clef, current_pitch_status):
 
     # then add dot
     if dots > 0:
-        res.append('duration_dot')
+        res.append('duration.dot')
 
     return res, current_pitch_status
 
@@ -69,6 +68,8 @@ current_key_sig = m21.key.KeySignature(5)
 current_pitch_status = get_reset_pitch_status(current_key_sig)
 current_time_sig = m21.meter.TimeSignature('4/4')
 
+# types of things we want to deal with:
+# notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
 for measure in part:
     for e in measure:
 
@@ -115,6 +116,11 @@ for measure in part:
                 position = p.diatonicNoteNum - current_clef.lowestLine
                 agnostic.append(f'accid.{p.accidental.name}.{position}')
 
+        elif type(e) == m21.bar.Barline:
+            agnostic.append(f'barline.{e.type}')
+
+    if not 'bar' in agnostic[-1]:
+        agnostic.append('bar.regular')
+
     # at the end of every measure, reset the pitch status to the key signature
-    agnostic.append('bar.barline')
     current_pitch_status = get_reset_pitch_status(current_key_sig)
