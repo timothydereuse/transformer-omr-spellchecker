@@ -1,4 +1,6 @@
 import music21 as m21
+import os
+import math
 
 DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
 def get_reset_pitch_status(current_key_sig):
@@ -25,15 +27,24 @@ def resolve_accidentals(p, current_pitch_status):
     return accid_str, current_pitch_status
 
 
+def resolve_duration(d):
+    dots = d.dots
+    d.dots = 0
+    if not d.tuplets:
+        dur_string = str.lower(d.fullName)
+        is_tuplet = 0
+    else:
+        dur_string = str.lower(d.tuplets[0].durationActual.type)
+        is_tuplet = d.tuplets[0].tupletActual[0]
+    return dots, dur_string, is_tuplet
+
 def resolve_note(e, is_chord, current_clef, current_pitch_status):
     res = []
 
     accid_str, current_pitch_status = resolve_accidentals(e.pitch, current_pitch_status)
 
     # notes contain: duration-position-isChord-beamStatus
-    dots = e.duration.dots
-    e.duration.dots = 0
-    d = str.lower(e.duration.fullName)
+    dots, dur_name, is_tuplet = resolve_duration(e.duration)
 
     # get staff position
     p = e.pitch.diatonicNoteNum - current_clef.lowestLine
@@ -46,24 +57,58 @@ def resolve_note(e, is_chord, current_clef, current_pitch_status):
 
     c = 1 if is_chord else 0
 
-    res.append(f'{d}.pos{p}.{b}.c{c}')
+    res.append(f'{dur_name}.pos{p}.{b}.c{c}')
 
     # then add dot
     if dots > 0:
         res.append(f'duration.dot.pos{p}')
 
-    return res, current_pitch_status
+    return res, is_tuplet, current_pitch_status
 
+
+def resolve_tuplet_record(tuplet_record):
+    # replaces runs of the same tuplet value in tuplet record (3 triplets, 5 quintuplets, 7 septuplets, etc)
+    # with just a central one
+    tr = {k:tuplet_record[k] for k in tuplet_record.keys() if tuplet_record[k] > 0}
+    ks = list(tr.keys())
+    to_insert = {}
+
+    for i in range(len(ks)):
+        k = ks[i]
+        try:
+            to_check = tr[k]
+        except KeyError:
+            continue
+
+        next_keys_indices = [i + x for x in range(to_check) if i + x < len(ks)]
+        next_trs = [tr[ks[x]] == to_check for x in next_keys_indices]
+
+        if all(next_trs):
+            # get the middle + 1 index here
+            mid_idx = min(len(next_keys_indices) // 2 + 1, len(next_keys_indices) - 1)
+            idx_to_insert = ks[next_keys_indices[mid_idx]]
+            to_insert[idx_to_insert] = to_check
+            for x in next_keys_indices:
+                del tr[ks[x]]
+
+    return to_insert
 
 def m21_part_to_agnostic(part):
 
     part = part.getElementsByClass(m21.stream.Measure)
         
     agnostic = []
-    current_clef = part.flat.getElementsByClass(m21.clef.Clef)[0]
-    current_key_sig = part.flat.getElementsByClass(m21.key.KeySignature)[0]
+    tuplet_record = {}
+    all_clefs = part.flat.getElementsByClass(m21.clef.Clef)
+    current_clef = all_clefs[0] if all_clefs else m21.clef.TrebleClef
+
+    all_keysigs = part.flat.getElementsByClass(m21.key.KeySignature)
+    current_key_sig = all_keysigs[0] if all_keysigs else m21.key.KeySignature(0)
     current_pitch_status = get_reset_pitch_status(current_key_sig)
-    current_time_sig = part.flat.getElementsByClass(m21.meter.TimeSignature)[0]
+
+    all_timesigs = part.flat.getElementsByClass(m21.meter.TimeSignature)
+    current_time_sig = all_timesigs[0] if all_keysigs else m21.meter.TimeSignature()
+
 
     # types of things we want to deal with:
     # notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
@@ -71,20 +116,31 @@ def m21_part_to_agnostic(part):
         for e in measure:
 
             if type(e) == m21.note.Note:
-                glyphs, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status) 
+                glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status) 
                 agnostic.extend(glyphs)
 
+                tuplet_record[len(agnostic)] = tuplet
+
             elif type(e) == m21.note.Rest:
-                agnostic.append(f'rest.{str.lower(e.duration.fullName)}')
+
+                dots, dur_name, is_tuplet = resolve_duration(e.duration)
+                agnostic.append(f'rest.{dur_name}')
+                tuplet_record[len(agnostic)] = is_tuplet
+
+                # add dot at position 5 for all rests that have a dot, which is fairly standard
+                if dots > 0:
+                    agnostic.append(f'duration.dot.pos5')
 
             elif type(e) == m21.chord.Chord:
                 is_chord_list = [False] + [True for _ in e.notes]
                 glyph_lists = []
                 
                 for i, x in enumerate(e.notes):
-                    gl, current_pitch_status = resolve_note(
+                    gl, tuplet, current_pitch_status = resolve_note(
                         x, is_chord_list[i], current_clef, current_pitch_status) 
                     glyph_lists.extend(gl)
+
+                tuplet_record[len(agnostic)] = tuplet
                     
                 agnostic.extend(glyph_lists)
 
@@ -102,8 +158,8 @@ def m21_part_to_agnostic(part):
                 agnostic.append(f'timeSig.{e.ratioString}')
 
             elif issubclass(type(e), m21.clef.Clef):
-                current_clef = e
                 agnostic.append(f'clef.{e.name}')
+                current_clef = current_clef if (e.lowestLine is None) else e
 
             elif type(e) == m21.layout.SystemLayout:
                 # restate clef and key signature
@@ -122,16 +178,33 @@ def m21_part_to_agnostic(part):
         # at the end of every measure, reset the pitch status to the key signature
         current_pitch_status = get_reset_pitch_status(current_key_sig)
 
+    # handle tuplet records by putting in tuplet indicators
+    insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
+    # insert starting from the end to not mess up later indices
+    for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
+        tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
+        agnostic.insert(pos, tuplet_str)
+
     return agnostic
 
 if __name__ == '__main__':
+    from collections import Counter
 
-    fpath = r"D:\Documents\datasets\just_quartets\felix_errors\5_op44iii_4_omr.musicxml"
-    # fpath = r"D:\Documents\datasets\just_quartets\kernscores\46072_op20n6-01.krn"
-    parsed_file = m21.converter.parse(fpath)
-    parts = list(parsed_file.getElementsByClass(m21.stream.Part))
-    # part = parts[0].getElementsByClass(m21.stream.Measure)
+    k = 'kernscores'
+    quartets_root = r'D:\Documents\datasets\just_quartets'
+    files = os.listdir(os.path.join(quartets_root, k))
+    all_tokens = Counter()
 
-    for p in parts:
-        asdf = m21_part_to_agnostic(p)
-        print(asdf)
+    for fname in files:
+        fpath = os.path.join(os.path.join(quartets_root, k, fname))
+        parsed_file = m21.converter.parse(fpath)
+        parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+        # part = parts[0].getElementsByClass(m21.stream.Measure)
+        print(f'processing {k}.{fname}')
+        print(f'ntokens {len(all_tokens)}')
+
+        for p in parts:
+            agnostic = m21_part_to_agnostic(p)
+            print(len(agnostic), len(set(agnostic)))
+            all_tokens.update(agnostic)
+            
