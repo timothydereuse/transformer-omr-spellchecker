@@ -36,6 +36,9 @@ def resolve_duration(d):
     else:
         dur_string = str.lower(d.tuplets[0].durationActual.type)
         is_tuplet = d.tuplets[0].tupletActual[0]
+    
+    if d.isGrace:
+        dur_string = 'grace.' + dur_string 
     return dots, dur_string, is_tuplet
 
 def resolve_note(e, is_chord, current_clef, current_pitch_status):
@@ -135,7 +138,10 @@ def m21_part_to_agnostic(part):
                 is_chord_list = [False] + [True for _ in e.notes]
                 glyph_lists = []
                 
-                for i, x in enumerate(e.notes):
+                # sort notes in chord from highest to lowest
+                sorted_notes = sorted(e.notes, key=lambda x: x.pitch.midi, reverse=True)
+
+                for i, x in enumerate(sorted_notes):
                     gl, tuplet, current_pitch_status = resolve_note(
                         x, is_chord_list[i], current_clef, current_pitch_status) 
                     glyph_lists.extend(gl)
@@ -190,7 +196,7 @@ def m21_part_to_agnostic(part):
 if __name__ == '__main__':
     from collections import Counter
 
-    k = 'kernscores'
+    k = 'felix'
     quartets_root = r'D:\Documents\datasets\just_quartets'
     files = os.listdir(os.path.join(quartets_root, k))
     all_tokens = Counter()
