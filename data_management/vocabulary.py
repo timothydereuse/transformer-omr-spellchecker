@@ -1,3 +1,5 @@
+import numpy as np
+
 class Vocabulary(object):
 
     SEQ_UNK = 0
@@ -53,7 +55,18 @@ class Vocabulary(object):
             self.wtv[word] = vec
             self.vtw[vec] = word
 
+    def words_to_vec(self, words):
+        res = np.zeros(len(words))
+        for i, w in enumerate(words):
+            try:
+                res[i] = self.wtv[w]
+            except KeyError:
+                res[i] = self.SEQ_UNK
+        return res
 
+    def vec_to_words(self, vecs):
+        res = [self.vtw[x] for x in vecs]
+        return res
 
 
 if __name__ == '__main__':
@@ -84,3 +97,5 @@ if __name__ == '__main__':
     v = Vocabulary(all_tokens)
     v.save_vocabulary('./data_management/vocab.txt') 
     vv = Vocabulary(load_from_file='./data_management/vocab.txt')
+
+    vecs = vv.words_to_vec(agnostic)
