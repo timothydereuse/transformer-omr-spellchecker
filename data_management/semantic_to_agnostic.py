@@ -191,6 +191,10 @@ def m21_part_to_agnostic(part):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
         agnostic.insert(pos, tuplet_str)
 
+    # make sure no spaces remain in any of the entries
+    for ind in range(len(agnostic)):
+        agnostic[ind] = agnostic[ind].replace(' ', '')
+
     return agnostic
 
 if __name__ == '__main__':
