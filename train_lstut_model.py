@@ -2,11 +2,12 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-import point_set_dataloader as dl
+import agnostic_omr_dataloader as dl
 import test_trained_notetuple_model as ttnm
 import models.LSTUT_model as lstut
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
+import data_management.vocabulary as vocab
 from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
@@ -42,30 +43,33 @@ dry_run = args['dryrun']
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
-dset_tr = dl.MidiNoteTupleDataset(
+
+v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
+error_generator = err_gen.ErrorGenerator(ngram=5, smoothing=params.error_gen_smoothing, models_fpath=params.error_model)
+
+dset_tr = dl.AgnosticOMRDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
     base='train',
-    num_feats=params.num_feats,
     padding_amt=params.padding_amt,
     dataset_proportion=params.dataset_proportion,
+    vocabulary=v
 )
-dset_vl = dl.MidiNoteTupleDataset(
+dset_vl = dl.AgnosticOMRDataset(
     dset_fname=params.dset_path,
     seq_length=params.seq_length,
     base='validate',
-    num_feats=params.num_feats,
     padding_amt=params.padding_amt,
     dataset_proportion=params.dataset_proportion,
-    use_stats_from=dset_tr)
-
-error_generator = err_gen.ErrorGenerator(ngram=5, smoothing=params.error_gen_smoothing, models_fpath=params.error_model)
+    vocabulary=v
+)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
-num_feats = dset_tr.num_feats
 
-model = lstut.LSTUT(**params.lstut_settings).to(device)
+lstut_settings = params.lstut_settings
+lstut_settings['vocab_size'] = v.num_words
+model = lstut.LSTUT(**lstut_settings).to(device)
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 model = model.float()
 model_size = sum(p.numel() for p in model.parameters())
@@ -141,12 +145,12 @@ for epoch in range(params.num_epochs):
     )
 
     # save an image
-    if not epoch % params.save_img_every and epoch > 0:
-        img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
-        fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
-        fig.savefig(img_fpath, bbox_inches='tight')
-        plt.clf()
-        plt.close(fig)
+    # if not epoch % params.save_img_every and epoch > 0:
+    #     img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
+    #     fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
+    #     fig.savefig(img_fpath, bbox_inches='tight')
+    #     plt.clf()
+    #     plt.close(fig)
 
     # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:

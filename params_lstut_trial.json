@@ -9,24 +9,26 @@
     "seq_length": 64,
     "padding_amt": 4,
     "lr": 0.0003,
-    "batch_size": 128,
+    "batch_size": 16,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
-    "dataset_proportion": 0.005,
+    "dataset_proportion": 0.002,
 
-    "dset_path": "all_string_quartets.h5",
+    "dset_path": "all_string_quartets_agnostic.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
-    "error_gen_smoothing": 0.5,
+    "saved_vocabulary": "data_management/vocab.txt",
+    "error_gen_smoothing": 0.7,
+
 
     "lstut_settings": {
-        "num_feats": 4,
+        "num_feats": 1,
         "output_feats": 1,
-        "lstm_layers": 2,
+        "lstm_layers": 1,
         "n_layers": 1,
         "n_heads": 2,
         "tf_depth": 2,
-        "hidden_dim": 32,
-        "ff_dim": 32,
+        "hidden_dim": 16,
+        "ff_dim": 16,
         "dropout": 0.1
     },
     "error_indices_settings": {

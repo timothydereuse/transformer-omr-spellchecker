@@ -49,10 +49,10 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     for i, batch in enumerate(dloader):
 
         batch = batch.float().cpu()
-        inp, target = example_generator.add_errors_to_batch(batch, 1)
+        inp, target = example_generator.add_errors_to_batch(batch, parallel=3)
 
         # batch = batch.to(device)
-        inp = torch.tensor(inp, device=device)
+        inp = torch.tensor(inp, device=device).type(torch.long)
         target = torch.tensor(target, device=device)
 
         if train:
