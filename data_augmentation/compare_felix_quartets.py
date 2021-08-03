@@ -3,20 +3,20 @@ import numpy as np
 import data_augmentation.needleman_wunsch_alignment as align
 from numba import njit
 from collections import Counter
-import error_gen_logistic_regression as elgr
+import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./quartets_felix_omr.h5'
-ngram = 5 # n for n-grams for maxent markov model
+dset_path = r'./quartets_felix_omr_agnostic.h5'
+ngram = 4 # n for n-grams for maxent markov model
 
 # voice, onset, time_to_next_onset, duration, midi_pitch, notated_pitch, accidental
 # here we take only voice, time to next onset, duration, midi pitch
-inds_subset = np.array([0, 2, 3, 4])
+# inds_subset = np.array([0, 2, 3, 4])
 
 with h5py.File(dset_path, 'a') as f:
     correct_fnames = [x for x in f.keys() if 'aligned' in x and 'op80' not in x]
     error_fnames = [x for x in f.keys() if 'omr' in x]
-    correct_dset = [f[x][:, inds_subset] for x in correct_fnames]
-    error_dset = [f[x][:, inds_subset] for x in error_fnames]
+    correct_dset = [f[x][:].astype(np.uint8) for x in correct_fnames]
+    error_dset = [f[x][:].astype(np.uint8) for x in error_fnames]
 
 error_notes = {x:[] for x in ['replace_mod', 'insert_mod']}
 correct_seqs_all = []
