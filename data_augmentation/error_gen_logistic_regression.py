@@ -46,7 +46,7 @@ class ErrorGenerator(object):
         
         i = 0
         while i < len(seq):
-            next_note = np.concatenate([gen_labels[-self.ngram:], seq[i]])
+            next_note = np.concatenate([gen_labels[-self.ngram:], [seq[i]] ])
             predictions = self.regression.predict_proba(self.enc.transform(next_note.reshape(1, -1)))[0]
 
             # smooth predictions to reduce overall chance of errors
@@ -140,20 +140,22 @@ class ErrorGenerator(object):
             else:
                 i += 1
 
-        padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len, :]
+        padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
 
         return padded_seq, Y_out
 
 if __name__ == "__main__":
 
-    from point_set_dataloader import MidiNoteTupleDataset
+    from agnostic_omr_dataloader import AgnosticOMRDataset
     from torch.utils.data import DataLoader
+    from data_management.vocabulary import Vocabulary
 
+    dset_path = r'./quartets_felix_omr_agnostic.h5'
+    v = Vocabulary(load_from_file='./data_management/vocab.txt')
 
-    fname = 'all_string_quartets.h5'
     seq_len = 50
     proportion = 0.2
-    dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4)
+    dset = AgnosticOMRDataset(dset_path, seq_len, v)
 
     dload = DataLoader(dset, batch_size=5)
     batches = []
