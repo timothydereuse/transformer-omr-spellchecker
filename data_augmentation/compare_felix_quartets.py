@@ -4,9 +4,12 @@ import data_augmentation.needleman_wunsch_alignment as align
 from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
+# import data_management.vocabulary as vocab
 
 dset_path = r'./quartets_felix_omr_agnostic.h5'
-ngram = 4 # n for n-grams for maxent markov model
+ngram = 5 # n for n-grams for maxent markov model
+# v = vocab.Vocabulary(load_from_file='./data_management/vocab.txt')
+# vocab_size = v.num_words
 
 # voice, onset, time_to_next_onset, duration, midi_pitch, notated_pitch, accidental
 # here we take only voice, time to next onset, duration, midi pitch
@@ -41,26 +44,30 @@ for ind in range(len(correct_dset)):
 
     err_to_class = {'O': 0, '~': 1, '+': 2, '-': 3}
 
-    most_recent_correct_note = np.zeros(inds_subset.shape)
+    # most_recent_correct_note = np.zeros(inds_subset.shape)s
+    most_recent_correct_note = 0
 
     for i in range(len(correct_align)):
 
         error_note = error_align[i]
         correct_note = correct_align[i]
         if r[i] == '~':
-            res = correct_note - error_note
-            error_notes['replace_mod'].append(res)
+            # res = correct_note - error_note
+            # error_notes['replace_mod'].append(res)
+            error_notes['replace_mod'].append(error_note)
         elif r[i] == '+' and type(error_note) != str:
             error_notes['insert_mod'].append(error_note)
 
         if not type(correct_note) == str:
             most_recent_correct_note = correct_note
         prev_entries = [err_to_class[r[i - x]] if i - x >= 0  else err_to_class[r[0]] for x in range(1, ngram + 1)]
-        sample = np.concatenate([prev_entries, most_recent_correct_note])
+        
+        # sample = np.concatenate([prev_entries, most_recent_correct_note])
+        sample = np.array(prev_entries + [most_recent_correct_note])
         label = err_to_class[r[i]]
         X.append(sample)
         Y.append(label)
 
 err_gen = elgr.ErrorGenerator(ngram, labeled_data=[X,Y], repl_samples=error_notes['replace_mod'], ins_samples=error_notes['insert_mod'])
-err_gen.save_models('./quartet_omr_error_models.joblib')
+err_gen.save_models('./data_augmentation/quartet_omr_error_models.joblib')
 

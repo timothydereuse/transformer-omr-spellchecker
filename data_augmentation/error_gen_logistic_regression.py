@@ -22,6 +22,7 @@ class ErrorGenerator(object):
             self.regression = models['logistic_regression']
             self.ins_samples = models['insert_samples']
             self.repl_samples = models['replace_samples']
+            self.ngram = models['ngram']
         elif models_fpath is None:
             X, Y = labeled_data
             self.enc = preprocessing.OneHotEncoder(sparse=True, handle_unknown="ignore")
@@ -65,7 +66,8 @@ class ErrorGenerator(object):
                 i += 1
             elif next_label == self.replace_idx: # REPLACE
                 rand_mod = repl_samples[np.random.randint(len(repl_samples))]
-                errored_seq.append((seq[i] + rand_mod).astype('float32'))
+                # errored_seq.append((seq[i] + rand_mod).astype('float32'))
+                errored_seq.append((rand_mod).astype('float32'))                
                 i += 1
             elif next_label == self.insert_idx: # INSERT
                 rand_ins = ins_samples[np.random.randint(len(ins_samples))]
@@ -80,7 +82,8 @@ class ErrorGenerator(object):
             'one_hot_encoder': self.enc,
             'logistic_regression': self.regression,
             'insert_samples': self.ins_samples,
-            'replace_samples': self.repl_samples
+            'replace_samples': self.repl_samples,
+            'ngram': self.ngram
         }
         dump(d, fpath)
 
