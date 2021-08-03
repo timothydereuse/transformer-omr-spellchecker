@@ -6,7 +6,7 @@
     "save_img_every": 1,
     "max_time_minutes": 5,
 
-    "seq_length": 64,
+    "seq_length": 128,
     "padding_amt": 4,
     "lr": 0.0003,
     "batch_size": 16,
@@ -19,7 +19,6 @@
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.7,
 
-
     "lstut_settings": {
         "num_feats": 1,
         "output_feats": 1,
@@ -28,13 +27,8 @@
         "n_heads": 2,
         "tf_depth": 2,
         "hidden_dim": 16,
-        "ff_dim": 16,
+        "ff_dim": 32,
         "dropout": 0.1
-    },
-    "error_indices_settings": {
-        "num_insertions": 10,
-        "num_deletions": 0,
-        "num_replacements": 0
     },
     "scheduler_settings": {
         "factor": 0.25,

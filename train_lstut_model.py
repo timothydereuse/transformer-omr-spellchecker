@@ -79,7 +79,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = params.seq_length // sum(list(params.error_indices_settings.values()))
+class_ratio = 2
 criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(class_ratio))
 
 logging.info('beginning training')
@@ -145,12 +145,11 @@ for epoch in range(params.num_epochs):
     )
 
     # save an image
-    # if not epoch % params.save_img_every and epoch > 0:
-    #     img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.png'
-    #     fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
-    #     fig.savefig(img_fpath, bbox_inches='tight')
-    #     plt.clf()
-    #     plt.close(fig)
+    if not epoch % params.save_img_every and epoch > 0:
+        img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.txt'
+        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh)
+        with open(img_fpath, 'w') as f:
+            f.write(''.join(lines))
 
     # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
@@ -188,11 +187,10 @@ logging.info(
 )
 
 for i in range(3):
-    img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.png'
-    fig, axs = po.plot_pianoroll_corrections(tr_exs, dset_tr, tr_thresh)
-    fig.savefig(img_fpath, bbox_inches='tight')
-    plt.clf()
-    plt.close(fig)
+    img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.txt'
+    lines = po.plot_agnostic_results(tr_exs, v, tr_thresh)
+    with open(img_fpath, 'w') as f:
+        f.write(''.join(lines))
 
 
 # # if max_epochs reached, or early stopping condition reached, save best model

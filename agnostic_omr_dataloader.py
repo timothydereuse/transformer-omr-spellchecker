@@ -26,8 +26,7 @@ def all_hdf5_keys(obj):
 class AgnosticOMRDataset(IterableDataset):
 
     def __init__(self, dset_fname, seq_length, vocabulary, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, dataset_proportion=False,
-                 use_stats_from=None):
+                 padding_amt=None, random_offsets=True, dataset_proportion=False):
         """
         @dset_fname - the file name of the processed hdf5 dataset
         @seq_length - length to chop sequences into
