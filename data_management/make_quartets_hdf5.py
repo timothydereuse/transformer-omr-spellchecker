@@ -24,6 +24,7 @@ with h5py.File(dset_path, 'a') as f:
 
 # voice, start, time_to_next_offset, duration, midi_pitch, notated_pitch, accidental
 
+
 def m21_note_to_tuple(x, voice_num, previous_offset):
 
     pitches = x.pitches if not x.isRest else (m21.pitch.Pitch(midi=0),)
@@ -73,7 +74,7 @@ for k in keys:
         for j, p in enumerate(parts):
             all_notes.extend([(n, j) for n in p.flat.notesAndRests if
             n.isNote or (n.isChord and len(n.pitches) > 0) or n.isRest])
-        # sort notes by offset, then voice number, then pitch
+        # sort notes by voice, then voice number, then pitch
         all_notes = sorted(all_notes, key=lambda x: (
            x[1], x[0].offset, 0 if x[0].isRest else x[0].pitches[0].midi, 
         ))
