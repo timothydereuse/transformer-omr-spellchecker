@@ -74,7 +74,9 @@ class AgnosticOMRDataset(IterableDataset):
             # pad runlength encoding on both sides
             padded_glyphs = np.concatenate([
                 self.padding_seq,
+                [self.vocabulary.SEQ_SOS],
                 glyphs,
+                [self.vocabulary.SEQ_EOS],
                 self.padding_seq
                 ])
 
