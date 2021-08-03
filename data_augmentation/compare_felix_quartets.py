@@ -4,12 +4,9 @@ import data_augmentation.needleman_wunsch_alignment as align
 from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
-# import data_management.vocabulary as vocab
 
 dset_path = r'./quartets_felix_omr_agnostic.h5'
 ngram = 5 # n for n-grams for maxent markov model
-# v = vocab.Vocabulary(load_from_file='./data_management/vocab.txt')
-# vocab_size = v.num_words
 
 # voice, onset, time_to_next_onset, duration, midi_pitch, notated_pitch, accidental
 # here we take only voice, time to next onset, duration, midi pitch
@@ -34,7 +31,7 @@ for ind in range(len(correct_dset)):
     print(f'aligning {correct_fnames[ind]}...' )
     correct_seq = [x for x in correct_dset[ind]]
     error_seq = [x for x in error_dset[ind]]
-    correct_align, error_align, r, score = align.perform_alignment(correct_seq, error_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
+    correct_align, error_align, r, score = align.perform_alignment(correct_seq, error_seq, match_weights=[2, -2], gap_penalties=[-2, -2, -1, -1])
 
     print(''.join(r))
 
@@ -43,8 +40,6 @@ for ind in range(len(correct_dset)):
     errors = []
 
     err_to_class = {'O': 0, '~': 1, '+': 2, '-': 3}
-
-    # most_recent_correct_note = np.zeros(inds_subset.shape)s
     most_recent_correct_note = 0
 
     for i in range(len(correct_align)):
