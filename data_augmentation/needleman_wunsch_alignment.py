@@ -38,10 +38,12 @@ def create_matrix(seq_a, seq_b, match_weights, gap_rules):
     for i in range(1, len_a):
         for j in range(1, len_b):
 
-            if np.all(seq_a[i-1] == seq_b[j-1]):
+            # if np.all(seq_a[i-1] == seq_b[j-1]):
+            if seq_a[i - 1] == seq_b[j - 1]:
                 match_score = match_weights[0]
             else:
-                match_score = np.sum(seq_a[i-1] != seq_b[j-1]) * match_weights[1]
+                # match_score = np.sum(seq_a[i-1] != seq_b[j-1]) * match_weights[1]
+                match_score = match_weights[1]
 
             mat_vals = np.array([mat[i-1][j-1], x_mat[i-1][j-1], y_mat[i-1][j-1]])
             mat[i][j] = np.max(mat_vals) + match_score
@@ -222,10 +224,10 @@ if __name__ == '__main__':
     # seq1 = [seq1[2*x] + seq1[2*x + 1] for x in range(len(seq1) // 2)]
     # seq2 = [seq2[2*x] + seq2[2*x + 1] for x in range(len(seq2) // 2)]
 
-    # seq1 = list(seq1)
-    # seq2 = list(seq2)
-    seq1 = [np.array([ord(x)]) for x in seq1]
-    seq2 = [np.array([ord(x)]) for x in seq2]
+    seq1 = list([ord(x) for x in seq1])
+    seq2 = list([ord(x) for x in seq2])
+    # seq1 = [np.array([ord(x)]) for x in seq1]
+    # seq2 = [np.array([ord(x)]) for x in seq2]
 
     a, b, align_record, score = perform_alignment(seq1, seq2, match_weights, gap_penalties, ignore_case=True)
 
