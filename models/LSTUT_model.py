@@ -11,7 +11,7 @@ import time
 class LSTUT(nn.Module):
 
     def __init__(self, num_feats, output_feats, lstm_layers, n_layers,
-                 n_heads, hidden_dim, ff_dim, tf_depth=3, dropout=0.15):
+                 n_heads, hidden_dim, ff_dim, tf_depth=3, vocab_size=0, dropout=0.15):
         super(LSTUT, self).__init__()
 
         self.num_feats = num_feats
@@ -23,6 +23,10 @@ class LSTUT(nn.Module):
         self.ff_dim = ff_dim
         self.tf_depth = tf_depth
         self.d_model = self.hidden_dim * self.n_heads
+        self.vocab_size = vocab_size
+
+        if vocab_size and num_feats > 1:
+            raise ValueError("can't have multiple features and an embedding")
 
         encoder_builder = TransformerEncoderBuilder.from_kwargs(
             n_layers=self.n_layers,
@@ -34,7 +38,11 @@ class LSTUT(nn.Module):
             dropout=dropout
         )
 
-        self.initial_ff = nn.Linear(self.num_feats, self.d_model)
+        if self.num_feats == 1 and vocab_size > 0:
+            self.initial = nn.Embedding(self.vocab_size, self.d_model, padding_idx=1)
+        else:
+            self.initial = nn.Linear(self.num_feats, self.d_model)
+
         self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
         self.encoder = encoder_builder.get()
         self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
@@ -42,7 +50,7 @@ class LSTUT(nn.Module):
 
     def forward(self, src):
 
-        x = self.initial_ff(src)
+        x = self.initial(src)
 
         self.lstm1.flatten_parameters()
         x, _ = self.lstm1(x)
@@ -60,17 +68,14 @@ class LSTUT(nn.Module):
 
 if __name__ == '__main__':
 
-    import model_params
-
-    params = model_params.Params(r'params_default.json', False, 0)
-
     batch_size = 10
-    seq_len = 100
+    seq_len = 128
     output_pts = 1
-    num_feats = 3
+    num_feats = 1
+    vocab_size = 100
 
-    X = torch.rand(batch_size, seq_len, num_feats)
-    tgt = (torch.rand(batch_size, seq_len, output_pts) - 0.4).round()
+    X = (torch.rand(batch_size, seq_len) * vocab_size).floor().type(torch.long)
+    tgt = (torch.rand(batch_size, seq_len, output_pts) - 0.3).round()
 
     model = LSTUT(
         num_feats=num_feats,
@@ -79,8 +84,9 @@ if __name__ == '__main__':
         n_layers=1,
         tf_depth=2,
         n_heads=2,
-        hidden_dim=64,
-        ff_dim=64)
+        hidden_dim=32,
+        ff_dim=32,
+        vocab_size=vocab_size)
 
     n_params = sum(p.numel() for p in model.parameters())
     print(f'created model with n_params={n_params}')
@@ -114,18 +120,3 @@ if __name__ == '__main__':
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
     model.eval()
-
-# d_model = 32
-# k = 5
-# b = 3
-# al = AttentionLayer(LinearAttention(d_model), d_model, 4, )
-# S = torch.rand(k, d_model)
-# S = S.unsqueeze(0).repeat(b, 1, 1)
-# Z = torch.rand(b, 40, d_model)
-#
-# # gotta make a bunch of masks that mask nothing
-# mask = FullMask(N=k, M=40)
-# ql_mask = LengthMask(torch.ones(b) * k)
-# kl_mask = LengthMask(torch.ones(b) * 40)
-#
-# res = al(S, Z, Z, mask, ql_mask, kl_mask)
