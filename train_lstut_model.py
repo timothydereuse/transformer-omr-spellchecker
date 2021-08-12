@@ -69,6 +69,7 @@ dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 
 lstut_settings = params.lstut_settings
 lstut_settings['vocab_size'] = v.num_words
+lstut_settings['seq_length'] = params.seq_length
 model = lstut.LSTUT(**lstut_settings).to(device)
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 model = model.float()
@@ -79,8 +80,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = 2
-criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(class_ratio))
+class_ratio = (10 / params.error_gen_smoothing)
+criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 logging.info('beginning training')
 start_time = time.time()
@@ -136,9 +137,9 @@ for epoch in range(params.num_epochs):
     epoch_end_time = time.time()
     logging.info(
         f'epoch {epoch:3d} | '
-        f's/epoch    {(epoch_end_time - epoch_start_time):3.5f} | '
-        f'train_loss {train_loss:1.6f} | '
-        f'val_loss   {val_loss:1.6f} | '
+        f's/epoch    {(epoch_end_time - epoch_start_time):3.5e} | '
+        f'train_loss {train_loss:1.6e} | '
+        f'val_loss   {val_loss:1.6e} | '
         f'tr_thresh  {tr_thresh:1.5f} | '
         f'tr_f1      {tr_f1:1.6f} | '
         f'val_f1     {val_f1:1.6f} | '
