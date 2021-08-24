@@ -55,7 +55,7 @@ class Vocabulary(object):
             self.wtv[word] = vec
             self.vtw[vec] = word
 
-        self.num_words = np.max(list(self.wtv.values()))
+        self.num_words = np.max(list(self.wtv.values())) + 1
 
     def words_to_vec(self, words):
         res = np.zeros(len(words), dtype=np.uint8)
