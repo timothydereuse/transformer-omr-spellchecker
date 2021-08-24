@@ -10,10 +10,11 @@ import time
 
 class LSTUT(nn.Module):
 
-    def __init__(self, num_feats, output_feats, lstm_layers, n_layers,
+    def __init__(self, seq_length, num_feats, output_feats, lstm_layers, n_layers,
                  n_heads, hidden_dim, ff_dim, tf_depth=3, vocab_size=0, dropout=0.15):
         super(LSTUT, self).__init__()
 
+        self.seq_length = seq_length
         self.num_feats = num_feats
         self.output_feats = output_feats
         self.lstm_layers = lstm_layers
@@ -47,6 +48,9 @@ class LSTUT(nn.Module):
         self.encoder = encoder_builder.get()
         self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
+        self.layer_norm = nn.LayerNorm([self.seq_length, self.d_model])
+        self.layer_norm2 = nn.LayerNorm([self.seq_length, self.d_model])
+
 
     def forward(self, src):
 
@@ -54,12 +58,15 @@ class LSTUT(nn.Module):
 
         self.lstm1.flatten_parameters()
         x, _ = self.lstm1(x)
+        lstm1_out = x.clone()
 
         for i in range(self.tf_depth):
             x = self.encoder(x)
 
+        x = self.layer_norm(x + lstm1_out)
         self.lstm2.flatten_parameters()
         x, _ = self.lstm2(x)
+        x = self.layer_norm2(x)
 
         x = self.final_ff(x)
 
@@ -69,18 +76,19 @@ class LSTUT(nn.Module):
 if __name__ == '__main__':
 
     batch_size = 10
-    seq_len = 128
+    seq_length = 128
     output_pts = 1
     num_feats = 1
     vocab_size = 100
 
-    X = (torch.rand(batch_size, seq_len) * vocab_size).floor().type(torch.long)
-    tgt = (torch.rand(batch_size, seq_len, output_pts) - 0.3).round()
+    X = (torch.rand(batch_size, seq_length) * vocab_size).floor().type(torch.long)
+    tgt = (torch.rand(batch_size, seq_length, output_pts) - 0.1).round()
 
     model = LSTUT(
+        seq_length=seq_length,
         num_feats=num_feats,
         output_feats=output_pts,
-        lstm_layers=3,
+        lstm_layers=1,
         n_layers=1,
         tf_depth=2,
         n_heads=2,
@@ -93,10 +101,12 @@ if __name__ == '__main__':
 
     res = model(X)
 
+    # assert False
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    sched = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.1, verbose=False)
+    sched = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.25, verbose=False)
 
     num_epochs = 100
 
@@ -109,7 +119,7 @@ if __name__ == '__main__':
 
         output = model(X)
 
-        loss = criterion(tgt, output)
+        loss = criterion(output, tgt)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
