@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import agnostic_omr_dataloader as dl
-import test_trained_model as ttm
-import models.LSTUT_model as lstut
+import test_trained_notetuple_model as ttnm
+import models.LSTM_model as lstm
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
 import data_management.vocabulary as vocab
@@ -13,7 +13,7 @@ import plot_outputs as po
 import model_params
 import logging
 import argparse
-import copy
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -21,11 +21,11 @@ import matplotlib.pyplot as plt
 from importlib import reload
 reload(tr_funcs)
 reload(dl)
-reload(lstut)
+reload(lstm)
 reload(model_params)
 reload(po)
 reload(err_gen)
-reload(ttm)
+reload(ttnm)
 
 parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
 parser.add_argument('parameters', default='default_params.json',
@@ -45,33 +45,32 @@ device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
 
 v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
-error_generator = err_gen.ErrorGenerator(
-    ngram=5,
-    smoothing=params.error_gen_smoothing,
-    simple_error_rate=params.simple_error_rate,
-    models_fpath=params.error_model
-)
+error_generator = err_gen.ErrorGenerator(ngram=5, smoothing=params.error_gen_smoothing, models_fpath=params.error_model)
 
-dset_kwargs = {
-    'dset_fname': params.dset_path,
-    'seq_length': params.seq_length,
-    'padding_amt': params.padding_amt,
-    'dataset_proportion': params.dataset_proportion,
-    'vocabulary': v
-}
-dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
-dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
-dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
+dset_tr = dl.AgnosticOMRDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='train',
+    padding_amt=params.padding_amt,
+    dataset_proportion=params.dataset_proportion,
+    vocabulary=v
+)
+dset_vl = dl.AgnosticOMRDataset(
+    dset_fname=params.dset_path,
+    seq_length=params.seq_length,
+    base='validate',
+    padding_amt=params.padding_amt,
+    dataset_proportion=params.dataset_proportion,
+    vocabulary=v
+)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
-dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
 
+# model = lstut.LSTUT(**lstut_settings).to(device)
 
-lstut_settings = params.lstut_settings
-lstut_settings['vocab_size'] = v.num_words
-lstut_settings['seq_length'] = params.seq_length
-model = lstut.LSTUT(**lstut_settings).to(device)
+model = lstm.LSTMModel(v.num_words, params.seq_length, lstm_inp=64, lstm_hidden=64, lstm_layers=2)
+
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 model = model.float()
 model_size = sum(p.numel() for p in model.parameters())
@@ -81,8 +80,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = (1 / params.simple_error_rate)
-criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
+class_ratio = 2
+criterion = torch.nn.BCEWithLogitsLoss(reduction='sum', pos_weight=torch.tensor(class_ratio))
 
 logging.info('beginning training')
 start_time = time.time()
@@ -94,25 +93,20 @@ tr_funcs.log_gpu_info()
 if dry_run:
     assert False, "Dry run successful"
 
-run_epoch_kwargs = {
-    'model': model,
-    'optimizer': optimizer,
-    'criterion': criterion,
-    'device': device,
-    'example_generator': error_generator,
-}
-
-
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
 
     # perform training epoch
     model.train()
     train_loss, tr_exs = tr_funcs.run_epoch(
+        model=model,
         dloader=dloader,
+        optimizer=optimizer,
+        criterion=criterion,
+        device=device,
+        example_generator=error_generator,
         train=True,
-        log_each_batch=True,
-        **run_epoch_kwargs
+        log_each_batch=True
     )
 
     # test on validation set
@@ -121,10 +115,14 @@ for epoch in range(params.num_epochs):
     val_loss = 0.
     with torch.no_grad():
         val_loss, val_exs = tr_funcs.run_epoch(
+            model=model,
             dloader=dloader_val,
+            optimizer=optimizer,
+            criterion=criterion,
+            device=device,
+            example_generator=error_generator,
             train=False,
-            log_each_batch=False,
-            **run_epoch_kwargs
+            log_each_batch=False
         )
 
     val_losses.append(val_loss)
@@ -133,15 +131,15 @@ for epoch in range(params.num_epochs):
     scheduler.step(val_loss)
     # tr_funcs.log_gpu_info()
 
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
-    val_f1 = ttm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
+    tr_f1, tr_thresh = ttnm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
+    val_f1 = ttnm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
 
     epoch_end_time = time.time()
     logging.info(
         f'epoch {epoch:3d} | '
-        f's/epoch    {(epoch_end_time - epoch_start_time):3.5e} | '
-        f'train_loss {train_loss:1.6e} | '
-        f'val_loss   {val_loss:1.6e} | '
+        f's/epoch    {(epoch_end_time - epoch_start_time):3.5f} | '
+        f'train_loss {train_loss:1.6f} | '
+        f'val_loss   {val_loss:1.6f} | '
         f'tr_thresh  {tr_thresh:1.5f} | '
         f'tr_f1      {tr_f1:1.6f} | '
         f'val_f1     {val_f1:1.6f} | '
@@ -161,16 +159,16 @@ for epoch in range(params.num_epochs):
     #         f'_{params.lstut_summary_str}.pt')
     #     torch.save(cur_model, m_name)
 
-    # keep snapshot of best model
-    cur_model = {
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': scheduler.state_dict(),
-            'val_losses': val_losses,
-            }
-    if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
-        best_model = copy.deepcopy(cur_model)
+    # # keep snapshot of best model
+    # cur_model = {
+    #         'epoch': epoch,
+    #         'model_state_dict': model.state_dict(),
+    #         'optimizer_state_dict': optimizer.state_dict(),
+    #         'scheduler_state_dict': scheduler.state_dict(),
+    #         'val_losses': val_losses,
+    #         }
+    # if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
+    #     best_model = copy.deepcopy(cur_model)
 
     # early stopping
     time_since_best = epoch - train_losses.index(min(train_losses))
@@ -189,30 +187,11 @@ logging.info(
     f'Total training time: {end_time - start_time} s.'
 )
 
-test_results = ttm.TestResults(tr_thresh)
-with torch.no_grad():
-    tst_loss, tst_exs = tr_funcs.run_epoch(
-        dloader=dloader_tst,
-        train=False,
-        log_each_batch=False,
-        test_results=test_results,
-        **run_epoch_kwargs
-    )
-res_stats = test_results.calculate_stats()
-logging.info(
-    f'precision: {res_stats["precision"]:1.6e} | '
-    f'recall:    {res_stats["recall"]:1.6e} | '
-    f'true positive: {res_stats["true positive rate"]:1.6e} | '
-    f'true negative:   {res_stats["true negative rate"]:1.6e}'
-)
-
-
 for i in range(3):
     img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.txt'
-    lines = po.plot_agnostic_results(tst_exs, v, tr_thresh)
+    lines = po.plot_agnostic_results(tr_exs, v, tr_thresh)
     with open(img_fpath, 'w') as f:
         f.write(''.join(lines))
-
 
 
 # # if max_epochs reached, or early stopping condition reached, save best model

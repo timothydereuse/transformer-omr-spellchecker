@@ -29,7 +29,7 @@ def log_gpu_info():
 
 
 def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
-              train=True, log_each_batch=False, clip_grad_norm=0.5, autoregressive=False):
+              train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None, autoregressive=False):
     '''
     Performs a training or validation epoch.
     @model: the model to use.
@@ -49,7 +49,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     for i, batch in enumerate(dloader):
 
         batch = batch.float().cpu()
-        inp, target = example_generator.add_errors_to_batch(batch, parallel=3)
+        inp, target = example_generator.add_errors_to_batch(batch, simple=True, parallel=3)
 
         # batch = batch.to(device)
         inp = torch.tensor(inp, device=device).type(torch.long)
@@ -64,6 +64,9 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             output = model(inp).squeeze(-1)
 
         loss = criterion(output, target)
+        
+        if test_results:
+            test_results.update(output, target)
 
         if train:
             loss.backward()

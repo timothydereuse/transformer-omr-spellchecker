@@ -4,20 +4,20 @@
     "early_stopping_patience": 20,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 300,
+    "max_time_minutes": 310,
 
     "seq_length": 128,
     "padding_amt": 4,
     "lr": 0.0005,
-    "batch_size": 512,
+    "batch_size": 2048,
     "clip_gradient_norm": 0.5,
-    "num_feats": 4,
-    "dataset_proportion": 0.5,
+    "num_feats": 1,
+    "dataset_proportion": 0.2,
 
     "dset_path": "all_string_quartets_agnostic.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 0.4,
+    "error_gen_smoothing": 0.6,
     "simple_error_rate": 0.05,
 
     "lstut_settings": {
@@ -25,10 +25,10 @@
         "output_feats": 1,
         "lstm_layers": 2,
         "n_layers": 1,
-        "n_heads": 4,
-        "tf_depth": 4,
-        "hidden_dim": 64,
-        "ff_dim": 64,
+        "n_heads": 1,
+        "tf_depth": 5,
+        "hidden_dim": 256,
+        "ff_dim": 256,
         "dropout": 0.1
     },
     "scheduler_settings": {
