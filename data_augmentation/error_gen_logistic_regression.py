@@ -12,9 +12,10 @@ class ErrorGenerator(object):
     insert_idx = 2
     delete_index = 3
 
-    def __init__(self, ngram, smoothing=1, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
+    def __init__(self, ngram, smoothing=1, simple_error_rate=0.05, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
         self.ngram = ngram
         self.smoothing = smoothing
+        self.simple_error_rate = simple_error_rate
 
         if labeled_data is None and ins_samples is None and repl_samples is None:
             models = load(models_fpath)
@@ -33,6 +34,39 @@ class ErrorGenerator(object):
             self.repl_samples = repl_samples
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
+
+    def get_simple_synthetic_error_sequence(self, seq):
+        err_prob = self.simple_error_rate
+        synthetic_error_alignment = np.random.choice(
+            [self.match_idx, self.replace_idx, self.insert_idx, self.delete_index],
+            size=len(seq),
+            replace=True,
+            p=[1 - err_prob, err_prob / 3, err_prob / 3, err_prob / 3]
+            )
+
+
+        ins_samples = self.ins_samples
+        repl_samples = self.repl_samples
+        errored_seq = []
+        i = 0  # seq position
+        for next_label in synthetic_error_alignment:
+            if len(errored_seq) >= len(seq):
+                break
+            elif next_label == self.match_idx: # MATCH
+                errored_seq.append(seq[i].astype('float32'))
+                i += 1
+            elif next_label == self.replace_idx: # REPLACE
+                rand_mod = repl_samples[np.random.randint(len(repl_samples))]
+                errored_seq.append((rand_mod).astype('float32'))                
+                i += 1
+            elif next_label == self.insert_idx: # INSERT
+                rand_ins = ins_samples[np.random.randint(len(ins_samples))]
+                errored_seq.append(rand_ins.astype('float32'))
+            elif next_label == self.delete_index: # DELETE
+                i += 1
+
+        return errored_seq, synthetic_error_alignment
+
 
     def get_synthetic_error_sequence(self, seq):
         num_ops = 4
@@ -66,7 +100,6 @@ class ErrorGenerator(object):
                 i += 1
             elif next_label == self.replace_idx: # REPLACE
                 rand_mod = repl_samples[np.random.randint(len(repl_samples))]
-                # errored_seq.append((seq[i] + rand_mod).astype('float32'))
                 errored_seq.append((rand_mod).astype('float32'))                
                 i += 1
             elif next_label == self.insert_idx: # INSERT
@@ -77,39 +110,11 @@ class ErrorGenerator(object):
         
         return errored_seq, gen_labels[self.ngram:]
 
-    def save_models(self, fpath):
-        d = {
-            'one_hot_encoder': self.enc,
-            'logistic_regression': self.regression,
-            'insert_samples': self.ins_samples,
-            'replace_samples': self.repl_samples,
-            'ngram': self.ngram
-        }
-        dump(d, fpath)
-
     def err_seq_string(self, labels):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_batch(self, batch, parallel=1, verbose=0):
-        if not (type(batch) == np.ndarray):
-            batch = batch.numpy()
-        b = batch.astype('float32')
-        
-        if parallel >= 2:
-            out = Parallel(n_jobs=parallel, verbose=verbose)(
-                delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
-                )
-        else:
-            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
-
-        X = np.stack([np.array(x[0]) for x in out], 0)
-        Y = np.stack([np.array(x[1]) for x in out], 0)
-
-        return X, Y
-
-
-    def add_errors_to_seq(self, inp):
+    def add_errors_to_seq(self, inp, simple=False):
         inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
@@ -122,7 +127,10 @@ class ErrorGenerator(object):
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
-        err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
+        if simple:
+            err_seq, _ = self.get_simple_synthetic_error_sequence(orig_seq)
+        else:
+            err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
 
         _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
 
@@ -143,6 +151,35 @@ class ErrorGenerator(object):
         padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
 
         return padded_seq, Y_out
+
+    def add_errors_to_batch(self, batch, simple=False, parallel=1, verbose=0):
+        if not (type(batch) == np.ndarray):
+            batch = batch.numpy()
+        b = batch.astype('float32')
+        
+        if simple:
+            out = [self.add_errors_to_seq(b[i], simple=True) for i in range(b.shape[0])]
+        elif parallel >= 2:
+            out = Parallel(n_jobs=parallel, verbose=verbose)(
+                delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
+                )
+        else:
+            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
+
+        X = np.stack([np.array(x[0]) for x in out], 0)
+        Y = np.stack([np.array(x[1]) for x in out], 0)
+
+        return X, Y
+
+    def save_models(self, fpath):
+        d = {
+            'one_hot_encoder': self.enc,
+            'logistic_regression': self.regression,
+            'insert_samples': self.ins_samples,
+            'replace_samples': self.repl_samples,
+            'ngram': self.ngram
+        }
+        dump(d, fpath)
 
 if __name__ == "__main__":
 
@@ -168,10 +205,10 @@ if __name__ == "__main__":
     print('creating error generator')
     e = ErrorGenerator(ngram=5, smoothing=0.7, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
 
-    asdf = e.add_errors_to_seq(x[0].numpy())
-    print(asdf[1])
+    synth_error = e.get_synthetic_error_sequence(x[0].numpy())
+    simple_error = e.get_simple_synthetic_error_sequence(x[0].numpy())
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
-        X, Y = e.add_errors_to_batch(x.numpy(), parallel=2)
+        X, Y = e.add_errors_to_batch(x.numpy(), simple=True, parallel=2)
         print(X.shape, Y.shape)
