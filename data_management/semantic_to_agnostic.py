@@ -155,7 +155,7 @@ def m21_part_to_agnostic(part):
 
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
-                    position = p.diatonicNoteNum - current_clef.lowestLine
+                    position = p.diatonicNoteNum - current_clef.lowestLine - 12
                     agnostic.append(f'accid.{p.accidental.name}.pos{position}')
                 current_key_sig = e 
             
@@ -172,7 +172,7 @@ def m21_part_to_agnostic(part):
                 agnostic.append(f'systemBreak')
                 agnostic.append(f'clef.{current_clef.name}')
                 for p in current_key_sig.alteredPitches:
-                    position = p.diatonicNoteNum - current_clef.lowestLine
+                    position = p.diatonicNoteNum - current_clef.lowestLine - 12
                     agnostic.append(f'accid.{p.accidental.name}.{position}')
 
             elif type(e) == m21.bar.Barline:
@@ -217,4 +217,5 @@ if __name__ == '__main__':
             agnostic = m21_part_to_agnostic(p)
             print(len(agnostic), len(set(agnostic)))
             all_tokens.update(agnostic)
+        break
             
