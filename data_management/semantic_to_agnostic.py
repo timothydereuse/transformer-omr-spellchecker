@@ -157,7 +157,8 @@ def m21_part_to_agnostic(part):
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                agnostic.extend(['+', f'dynamics.{e.value}'])
+                # agnostic.extend(['+', f'dynamics.{e.value}'])
+                pass
 
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
@@ -202,6 +203,7 @@ def m21_part_to_agnostic(part):
     for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
         agnostic.insert(pos, tuplet_str)
+        agnostic.insert(pos, '<')
 
     # make sure no spaces remain in any of the entries
     for ind in range(len(agnostic)):
@@ -210,10 +212,18 @@ def m21_part_to_agnostic(part):
     return agnostic
 
 
-def m21_parts_to_interleaved_agnostic(parts, fallback_num_bars_per_line = 8):
+def m21_parts_to_interleaved_agnostic(parts, remove=None, fallback_num_bars_per_line=8):
+
 
     # get agnostic representation of each part
     agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
+
+    if remove:
+        agnostic_parts = [
+            [x for x in part if not x in remove]
+            for part
+            in agnostic_parts
+        ]
 
     # get locations of barlines in each part
     bar_break_points = [
@@ -240,7 +250,7 @@ def m21_parts_to_interleaved_agnostic(parts, fallback_num_bars_per_line = 8):
 
     # interleave parts together every few line breaks
     interleaved_agnostic = []
-    for i in range(num_bars[0] - 1):
+    for i in range(min(num_bars) - 1):
         for j in range(len(agnostic_parts)):
             start = staff_break_points[j][i]
             end = staff_break_points[j][i + 1]
@@ -270,7 +280,7 @@ if __name__ == '__main__':
         #     agnostic = m21_part_to_agnostic(p)
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
-        agnostic = m21_parts_to_interleaved_agnostic(parts)
+        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
         all_tokens.update(agnostic)
 
             
