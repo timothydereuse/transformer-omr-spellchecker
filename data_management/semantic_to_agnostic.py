@@ -41,12 +41,13 @@ def resolve_duration(d):
         dur_string = 'grace.' + dur_string 
     return dots, dur_string, is_tuplet
 
+
 def resolve_note(e, is_chord, current_clef, current_pitch_status):
     res = []
 
     accid_str, current_pitch_status = resolve_accidentals(e.pitch, current_pitch_status)
 
-    # notes contain: duration-position-isChord-beamStatus
+    # notes contain: duration-position-beamStatus
     dots, dur_name, is_tuplet = resolve_duration(e.duration)
 
     # get staff position
@@ -56,15 +57,13 @@ def resolve_note(e, is_chord, current_clef, current_pitch_status):
     b = 'noBeam' if len(beams) == 0 else beams[0].type
 
     if(accid_str):
-        res.append(f'accid.{accid_str}.pos{p}')
+        res.extend(['+', f'accid.{accid_str}.pos{p}'])
 
-    c = 1 if is_chord else 0
-
-    res.append(f'{dur_name}.pos{p}.{b}.c{c}')
+    res.extend(['+', f'{dur_name}.pos{p}.{b}'])
 
     # then add dot
     if dots > 0:
-        res.append(f'duration.dot.pos{p}')
+        res.extend(['+', f'duration.dot.pos{p}'])
 
     return res, is_tuplet, current_pitch_status
 
@@ -118,22 +117,26 @@ def m21_part_to_agnostic(part):
     for measure in part:
         for e in measure:
 
+            # case if the current m21 element is a Note
             if type(e) == m21.note.Note:
                 glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status) 
                 agnostic.extend(glyphs)
 
                 tuplet_record[len(agnostic)] = tuplet
 
+            # case if the current m21 element is a Rest
             elif type(e) == m21.note.Rest:
 
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
-                agnostic.append(f'rest.{dur_name}')
+                agnostic.extend(['+', f'rest.{dur_name}'])
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
                 if dots > 0:
-                    agnostic.append(f'duration.dot.pos5')
+                    agnostic.extend(['+', 'duration.dot.pos5'])
 
+            # case if the current m21 element is a Chord
+            # (must be split into notes and individually processed)
             elif type(e) == m21.chord.Chord:
                 is_chord_list = [False] + [True for _ in e.notes]
                 glyph_lists = []
@@ -145,42 +148,50 @@ def m21_part_to_agnostic(part):
                     gl, tuplet, current_pitch_status = resolve_note(
                         x, is_chord_list[i], current_clef, current_pitch_status) 
                     glyph_lists.extend(gl)
+                
+                sustain_list = ['<' if x == '+' else x for x in glyph_lists]
+                sustain_list[0] = '+'
 
                 tuplet_record[len(agnostic)] = tuplet
-                    
-                agnostic.extend(glyph_lists)
+                agnostic.extend(sustain_list)
 
+            # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                agnostic.append(f'dynamics.{e.value}')
+                agnostic.extend(['+', f'dynamics.{e.value}'])
 
+            # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.append(f'accid.{p.accidental.name}.pos{position}')
+                    agnostic.extend(['+', f'accid.{p.accidental.name}.pos{position}'])
                 current_key_sig = e 
             
+            # case if the current m21 element is a Time Signature
             elif type(e) == m21.meter.TimeSignature:
                 current_time_sig = e
-                agnostic.append(f'timeSig.{e.ratioString}')
+                agnostic.extend(['+', f'timeSig.{e.ratioString}'])
 
+            # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
-                agnostic.append(f'clef.{e.name}')
+                agnostic.extend(['+', f'clef.{e.name}'])
                 current_clef = current_clef if (e.lowestLine is None) else e
 
-            # case where event is a systemLayout that actually makes a new system
+            # case where the current m21 element is a systemLayout
+            # (must check to be sure it actually makes a new system)
             elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
-                agnostic.append(f'lineBreak')
-                agnostic.append(f'clef.{current_clef.name}')
+                agnostic.extend(['+', f'lineBreak', '+', f'clef.{current_clef.name}'])
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.append(f'accid.{p.accidental.name}.{position}')
+                    agnostic.extend(['+', f'accid.{p.accidental.name}.{position}'])
 
+            # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
-                agnostic.append(f'barline.{e.type}')
+                agnostic.extend(['+', f'barline.{e.type}'])
 
+        # at the end of every measure, add a bar if there isn't one already
         if not 'bar' in agnostic[-1]:
-            agnostic.append('bar.regular')
+            agnostic.extend(['+', 'barline.regular'])
 
         # at the end of every measure, reset the pitch status to the key signature
         current_pitch_status = get_reset_pitch_status(current_key_sig)
