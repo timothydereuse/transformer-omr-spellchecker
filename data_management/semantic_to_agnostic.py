@@ -167,9 +167,10 @@ def m21_part_to_agnostic(part):
                 agnostic.append(f'clef.{e.name}')
                 current_clef = current_clef if (e.lowestLine is None) else e
 
-            elif type(e) == m21.layout.SystemLayout:
+            # case where event is a systemLayout that actually makes a new system
+            elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
-                agnostic.append(f'systemBreak')
+                agnostic.append(f'lineBreak')
                 agnostic.append(f'clef.{current_clef.name}')
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
@@ -197,10 +198,49 @@ def m21_part_to_agnostic(part):
 
     return agnostic
 
+
+def m21_parts_to_interleaved_agnostic(parts, fallback_num_bars_per_line = 8):
+    agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
+
+    # staff_break_points = [
+    #     [i for i, j in enumerate(part) if j == 'lineBreak']
+    #     for part
+    #     in agnostic_parts
+    # ]
+
+    bar_break_points = [
+        [0] + [i for i, j in enumerate(part) if 'barline' in j]
+        for part
+        in agnostic_parts
+    ]
+
+    staff_break_points = [
+        [0] + [i for i, j in enumerate(part) if j == 'lineBreak']
+        for part
+        in agnostic_parts
+    ]
+
+    if any([len(x) == 1 for x in staff_break_points]):
+        staff_break_points = [x[::fallback_num_bars_per_line] for x in bar_break_points]
+    num_bars = [len(x) for x in staff_break_points]
+    assert all([num_bars[0] == x for x in num_bars]), "different number of bars in each part of an input symbolic music file!"
+
+    interleaved_agnostic = []
+
+    for i in range(num_bars[0] - 1):
+        for j in range(len(agnostic_parts)):
+            start = staff_break_points[j][i]
+            end = staff_break_points[j][i + 1]
+            interleaved_agnostic += agnostic_parts[j][start:end]
+
+    return interleaved_agnostic
+
+
+
 if __name__ == '__main__':
     from collections import Counter
 
-    k = 'felix'
+    k = 'kernscores'
     quartets_root = r'D:\Documents\datasets\just_quartets'
     files = os.listdir(os.path.join(quartets_root, k))
     all_tokens = Counter()
@@ -213,9 +253,11 @@ if __name__ == '__main__':
         print(f'processing {k}.{fname}')
         print(f'ntokens {len(all_tokens)}')
 
-        for p in parts:
-            agnostic = m21_part_to_agnostic(p)
-            print(len(agnostic), len(set(agnostic)))
-            all_tokens.update(agnostic)
-        break
+        # for p in parts:
+        #     agnostic = m21_part_to_agnostic(p)
+        #     print(len(agnostic), len(set(agnostic)))
+        #     all_tokens.update(agnostic)
+        agnostic = m21_parts_to_interleaved_agnostic(parts)
+        all_tokens.update(agnostic)
+
             
