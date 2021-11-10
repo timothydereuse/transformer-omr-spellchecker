@@ -200,33 +200,35 @@ def m21_part_to_agnostic(part):
 
 
 def m21_parts_to_interleaved_agnostic(parts, fallback_num_bars_per_line = 8):
+
+    # get agnostic representation of each part
     agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
 
-    # staff_break_points = [
-    #     [i for i, j in enumerate(part) if j == 'lineBreak']
-    #     for part
-    #     in agnostic_parts
-    # ]
-
+    # get locations of barlines in each part
     bar_break_points = [
         [0] + [i for i, j in enumerate(part) if 'barline' in j]
         for part
         in agnostic_parts
     ]
 
+    # get locations of linebreaks in each part
     staff_break_points = [
         [0] + [i for i, j in enumerate(part) if j == 'lineBreak']
         for part
         in agnostic_parts
     ]
 
+    # if there are no notated line breaks, insert them manually every couple of bars
     if any([len(x) == 1 for x in staff_break_points]):
         staff_break_points = [x[::fallback_num_bars_per_line] for x in bar_break_points]
+
+    # if there is somehow a discrepancy in the number of staves per part, choose the minimum number per part
     num_bars = [len(x) for x in staff_break_points]
-    assert all([num_bars[0] == x for x in num_bars]), "different number of bars in each part of an input symbolic music file!"
+    if not all([num_bars[0] == x for x in num_bars]):
+        staff_break_points = [x[:min(num_bars)] for x in staff_break_points]
 
+    # interleave parts together every few line breaks
     interleaved_agnostic = []
-
     for i in range(num_bars[0] - 1):
         for j in range(len(agnostic_parts)):
             start = staff_break_points[j][i]
