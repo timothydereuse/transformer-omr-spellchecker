@@ -212,11 +212,14 @@ def m21_part_to_agnostic(part):
     return agnostic
 
 
-def m21_parts_to_interleaved_agnostic(parts, remove=None, fallback_num_bars_per_line=8):
+def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallback_num_bars_per_line=8):
 
 
     # get agnostic representation of each part
-    agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
+    if transpose:
+        agnostic_parts = [m21_part_to_agnostic(p.transpose(transpose)) for p in parts]
+    else:
+        agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
 
     if remove:
         agnostic_parts = [
