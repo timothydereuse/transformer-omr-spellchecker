@@ -95,6 +95,7 @@ def resolve_tuplet_record(tuplet_record):
 
     return to_insert
 
+
 def m21_part_to_agnostic(part):
 
     part = part.getElementsByClass(m21.stream.Measure)
