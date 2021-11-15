@@ -8,7 +8,7 @@ import copy
 
 
 class LSTMModel(nn.Module):
-    def __init__(self, vocab_size, seq_length, lstm_inp=64, lstm_hidden=200, lstm_layers=2, dim_out=1, dropout=0.1):
+    def __init__(self, vocab_size, seq_length, lstm_inp=128, lstm_hidden=128, lstm_layers=2, dim_out=1, dropout=0.1):
         super(LSTMModel, self).__init__()
 
         self.vocab_size = vocab_size
@@ -21,6 +21,7 @@ class LSTMModel(nn.Module):
         self.dropout = dropout
 
         self.embedding = nn.Embedding(self.vocab_size, self.lstm_inp, padding_idx=1)
+        self.post_dropout = nn.Dropout(self.dropout)
         self.gelu = nn.GELU()
         self.lstm = nn.LSTM(lstm_inp, lstm_hidden, lstm_layers,
                             batch_first=True, dropout=dropout, bidirectional=True)
@@ -35,6 +36,7 @@ class LSTMModel(nn.Module):
 
         x = self.embedding(inp)
         x, _ = self.lstm(x)
+        x = self.post_dropout(x)
         x = self.bn(x)
         # out = self.sig(self.decoding_ff_1(x))
         out = self.decoding_ff_1(x)
