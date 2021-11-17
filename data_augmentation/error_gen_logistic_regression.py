@@ -187,7 +187,7 @@ if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from data_management.vocabulary import Vocabulary
 
-    dset_path = r'./quartets_felix_omr_agnostic.h5'
+    dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
 
     seq_len = 50

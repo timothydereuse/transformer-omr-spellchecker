@@ -86,5 +86,5 @@ def make_hdf5(dset_path, keys, train_val_test_split=True):
                         compression='gzip'
                     )
 
-make_hdf5(r'./all_string_quartets_agnostic.h5', ['ABC', 'kernscores', 'felix'], True)
-# make_hdf5(r'./quartets_felix_omr_agnostic.h5', ['felix_errors', 'felix'], False)
+# make_hdf5(r'./processed_datasets/all_string_quartets_agnostic.h5', ['ABC', 'kernscores', 'felix'], True)
+make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic.h5', ['felix_errors', 'felix'], False)

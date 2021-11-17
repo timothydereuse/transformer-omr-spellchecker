@@ -5,12 +5,8 @@ from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./quartets_felix_omr_agnostic.h5'
+dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
 ngram = 5 # n for n-grams for maxent markov model
-
-# voice, onset, time_to_next_onset, duration, midi_pitch, notated_pitch, accidental
-# here we take only voice, time to next onset, duration, midi pitch
-# inds_subset = np.array([0, 2, 3, 4])
 
 with h5py.File(dset_path, 'a') as f:
     correct_fnames = [x for x in f.keys() if 'aligned' in x and 'op80' not in x]
@@ -23,7 +19,7 @@ correct_seqs_all = []
 all_align_records = []
 
 # training samples for logistic regression (MaxEnt Markov Model) for creating errors
-# features in X are: [ngram of past 3 classes || note vector]
+# features in X are: [ngram of past 5 classes || note vector]
 X = []
 Y = []
 for ind in range(len(correct_dset)):
