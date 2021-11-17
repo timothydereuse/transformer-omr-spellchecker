@@ -79,7 +79,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
         if log_each_batch:
             log_loss = (batch_loss / target.numel())
-            logging.info(f'    batch {i}, loss {log_loss:2.7e}')
+            print(f'    batch {i}, loss {log_loss:2.7e}')
 
     mean_loss = total_loss / num_seqs_used
     example_dict = {'orig': batch, 'input': inp, 'target': target, 'output': output}
@@ -88,28 +88,43 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
 if __name__ == '__main__':
 
-    import toy_datasets as td
+    from data_augmentation import error_gen_logistic_regression as err_gen
+    import agnostic_omr_dataloader as dl
     from torch.utils.data import DataLoader
     from models.LSTUT_model import LSTUT
+    import data_management.vocabulary as vocab
 
-    dset_args = {
-        'num_feats': 1,
-        'num_seqs': 300,
-        'seq_length': 128,
-        'seq_period': 128 // 5,
-        'phase_vary': 0.01,
-        'freq_vary': 0.01
-    }
-    dset = td.SequenceCopyDataset(**dset_args)
+    if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
+        logging.getLogger().addHandler(logging.StreamHandler())
 
-    dload = DataLoader(dset, batch_size=50)
+    print('making vocabulary and dataset')
+    v = vocab.Vocabulary(load_from_file='./data_management/vocab.txt')
+    dset = dl.AgnosticOMRDataset(
+        base=None,
+        dset_fname="./processed_datasets/quartets_felix_omr_agnostic.h5",
+        seq_length=50,
+        vocabulary=v,
+    )
+
+    print('making error generator')
+    error_generator = err_gen.ErrorGenerator(
+        ngram=5,
+        smoothing=1,
+        simple_error_rate=0.05,
+        models_fpath=('./data_augmentation/quartet_omr_error_models.joblib')
+    )
+
+    print('testing dataloader')
+    dload = DataLoader(dset, batch_size=3)
     for i, batch in enumerate(dload):
         batch = batch.float()
-        inp, target = make_point_set_target(batch, dload, device='cpu')
+        inp, target = error_generator.add_errors_to_batch(batch, simple=False, parallel=3)
+        print(inp.shape, batch.shape)
         if i > 2:
             break
 
     lstut_settings = {
+            "seq_length": dset.seq_length,
             "num_feats": 1,
             "output_feats": 1,
             "lstm_layers": 2,
@@ -118,13 +133,15 @@ if __name__ == '__main__':
             "tf_depth": 2,
             "hidden_dim": 32,
             "ff_dim": 32,
-            "dropout": 0.1
+            "dropout": 0.1,
+            "vocab_size": v.num_words
         }
 
+    print('defining model')
     model = LSTUT(**lstut_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    loss, exs = run_epoch(model, dload, optimizer, criterion, log_each_batch=True)
+    print('running epoch')
+    loss, exs = run_epoch(model, dload, optimizer, criterion, error_generator, log_each_batch=True)
 
-    # fig, axs = po.plot_set(exs, dset, 4)

@@ -1,4 +1,4 @@
-import time
+import time, logging, argparse, copy
 import numpy as np
 import torch
 import torch.nn as nn
@@ -11,9 +11,8 @@ import data_management.vocabulary as vocab
 from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
-import logging
-import argparse
-import copy
+
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -101,7 +100,6 @@ run_epoch_kwargs = {
     'device': device,
     'example_generator': error_generator,
 }
-
 
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
