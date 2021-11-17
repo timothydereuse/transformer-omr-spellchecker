@@ -4,14 +4,14 @@ from fast_transformers.builders import TransformerEncoderBuilder
 from fast_transformers.attention.attention_layer import AttentionLayer
 from fast_transformers.attention.linear_attention import LinearAttention
 from fast_transformers.masking import FullMask, LengthMask
-# from positional_encoding import PositionalEncoding
+from models.positional_encoding import PositionalEncoding
 import time
 
 
 class LSTUT(nn.Module):
 
     def __init__(self, seq_length, num_feats, output_feats, lstm_layers, n_layers,
-                 n_heads, hidden_dim, ff_dim, tf_depth=3, vocab_size=0, dropout=0.15):
+                 n_heads, hidden_dim, ff_dim, tf_depth=3, positional_encoding=False, vocab_size=0, dropout=0.15):
         super(LSTUT, self).__init__()
 
         self.seq_length = seq_length
@@ -25,6 +25,11 @@ class LSTUT(nn.Module):
         self.tf_depth = tf_depth
         self.d_model = self.hidden_dim * self.n_heads
         self.vocab_size = vocab_size
+
+        if positional_encoding:
+            self.positional_encoding = PositionalEncoding(self.d_model, max_len=self.seq_length + 1)
+        else:
+            self.positional_encoding = False
 
         if vocab_size and num_feats > 1:
             raise ValueError("can't have multiple features and an embedding")
@@ -44,30 +49,38 @@ class LSTUT(nn.Module):
         else:
             self.initial = nn.Linear(self.num_feats, self.d_model)
 
-        self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
-        self.encoder = encoder_builder.get()
-        self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+        if lstm_layers > 0:
+            self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+            self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+
+        if n_layers > 0 and tf_depth > 0:
+            self.encoder = encoder_builder.get()
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
         self.layer_norm = nn.LayerNorm([self.seq_length, self.d_model])
         self.layer_norm2 = nn.LayerNorm([self.seq_length, self.d_model])
-
 
     def forward(self, src):
 
         x = self.initial(src)
 
-        self.lstm1.flatten_parameters()
-        x, _ = self.lstm1(x)
-        lstm1_out = x.clone()
+        if self.lstm_layers > 0:
+            self.lstm1.flatten_parameters()
+            x, _ = self.lstm1(x)
+            lstm1_out = x.clone()
 
-        for i in range(self.tf_depth):
-            x = self.encoder(x)
+        if self.positional_encoding:
+            x = self.positional_encoding(x)
 
-        x = self.layer_norm(x + lstm1_out)
-        self.lstm2.flatten_parameters()
-        x, _ = self.lstm2(x)
+        if self.n_layers > 0:
+            for i in range(self.tf_depth):
+                x = self.encoder(x)
+
+        if self.lstm_layers > 0:
+            x = self.layer_norm(x + lstm1_out)
+            self.lstm2.flatten_parameters()
+            x, _ = self.lstm2(x)
+
         x = self.layer_norm2(x)
-
         x = self.final_ff(x)
 
         return x
@@ -88,12 +101,13 @@ if __name__ == '__main__':
         seq_length=seq_length,
         num_feats=num_feats,
         output_feats=output_pts,
-        lstm_layers=1,
+        lstm_layers=0,
         n_layers=1,
         tf_depth=2,
         n_heads=2,
-        hidden_dim=32,
-        ff_dim=32,
+        hidden_dim=64,
+        ff_dim=64,
+        positional_encoding=True,
         vocab_size=vocab_size)
 
     n_params = sum(p.numel() for p in model.parameters())
@@ -108,7 +122,7 @@ if __name__ == '__main__':
 
     sched = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.25, verbose=False)
 
-    num_epochs = 100
+    num_epochs = 20
 
     model.train()
     epoch_loss = 0
