@@ -10,20 +10,20 @@ import time
 
 class LSTUT(nn.Module):
 
-    def __init__(self, seq_length, num_feats, output_feats, lstm_layers, n_layers,
-                 n_heads, hidden_dim, ff_dim, tf_depth=3, positional_encoding=False, vocab_size=0, dropout=0.15):
+    def __init__(self, seq_length, num_feats, output_feats, lstm_layers, tf_layers,
+                 tf_heads, hidden_dim, ff_dim, tf_depth=3, positional_encoding=False, vocab_size=0, dropout=0.15):
         super(LSTUT, self).__init__()
 
         self.seq_length = seq_length
         self.num_feats = num_feats
         self.output_feats = output_feats
         self.lstm_layers = lstm_layers
-        self.n_layers = n_layers
-        self.n_heads = n_heads
+        self.tf_layers = tf_layers
+        self.tf_heads = tf_heads
         self.hidden_dim = hidden_dim
         self.ff_dim = ff_dim
         self.tf_depth = tf_depth
-        self.d_model = self.hidden_dim * self.n_heads
+        self.d_model = self.hidden_dim * self.tf_heads
         self.vocab_size = vocab_size
 
         if positional_encoding:
@@ -35,8 +35,8 @@ class LSTUT(nn.Module):
             raise ValueError("can't have multiple features and an embedding")
 
         encoder_builder = TransformerEncoderBuilder.from_kwargs(
-            n_layers=self.n_layers,
-            n_heads=self.n_heads,
+            n_layers=self.tf_layers,
+            n_heads=self.tf_heads,
             query_dimensions=self.hidden_dim,
             value_dimensions=self.hidden_dim,
             feed_forward_dimensions=self.ff_dim,
@@ -53,7 +53,7 @@ class LSTUT(nn.Module):
             self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
             self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
 
-        if n_layers > 0 and tf_depth > 0:
+        if tf_layers > 0 and tf_depth > 0:
             self.encoder = encoder_builder.get()
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
         self.layer_norm = nn.LayerNorm([self.seq_length, self.d_model])
@@ -71,7 +71,7 @@ class LSTUT(nn.Module):
         if self.positional_encoding:
             x = self.positional_encoding(x)
 
-        if self.n_layers > 0:
+        if self.tf_layers > 0:
             for i in range(self.tf_depth):
                 x = self.encoder(x)
 
@@ -102,9 +102,9 @@ if __name__ == '__main__':
         num_feats=num_feats,
         output_feats=output_pts,
         lstm_layers=0,
-        n_layers=1,
+        tf_layers=1,
         tf_depth=2,
-        n_heads=2,
+        tf_heads=2,
         hidden_dim=64,
         ff_dim=64,
         positional_encoding=True,

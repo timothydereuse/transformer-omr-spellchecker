@@ -24,12 +24,13 @@
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 2,
-        "n_layers": 1,
-        "n_heads": 4,
+        "tf_layers": 1,
+        "tf_heads": 4,
         "tf_depth": 5,
         "hidden_dim": 128,
         "ff_dim": 128,
-        "dropout": 0.1
+        "dropout": 0.1,
+        "positional_encoding": false
     },
     "scheduler_settings": {
         "factor": 0.25,

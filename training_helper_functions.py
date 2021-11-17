@@ -137,6 +137,20 @@ if __name__ == '__main__':
             "vocab_size": v.num_words
         }
 
+    lstm_settings = {
+            "seq_length": dset.seq_length,
+            "num_feats": 1,
+            "output_feats": 1,
+            "lstm_layers": 2,
+            "n_layers": 1,
+            "n_heads": 1,
+            "tf_depth": 2,
+            "hidden_dim": 32,
+            "ff_dim": 32,
+            "dropout": 0.1,
+            "vocab_size": v.num_words
+        }
+
     print('defining model')
     model = LSTUT(**lstut_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
