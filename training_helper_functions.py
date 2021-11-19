@@ -79,7 +79,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
         if log_each_batch:
             log_loss = (batch_loss / target.numel())
-            print(f'    batch {i}, loss {log_loss:2.7e}')
+            logging.info(f'    batch {i}, loss {log_loss:2.7e}')
 
     mean_loss = total_loss / num_seqs_used
     example_dict = {'orig': batch, 'input': inp, 'target': target, 'output': output}

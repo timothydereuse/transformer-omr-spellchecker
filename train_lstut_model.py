@@ -145,7 +145,8 @@ for epoch in range(params.num_epochs):
     )
 
     wandb.log({
-        's/epoch': (epoch_end_time - epoch_start_time), 
+        'epoch': epoch,
+        'epoch_s': (epoch_end_time - epoch_start_time), 
         'train_loss': train_loss,
         'val_loss': val_loss,
         'tr_thresh': tr_thresh,
@@ -155,10 +156,9 @@ for epoch in range(params.num_epochs):
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
-        img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.txt'
-        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh)
-        with open(img_fpath, 'w') as f:
-            f.write(''.join(lines))
+        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
+        table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+        wandb.log({'examples': table})
 
     # save a model checkpoint
     # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
@@ -218,14 +218,10 @@ wandb.run.summary["true_positive"] = res_stats["true positive rate"]
 wandb.run.summary["true_negative"] = res_stats["true negative rate"]
 wandb.run.summary["total_training_time"] = end_time - start_time
 
-
 for i in range(3):
-    img_fpath = f'./out_imgs/FINAL_{i}_{params.params_id_str}.txt'
-    lines = po.plot_agnostic_results(tst_exs, v, tr_thresh)
-    with open(img_fpath, 'w') as f:
-        f.write(''.join(lines))
-
-
+    lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
+    table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+    wandb.run.summary['examples_final'] = table
 
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']

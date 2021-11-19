@@ -83,7 +83,7 @@ def plot_line_corrections(inp, output, target, thresh=None):
     return fig, axs
 
 
-def plot_agnostic_results(exs, vocabulary, thresh, ind=-1):
+def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
 
     if ind < 0:
         ind = np.random.choice(exs['input'].shape[0])
@@ -96,6 +96,12 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1):
     orig_words = vocabulary.vec_to_words(orig)
     space = ' '
     mark = 'X'
+
+    if return_arrays:
+        res = []
+        for i in range(len(input)):
+            res.append([orig_words[i], input_words[i], target[i], output[i]])
+        return res
 
     lines = ['ORIG | ERRORED INPUT | TARGET | OUTPUT \n']
     for i in range(len(input)):
