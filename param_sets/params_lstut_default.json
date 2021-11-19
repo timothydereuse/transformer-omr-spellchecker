@@ -1,20 +1,20 @@
 {
     "params_name": "LSTUT_FELIX_DEFAULT",
-    "num_epochs": 151,
+    "num_epochs": 50,
     "early_stopping_patience": 20,
     "save_model_every": 4,
     "save_img_every": 1,
     "max_time_minutes": 300,
 
-    "seq_length": 256,
+    "seq_length": 64,
     "padding_amt": 4,
     "lr": 0.0005,
-    "batch_size": 1024,
+    "batch_size": 2048,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
-    "dataset_proportion": 1,
+    "dataset_proportion": 0.5,
 
-    "dset_path": "all_string_quartets_agnostic.h5",
+    "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.4,
@@ -24,12 +24,13 @@
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 2,
-        "n_layers": 1,
-        "n_heads": 4,
+        "tf_layers": 1,
+        "tf_heads": 4,
         "tf_depth": 4,
         "hidden_dim": 64,
         "ff_dim": 64,
-        "dropout": 0.1
+        "dropout": 0.1,
+        "positional_encoding": false
     },
     "scheduler_settings": {
         "factor": 0.25,
@@ -38,11 +39,6 @@
         "verbose": true
     },
     "parameter_searching":{
-        "toy_datasets_args.seq_freq": [2, 8, 16],
-        "toy_dataset_args.phase_vary": [0.1, 1],
-        "toy_dataset_args.power_vary": [1],
-        "toy_dataset_args.freq_vary": [1],
-        "error_indices_settings.num_replacements": [5, 10, 20],
-        "error_indices_settings.num_deletions": [5, 10, 20]
+        "toy_datasets_args.seq_freq": [2, 8, 16]
     }
 }
