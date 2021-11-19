@@ -1,6 +1,6 @@
 import time, logging, argparse, copy
 import numpy as np
-import torch
+import torch, wandb
 import torch.nn as nn
 import agnostic_omr_dataloader as dl
 import test_trained_model as ttm
@@ -11,7 +11,6 @@ import data_management.vocabulary as vocab
 from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
-
 
 import matplotlib
 matplotlib.use('Agg')
@@ -39,6 +38,7 @@ args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
+wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
@@ -65,7 +65,6 @@ dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
-
 
 lstut_settings = params.lstut_settings
 lstut_settings['vocab_size'] = v.num_words
@@ -145,6 +144,15 @@ for epoch in range(params.num_epochs):
         f'val_f1     {val_f1:1.6f} | '
     )
 
+    wandb.log({
+        's/epoch': (epoch_end_time - epoch_start_time), 
+        'train_loss': train_loss,
+        'val_loss': val_loss,
+        'tr_thresh': tr_thresh,
+        'tr_f1': tr_f1,
+        'val_f1': val_f1
+        })
+
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
         img_fpath = f'./out_imgs/epoch_{epoch}_{params.params_id_str}.txt'
@@ -203,6 +211,12 @@ logging.info(
     f'true positive: {res_stats["true positive rate"]:1.6e} | '
     f'true negative:   {res_stats["true negative rate"]:1.6e}'
 )
+
+wandb.run.summary["precision"] = res_stats["precision"]
+wandb.run.summary["recall"] = res_stats["recall"]
+wandb.run.summary["true_positive"] = res_stats["true positive rate"]
+wandb.run.summary["true_negative"] = res_stats["true negative rate"]
+wandb.run.summary["total_training_time"] = end_time - start_time
 
 
 for i in range(3):

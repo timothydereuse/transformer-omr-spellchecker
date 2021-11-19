@@ -9,15 +9,15 @@ class Params(object):
 
     def __init__(self, base_file='params_default.json', log_training=False, mod_num=0):
         with open(base_file, 'r') as f:
-            params = json.load(f)
+            self.params_dict = json.load(f)
 
-        for k in params.keys():
-            self.__dict__[k] = params[k]
+        for k in self.params_dict.keys():
+            self.__dict__[k] = self.params_dict[k]
 
         self.log_training = log_training
         self.model_summary = (
-            '{num_feats}-{output_feats}-{lstm_layers}-'
-            '{n_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
+            '{num_feats}-{output_feats}-{lstm_layers}-{tf_layers}'
+            '{tf_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
 
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
