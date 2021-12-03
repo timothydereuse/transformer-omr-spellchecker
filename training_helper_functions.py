@@ -49,7 +49,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     for i, batch in enumerate(dloader):
 
         batch = batch.float().cpu()
-        inp, target = example_generator.add_errors_to_batch(batch, simple=True, parallel=3)
+        inp, target = example_generator.add_errors_to_batch(batch, parallel=3)
 
         # batch = batch.to(device)
         inp = torch.tensor(inp, device=device).type(torch.long)
@@ -79,7 +79,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
         if log_each_batch:
             log_loss = (batch_loss / target.numel())
-            logging.info(f'    batch {i}, loss {log_loss:2.7e}')
+            print(f'    batch {i}, loss {log_loss:2.7e}')
 
     mean_loss = total_loss / num_seqs_used
     example_dict = {'orig': batch, 'input': inp, 'target': target, 'output': output}
@@ -103,6 +103,7 @@ if __name__ == '__main__':
         base=None,
         dset_fname="./processed_datasets/quartets_felix_omr_agnostic.h5",
         seq_length=50,
+        dataset_proportion=0.02,
         vocabulary=v,
     )
 
@@ -110,6 +111,7 @@ if __name__ == '__main__':
     error_generator = err_gen.ErrorGenerator(
         ngram=5,
         smoothing=1,
+        simple=False,
         simple_error_rate=0.05,
         models_fpath=('./data_augmentation/quartet_omr_error_models.joblib')
     )
@@ -118,7 +120,7 @@ if __name__ == '__main__':
     dload = DataLoader(dset, batch_size=3)
     for i, batch in enumerate(dload):
         batch = batch.float()
-        inp, target = error_generator.add_errors_to_batch(batch, simple=False, parallel=3)
+        inp, target = error_generator.add_errors_to_batch(batch, parallel=3)
         print(inp.shape, batch.shape)
         if i > 2:
             break
@@ -128,22 +130,8 @@ if __name__ == '__main__':
             "num_feats": 1,
             "output_feats": 1,
             "lstm_layers": 2,
-            "n_layers": 1,
-            "n_heads": 1,
-            "tf_depth": 2,
-            "hidden_dim": 32,
-            "ff_dim": 32,
-            "dropout": 0.1,
-            "vocab_size": v.num_words
-        }
-
-    lstm_settings = {
-            "seq_length": dset.seq_length,
-            "num_feats": 1,
-            "output_feats": 1,
-            "lstm_layers": 2,
-            "n_layers": 1,
-            "n_heads": 1,
+            "tf_layers": 1,
+            "tf_heads": 1,
             "tf_depth": 2,
             "hidden_dim": 32,
             "ff_dim": 32,

@@ -9,15 +9,17 @@
     "seq_length": 64,
     "padding_amt": 4,
     "lr": 0.0003,
-    "batch_size": 256,
+    "batch_size": 32,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
-    "dataset_proportion": 0.03,
+    "dataset_proportion": 0.02,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.7,
+    "simple_errors": false,
+    "errors_parallel": 4,
     "simple_error_rate": 0.05,
 
     "lstut_settings": {

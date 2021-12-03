@@ -38,7 +38,9 @@ args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
-wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
+
+if not dry_run:
+    wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
 
 device, num_gpus = tr_funcs.get_cuda_info()
 logging.info('defining datasets...')
@@ -46,8 +48,10 @@ logging.info('defining datasets...')
 v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 error_generator = err_gen.ErrorGenerator(
     ngram=5,
+    simple=params.simple_errors,
     smoothing=params.error_gen_smoothing,
     simple_error_rate=params.simple_error_rate,
+    parallel=params.errors_parallel,
     models_fpath=params.error_model
 )
 
@@ -220,7 +224,7 @@ wandb.run.summary["total_training_time"] = end_time - start_time
 
 for i in range(3):
     lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-    table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+    table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
     wandb.run.summary['examples_final'] = table
 
 # # if max_epochs reached, or early stopping condition reached, save best model

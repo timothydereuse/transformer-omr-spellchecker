@@ -18,6 +18,8 @@
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.4,
+    "simple_errors": false,
+    "errors_parallel": 4,
     "simple_error_rate": 0.05,
 
     "lstut_settings": {

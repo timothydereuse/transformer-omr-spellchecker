@@ -12,10 +12,12 @@ class ErrorGenerator(object):
     insert_idx = 2
     delete_index = 3
 
-    def __init__(self, ngram, smoothing=1, simple_error_rate=0.05, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
+    def __init__(self, ngram, smoothing=1, simple_error_rate=0.05, parallel=1, simple=False, models_fpath=None, labeled_data=None, ins_samples=None, repl_samples=None):
         self.ngram = ngram
         self.smoothing = smoothing
         self.simple_error_rate = simple_error_rate
+        self.simple = simple
+        self.parallel = parallel
 
         if labeled_data is None and ins_samples is None and repl_samples is None:
             models = load(models_fpath)
@@ -43,7 +45,6 @@ class ErrorGenerator(object):
             replace=True,
             p=[1 - err_prob, err_prob / 3, err_prob / 3, err_prob / 3]
             )
-
 
         ins_samples = self.ins_samples
         repl_samples = self.repl_samples
@@ -114,7 +115,7 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_seq(self, inp, simple=False):
+    def add_errors_to_seq(self, inp):
         inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
@@ -127,7 +128,7 @@ class ErrorGenerator(object):
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
-        if simple:
+        if self.simple:
             err_seq, _ = self.get_simple_synthetic_error_sequence(orig_seq)
         else:
             err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
@@ -152,15 +153,15 @@ class ErrorGenerator(object):
 
         return padded_seq, Y_out
 
-    def add_errors_to_batch(self, batch, simple=False, parallel=1, verbose=0):
+    def add_errors_to_batch(self, batch, verbose=0):
         if not (type(batch) == np.ndarray):
             batch = batch.numpy()
         b = batch.astype('float32')
         
-        if simple:
-            out = [self.add_errors_to_seq(b[i], simple=True) for i in range(b.shape[0])]
-        elif parallel >= 2:
-            out = Parallel(n_jobs=parallel, verbose=verbose)(
+        if self.simple:
+            out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
+        elif self.parallel >= 2:
+            out = Parallel(n_jobs=self.parallel, verbose=verbose)(
                 delayed(self.add_errors_to_seq)(b[i]) for i in range(b.shape[0])
                 )
         else:
@@ -203,12 +204,12 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(ngram=5, smoothing=0.7, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
+    e = ErrorGenerator(ngram=5, smoothing=0.7, parallel=3, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
 
     synth_error = e.get_synthetic_error_sequence(x[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(x[0].numpy())
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
-        X, Y = e.add_errors_to_batch(x.numpy(), simple=True, parallel=2)
+        X, Y = e.add_errors_to_batch(x.numpy())
         print(X.shape, Y.shape)
