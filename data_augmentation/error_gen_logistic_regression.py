@@ -70,7 +70,6 @@ class ErrorGenerator(object):
 
 
     def get_synthetic_error_sequence(self, seq):
-        num_ops = 4
         errored_seq = []
         gen_labels = [0 for _ in range(self.ngram)]
 
