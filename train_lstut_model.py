@@ -39,11 +39,11 @@ args = vars(parser.parse_args())
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
 
-if not dry_run:
+if (not dry_run) and logging:
     wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
 
 device, num_gpus = tr_funcs.get_cuda_info()
-logging.info('defining datasets...')
+print('defining datasets...')
 
 v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 error_generator = err_gen.ErrorGenerator(
@@ -65,10 +65,15 @@ dset_kwargs = {
 dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
 dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
 dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
+dset_kwargs['dset_fname'] = params.dset_testing_path
+dset_kwargs['dataset_proportion'] = 1
+dset_omr = dl.AgnosticOMRDataset(base=None, **dset_kwargs)
+
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
+dloader_omr = DataLoader(dset_omr, params.batch_size, pin_memory=True)
 
 lstut_settings = params.lstut_settings
 lstut_settings['vocab_size'] = v.num_words
@@ -77,7 +82,7 @@ model = lstut.LSTUT(**lstut_settings).to(device)
 model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
 model = model.float()
 model_size = sum(p.numel() for p in model.parameters())
-logging.info(f'created model with n_params={model_size}')
+print(f'created model with n_params={model_size}')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -86,7 +91,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 class_ratio = (1 / params.simple_error_rate)
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
-logging.info('beginning training')
+print('beginning training')
 start_time = time.time()
 val_losses = []
 train_losses = []
@@ -138,7 +143,7 @@ for epoch in range(params.num_epochs):
     val_f1 = ttm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
 
     epoch_end_time = time.time()
-    logging.info(
+    print(
         f'epoch {epoch:3d} | '
         f's/epoch    {(epoch_end_time - epoch_start_time):3.5e} | '
         f'train_loss {train_loss:1.6e} | '
@@ -148,15 +153,16 @@ for epoch in range(params.num_epochs):
         f'val_f1     {val_f1:1.6f} | '
     )
 
-    wandb.log({
-        'epoch': epoch,
-        'epoch_s': (epoch_end_time - epoch_start_time), 
-        'train_loss': train_loss,
-        'val_loss': val_loss,
-        'tr_thresh': tr_thresh,
-        'tr_f1': tr_f1,
-        'val_f1': val_f1
-        })
+    if logging:
+        wandb.log({
+            'epoch': epoch,
+            'epoch_s': (epoch_end_time - epoch_start_time), 
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'tr_thresh': tr_thresh,
+            'tr_f1': tr_f1,
+            'val_f1': val_f1
+            })
 
     # save an image
     if not epoch % params.save_img_every and epoch > 0:
@@ -194,38 +200,40 @@ for epoch in range(params.num_epochs):
         break
 
 end_time = time.time()
-logging.info(
+wandb.run.summary["total_training_time"] = end_time - start_time
+print(
     f'Training over at epoch at epoch {epoch}.\n'
     f'Total training time: {end_time - start_time} s.'
 )
 
-test_results = ttm.TestResults(tr_thresh)
-with torch.no_grad():
-    tst_loss, tst_exs = tr_funcs.run_epoch(
-        dloader=dloader_tst,
-        train=False,
-        log_each_batch=False,
-        test_results=test_results,
-        **run_epoch_kwargs
+for end_group in [(dloader_tst, 'data_aug_test'), (dloader_omr, 'real_omr_test')]:
+    end_dloader, end_name = end_group
+    test_results = ttm.TestResults(tr_thresh)
+    with torch.no_grad():
+        tst_loss, tst_exs = tr_funcs.run_epoch(
+            dloader=dloader_tst,
+            train=False,
+            log_each_batch=False,
+            test_results=test_results,
+            **run_epoch_kwargs
+        )
+    res_stats = test_results.calculate_stats()
+    print(
+        f'{end_name}_precision: {res_stats["precision"]:1.6e} | '
+        f'{end_name}_recall:    {res_stats["recall"]:1.6e} | '
+        f'{end_name}_true positive: {res_stats["true positive rate"]:1.6e} | '
+        f'{end_name}_true negative:   {res_stats["true negative rate"]:1.6e}'
     )
-res_stats = test_results.calculate_stats()
-logging.info(
-    f'precision: {res_stats["precision"]:1.6e} | '
-    f'recall:    {res_stats["recall"]:1.6e} | '
-    f'true positive: {res_stats["true positive rate"]:1.6e} | '
-    f'true negative:   {res_stats["true negative rate"]:1.6e}'
-)
 
-wandb.run.summary["precision"] = res_stats["precision"]
-wandb.run.summary["recall"] = res_stats["recall"]
-wandb.run.summary["true_positive"] = res_stats["true positive rate"]
-wandb.run.summary["true_negative"] = res_stats["true negative rate"]
-wandb.run.summary["total_training_time"] = end_time - start_time
+    wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
+    wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
+    wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
+    wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
 
-for i in range(3):
-    lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-    table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
-    wandb.run.summary['examples_final'] = table
+    for i in range(3):
+        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
+        table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+        wandb.run.summary[f'{end_name}_examples_final'] = table
 
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']

@@ -4,11 +4,8 @@ from functools import partial
 from numba import njit
 from numba.typed import List as numbaList
 
-# scoring system; these were the optimal weights found by grid search. different scoring methods
-# tend to barely make any impact on the actual aligned output, however, since things are
-# aggregated by syllable, so don't worry about tweaking this too much.
-default_match_weights = [8, -5]
-default_gap_penalties = [-7, -7, -3, 0]
+default_match_weights = [3, -2]
+default_gap_penalties = [-2, -2, -1, -1]
 
 @njit
 def create_matrix(seq_a, seq_b, match_weights, gap_rules):

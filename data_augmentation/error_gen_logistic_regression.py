@@ -68,7 +68,6 @@ class ErrorGenerator(object):
 
         return errored_seq, synthetic_error_alignment
 
-
     def get_synthetic_error_sequence(self, seq):
         errored_seq = []
         gen_labels = [0 for _ in range(self.ngram)]
@@ -114,7 +113,7 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
 
-    def add_errors_to_seq(self, inp):
+    def add_errors_to_seq(self, inp, given_err_seq=None):
         inp = inp.astype('float32')
 
         seq_len = inp.shape[0]
@@ -127,12 +126,14 @@ class ErrorGenerator(object):
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
-        if self.simple:
+        if given_err_seq is not None:
+            err_seq = list(given_err_seq)
+        elif self.simple:
             err_seq, _ = self.get_simple_synthetic_error_sequence(orig_seq)
         else:
             err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
 
-        _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[1, -1], gap_penalties=[-3, -3, -3, -3])
+        _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[3, -2], gap_penalties=[-2, -2, -1, -1])
 
         # put 'deletion' markers in front of entries in alignment record r that record deletions
         res = np.zeros(seq_len)
@@ -165,6 +166,19 @@ class ErrorGenerator(object):
                 )
         else:
             out = [self.add_errors_to_seq(b[i]) for i in range(b.shape[0])]
+
+        X = np.stack([np.array(x[0]) for x in out], 0)
+        Y = np.stack([np.array(x[1]) for x in out], 0)
+
+        return X, Y
+
+    def use_errors_from_existing_batch(self, batch):
+        b, e = batch
+        if not (type(b) == np.ndarray):
+            b = batch.numpy()
+            e = batch.numpy()
+
+        out = [self.add_errors_to_seq(b[i], given_err_seq=e) for i in range(b.shape[0])]
 
         X = np.stack([np.array(x[0]) for x in out], 0)
         Y = np.stack([np.array(x[1]) for x in out], 0)

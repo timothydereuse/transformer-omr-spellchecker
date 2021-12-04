@@ -48,8 +48,11 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
     for i, batch in enumerate(dloader):
 
-        batch = batch.float().cpu()
-        inp, target = example_generator.add_errors_to_batch(batch, parallel=3)
+        if type(batch) == list and len(batch) == 2:
+            inp, target = batch
+        else:
+            batch = batch.float().cpu()
+            inp, target = example_generator.add_errors_to_batch(batch)
 
         # batch = batch.to(device)
         inp = torch.tensor(inp, device=device).type(torch.long)
@@ -106,6 +109,13 @@ if __name__ == '__main__':
         dataset_proportion=0.02,
         vocabulary=v,
     )
+    dset_test = dl.AgnosticOMRDataset(
+        base=None,
+        dset_fname="./processed_datasets/supervised_omr_targets.h5",
+        seq_length=50,
+        dataset_proportion=0.1,
+        vocabulary=v,
+    )
 
     print('making error generator')
     error_generator = err_gen.ErrorGenerator(
@@ -118,9 +128,10 @@ if __name__ == '__main__':
 
     print('testing dataloader')
     dload = DataLoader(dset, batch_size=3)
+    dload_test = DataLoader(dset_test, batch_size=3)
     for i, batch in enumerate(dload):
         batch = batch.float()
-        inp, target = error_generator.add_errors_to_batch(batch, parallel=3)
+        inp, target = error_generator.add_errors_to_batch(batch)
         print(inp.shape, batch.shape)
         if i > 2:
             break
@@ -146,4 +157,7 @@ if __name__ == '__main__':
 
     print('running epoch')
     loss, exs = run_epoch(model, dload, optimizer, criterion, error_generator, log_each_batch=True)
+
+    print('running test epoch')
+    loss, exs = run_epoch(model, dload_test, optimizer, criterion, error_generator, log_each_batch=True)
 
