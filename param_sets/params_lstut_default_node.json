@@ -20,7 +20,7 @@
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.6,
     "simple_errors": false,
-    "errors_parallel": 4,
+    "errors_parallel": 7,
     "simple_error_rate": 0.05,
 
     "lstut_settings": {
