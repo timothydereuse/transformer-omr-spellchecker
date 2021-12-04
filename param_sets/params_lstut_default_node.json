@@ -14,7 +14,8 @@
     "num_feats": 1,
     "dataset_proportion": 1,
 
-    "dset_path": "all_string_quartets_agnostic.h5",
+    "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 0.6,
