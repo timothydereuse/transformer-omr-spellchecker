@@ -23,11 +23,11 @@ class Params(object):
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
         self.log_fname = f'./logs/training_{self.params_id_str}.log'
         self.results_fname = f'./logs/test_results_{self.params_id_str}.log'
-        if self.log_training:
-            logging.basicConfig(filename=self.log_fname, filemode='w', level=logging.INFO,
-                                format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
-            if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
-                logging.getLogger().addHandler(logging.StreamHandler())
+        # if self.log_training:
+        #     logging.basicConfig(filename=self.log_fname, filemode='w', level=logging.INFO,
+        #                         format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+        #     if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
+        #         logging.getLogger().addHandler(logging.StreamHandler())
 
         self.modifications = []
         if mod_num > 0:
