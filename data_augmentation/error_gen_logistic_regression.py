@@ -36,7 +36,7 @@ class ErrorGenerator(object):
             self.enc_labels.fit(Y)
             X_one_hot = self.enc.transform(X)
             Y_labels = self.enc_labels.transform(Y)
-            self.regression = LogisticRegression(max_iter=5000).fit(X_one_hot, Y_labels)
+            self.regression = LogisticRegression(max_iter=100, solver='sag', tol=0.01).fit(X_one_hot, Y_labels)
  
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
@@ -201,11 +201,11 @@ if __name__ == "__main__":
     dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
 
-    seq_len = 50
+    seq_len = 256
     proportion = 0.2
     dset = AgnosticOMRDataset(dset_path, seq_len, v)
 
-    dload = DataLoader(dset, batch_size=5)
+    dload = DataLoader(dset, batch_size=50)
     batches = []
     for i, x in enumerate(dload):
         print(i, x.shape)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(ngram=5, smoothing=0.7, parallel=3, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
+    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
 
     synth_error = e.get_synthetic_error_sequence(x[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(x[0].numpy())

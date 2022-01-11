@@ -66,16 +66,11 @@ for ind in range(len(correct_dset)):
 
         X.append(sample)
         Y.append(label)
-
-    if ind > 1:
-        break
     
 X = np.array(X).reshape(-1, 1)
 err_gen = elgr.ErrorGenerator(labeled_data=[X,Y])
 err_gen.save_models('./data_augmentation/quartet_omr_error_models.joblib')
 err_gen = elgr.ErrorGenerator(ngram, models_fpath='./data_augmentation/quartet_omr_error_models.joblib' )
-assert False
-
 
 with h5py.File(dset_path, 'r') as f:
     correct_fnames = [x for x in f.keys() if not 'omr' in x and x[-1] == '0' and not 'op80' in x]
