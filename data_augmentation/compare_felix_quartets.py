@@ -6,7 +6,7 @@ from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
 dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
-ngram = 5 # n for n-grams for maxent markov model
+ngram = 3 # n for n-grams for maxent markov model
 
 with h5py.File(dset_path, 'r') as f:
     correct_fnames = [x for x in f.keys() if not 'omr' in x and not 'op80' in x]
@@ -44,26 +44,38 @@ for ind in range(len(correct_dset)):
 
         error_note = error_align[i]
         correct_note = correct_align[i]
-        if r[i] == '~':
-            # res = correct_note - error_note
-            # error_notes['replace_mod'].append(res)
+
+        # this horrible string hack is necessary beause sklearn's label encoder takes only strings or numbers as input,
+        # not tuples. everything is a string of '[error type].[replace/insertion entry]'
+        c = err_to_class[r[i]]
+        if r[i] == 'O':
+            label = f'{c}.0'
+        elif r[i] == '~':
             error_notes['replace_mod'].append(error_note)
-        elif r[i] == '+' and type(error_note) != str:
+            label = f'{c}.{error_note}'
+        elif r[i] == '+':
             error_notes['insert_mod'].append(error_note)
+            label = f'{c}.{error_note}'
+        elif r[i] == '-':
+            label = f'{c}.0'
 
         if not type(correct_note) == str:
             most_recent_correct_note = correct_note
-        prev_entries = [err_to_class[r[i - x]] if i - x >= 0  else err_to_class[r[0]] for x in range(1, ngram + 1)]
-        
-        # sample = np.concatenate([prev_entries, most_recent_correct_note])
-        sample = np.array(prev_entries + [most_recent_correct_note])
-        label = err_to_class[r[i]]
+        # prev_entries = [err_to_class[r[i - x]] if i - x >= 0  else err_to_class[r[0]] for x in range(1, ngram + 1)]
+        sample = most_recent_correct_note 
+
         X.append(sample)
         Y.append(label)
 
-err_gen = elgr.ErrorGenerator(ngram, labeled_data=[X,Y], repl_samples=error_notes['replace_mod'], ins_samples=error_notes['insert_mod'])
+    if ind > 2:
+        break
+    
+X = np.array(X).reshape(-1, 1)
+err_gen = elgr.ErrorGenerator(labeled_data=[X,Y])
 err_gen.save_models('./data_augmentation/quartet_omr_error_models.joblib')
 err_gen = elgr.ErrorGenerator(ngram, models_fpath='./data_augmentation/quartet_omr_error_models.joblib' )
+assert False
+
 
 with h5py.File(dset_path, 'r') as f:
     correct_fnames = [x for x in f.keys() if not 'omr' in x and x[-1] == '0' and not 'op80' in x]
