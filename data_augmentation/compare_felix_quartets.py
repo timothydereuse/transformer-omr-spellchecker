@@ -67,7 +67,7 @@ for ind in range(len(correct_dset)):
         X.append(sample)
         Y.append(label)
 
-    if ind > 2:
+    if ind > 1:
         break
     
 X = np.array(X).reshape(-1, 1)

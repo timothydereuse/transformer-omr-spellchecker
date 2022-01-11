@@ -17,7 +17,7 @@ class ErrorGenerator(object):
     insert_idx = 2
     delete_index = 3
 
-    def __init__(self, smoothing=1, simple_error_rate=0.05, parallel=1, simple=False, models_fpath=None, labeled_data=None):
+    def __init__(self, smoothing=4, simple_error_rate=0.05, parallel=1, simple=False, models_fpath=None, labeled_data=None):
         self.smoothing = smoothing
         self.simple_error_rate = simple_error_rate
         self.simple = simple
@@ -78,18 +78,17 @@ class ErrorGenerator(object):
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))
         predictions = self.regression.predict_proba(X_one_hot)
 
+        smooth_ind = int(np.median(np.argmax(predictions, 1)))
         # smooth predictions to reduce overall chance of errors
-        # smooth_dist = (1 - predictions[0]) * (1 - self.smoothing)
-        # predictions[0] += smooth_dist
+        predictions[:, smooth_ind] *= self.smoothing
 
-        # error_target = 1 - predictions[0]
-        # pred_sum = sum(predictions[1:])
-        # for j in range(1, len(predictions)):
-        #     predictions[j] = predictions[j] / pred_sum * error_target
-
-        labels = [np.random.choice(predictions.shape[1], p=x) for x in predictions]
+        labels = []
+        for p in predictions:
+            p = p / np.sum(p)
+            labels.append(np.random.choice(len(p), p=p))
+            
         edit_instructions = [(int(x[0]), int(x[2:])) for x in self.enc_labels.inverse_transform(labels)]
-        
+
         i = 0
         for label in edit_instructions:
             type, ind = label
