@@ -47,7 +47,6 @@ print('defining datasets...')
 
 v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 error_generator = err_gen.ErrorGenerator(
-    ngram=5,
     simple=params.simple_errors,
     smoothing=params.error_gen_smoothing,
     simple_error_rate=params.simple_error_rate,

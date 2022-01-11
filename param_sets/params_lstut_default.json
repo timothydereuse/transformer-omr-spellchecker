@@ -18,22 +18,22 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 0.5,
+    "error_gen_smoothing": 5,
     "simple_errors": false,
-    "errors_parallel": 7,
+    "errors_parallel": 1,
     "simple_error_rate": 0.05,
 
     "lstut_settings": {
         "num_feats": 1,
         "output_feats": 1,
-        "lstm_layers": 2,
-        "tf_layers": 1,
+        "lstm_layers": 0,
+        "tf_layers": 4,
         "tf_heads": 4,
-        "tf_depth": 4,
+        "tf_depth": 1,
         "hidden_dim": 64,
         "ff_dim": 64,
         "dropout": 0.1,
-        "positional_encoding": false
+        "positional_encoding": true
     },
     "scheduler_settings": {
         "factor": 0.25,

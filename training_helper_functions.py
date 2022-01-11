@@ -119,7 +119,6 @@ if __name__ == '__main__':
 
     print('making error generator')
     error_generator = err_gen.ErrorGenerator(
-        ngram=5,
         smoothing=1,
         simple=False,
         simple_error_rate=0.05,
