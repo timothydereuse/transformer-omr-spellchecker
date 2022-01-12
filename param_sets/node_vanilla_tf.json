@@ -42,11 +42,6 @@
         "verbose": true
     },
     "parameter_searching":{
-        "toy_datasets_args.seq_freq": [2, 8, 16],
-        "toy_dataset_args.phase_vary": [0.1, 1],
-        "toy_dataset_args.power_vary": [1],
-        "toy_dataset_args.freq_vary": [1],
-        "error_indices_settings.num_replacements": [5, 10, 20],
-        "error_indices_settings.num_deletions": [5, 10, 20]
+
     }
 }
