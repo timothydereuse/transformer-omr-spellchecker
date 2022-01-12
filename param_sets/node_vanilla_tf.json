@@ -37,7 +37,7 @@
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 10,
+        "patience": 5,
         "threshold": 0.001,
         "verbose": true
     },
