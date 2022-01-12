@@ -1,18 +1,18 @@
 {
     "params_name": "LSTUT_FELIX_DEFAULT",
-    "num_epochs": 151,
+    "num_epochs": 50,
     "early_stopping_patience": 20,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 280,
+    "max_time_minutes": 100,
 
-    "seq_length": 256,
+    "seq_length": 128,
     "padding_amt": 16,
     "lr": 0.0005,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "num_feats": 1,
-    "dataset_proportion": 1,
+    "num_feats": 4,
+    "dataset_proportion": 0.25,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
@@ -27,21 +27,21 @@
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 0,
-        "tf_layers": 6,
+        "tf_layers": 4,
         "tf_heads": 4,
         "tf_depth": 1,
-        "hidden_dim": 128,
-        "ff_dim": 128,
+        "hidden_dim": 64,
+        "ff_dim": 64,
         "dropout": 0.1,
         "positional_encoding": true
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 10,
+        "patience": 3,
         "threshold": 0.001,
         "verbose": true
     },
     "param_sweep":{
-
+        "toy_datasets_args.seq_freq": [2, 8, 16]
     }
 }

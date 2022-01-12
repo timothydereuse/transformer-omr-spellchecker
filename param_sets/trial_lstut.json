@@ -11,7 +11,7 @@
     "lr": 0.0005,
     "batch_size": 4,
     "clip_gradient_norm": 0.5,
-    "num_feats": 4,
+    "num_feats": 1,
     "dataset_proportion": 0.001,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
@@ -41,7 +41,10 @@
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching":{
-        "lstut_settings.tf_depth": [1, 3, 5]
-    }
+    "param_sweep":
+    [
+        {"batch_size": 10, "seq_length": 32},
+        {"lstut_settings.tf_depth": 3},
+        {"lstut_settings.tf_depth": 2, "num_epochs": 6}
+    ]
 }

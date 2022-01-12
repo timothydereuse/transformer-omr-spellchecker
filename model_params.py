@@ -29,27 +29,27 @@ class Params(object):
             if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
                 logging.getLogger().addHandler(logging.StreamHandler())
 
-        self.modifications = []
-        if mod_num > 0:
-            if not hasattr(self, 'parameter_searching'):
-                raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
-                                 'but the Params class was passed mod number {mod_num}.')
-            for k in self.parameter_searching:
-                for i in self.parameter_searching[k]:
-                    self.modifications.append((k, i))
-            m = self.modifications[mod_num - 1]
-            logging.info(f'applying modification {m} to parameters.')
-            self.apply_mod(m)
+        if mod_num > 0 and not hasattr(self, 'param_sweep'):
+            raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
+                                'but the Params class was passed mod number {mod_num}.')
+        elif mod_num > 0:
+            self.apply_mod(self.param_sweep[mod_num - 1])
 
     def apply_mod(self, mod):
-        name, val = mod
-        if not name:
-            return
-        elif '.' not in name:
-            self.__dict__[name] = val
-        elif '.' in name:
-            pt1, pt2 = name.split('.')
-            self.__dict__[pt1][pt2] = val
+
+        for k in mod.keys():
+            name = k
+            val = mod[k]
+            if not name:
+                return
+            elif '.' not in name:
+                assert name in self.__dict__.keys(), "modification name not found in params!"
+                self.__dict__[name] = val
+            elif '.' in name:
+                pt1, pt2 = name.split('.')
+                assert pt1 in self.__dict__.keys(), "modification name not found in params!"
+                assert pt2 in self.__dict__[pt1].keys(), "modification name not found in params!"
+                self.__dict__[pt1][pt2] = val
 
 
 # -- constants that need to be here so that they can be referenced, but shouldn't be changed

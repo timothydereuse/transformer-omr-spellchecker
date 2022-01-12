@@ -4,7 +4,7 @@
     "early_stopping_patience": 20,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 280,
+    "max_time_minutes": 270,
 
     "seq_length": 256,
     "padding_amt": 16,
@@ -41,7 +41,7 @@
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching":{
+    "param_sweep":{
 
     }
 }

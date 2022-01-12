@@ -41,7 +41,7 @@
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching":{
+    "param_sweep":{
 
     }
 }

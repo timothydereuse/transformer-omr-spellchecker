@@ -26,14 +26,14 @@
     "lstut_settings": {
         "num_feats": 1,
         "output_feats": 1,
-        "lstm_layers": 0,
-        "tf_layers": 4,
-        "tf_heads": 4,
-        "tf_depth": 1,
+        "lstm_layers": 1,
+        "tf_layers": 1,
+        "tf_heads": 5,
+        "tf_depth": 4,
         "hidden_dim": 64,
         "ff_dim": 64,
         "dropout": 0.1,
-        "positional_encoding": true
+        "positional_encoding": false
     },
     "scheduler_settings": {
         "factor": 0.25,
@@ -41,7 +41,7 @@
         "threshold": 0.001,
         "verbose": true
     },
-    "parameter_searching":{
+    "param_sweep":{
         "toy_datasets_args.seq_freq": [2, 8, 16]
     }
 }
