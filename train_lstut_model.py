@@ -39,7 +39,7 @@ args = vars(parser.parse_args())
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
 
-if (not dry_run) and logging:
+if (not dry_run) and args['logging']:
     wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
 
 device, num_gpus = tr_funcs.get_cuda_info()
@@ -154,7 +154,6 @@ for epoch in range(params.num_epochs):
 
     if logging:
         wandb.log({
-            'epoch': epoch,
             'epoch_s': (epoch_end_time - epoch_start_time), 
             'train_loss': train_loss,
             'val_loss': val_loss,
