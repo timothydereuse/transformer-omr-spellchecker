@@ -30,6 +30,8 @@ parser.add_argument('parameters', default='default_params.json',
                     help='Parameter file in .json format.')
 parser.add_argument('-m', '--mod_number', type=int, default=0,
                     help='Index of specific modification to apply to given parameter set.')
+parser.add_argument('-w', '--wandb', type=ascii, action='store', default=None,
+                    help='Index of specific modification to apply to given parameter set.')
 parser.add_argument('-l', '--logging', action='store_true',
                     help='Whether or not to log training results to file.')
 parser.add_argument('-d', '--dryrun', action='store_true',
@@ -39,8 +41,8 @@ args = vars(parser.parse_args())
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
 
-if (not dry_run) and args['logging']:
-    wandb.init(project="my-test-project", config=params.params_dict, entity="timothydereuse")
+if (not dry_run) and args['wandb']:
+    wandb.init(project=args['wandb'].strip("'"), config=params.params_dict, entity="timothydereuse")
 
 device, num_gpus = tr_funcs.get_cuda_info()
 print('defining datasets...')
