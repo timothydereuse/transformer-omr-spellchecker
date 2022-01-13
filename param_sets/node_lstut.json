@@ -45,7 +45,7 @@
         {"batch_size": 128, "seq_length": 512},
         {"batch_size": 64, "seq_length": 1024},
         {"batch_size": 1024, "seq_length": 128},
-        {"lr": 0.00005}
+        {"lr": 0.00005},
         {"lr": 0.005},
         {"lr": 0.05},
         {"error_gen_smoothing": 1},
