@@ -18,7 +18,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 5,
+    "error_gen_smoothing": 3,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.05,
@@ -43,9 +43,16 @@
     },
     "param_sweep": [
         {"batch_size": 128, "seq_length": 512},
+        {"batch_size": 64, "seq_length": 1024},
         {"batch_size": 1024, "seq_length": 128},
+        {"lr": 0.00005}
         {"lr": 0.005},
-        {"lstut_settings.tf_depth": 3},
-        {"error_gen_smoothing": 2}
+        {"lr": 0.05},
+        {"error_gen_smoothing": 1},
+        {"error_gen_smoothing": 5},
+        {"error_gen_smoothing": 10},
+        {"error_gen_smoothing": 1, "batch_size": 64, "seq_length": 1024},
+        {"error_gen_smoothing": 5, "batch_size": 64, "seq_length": 1024},
+        {"error_gen_smoothing": 10, "batch_size": 64, "seq_length": 1024}
     ]
 }
