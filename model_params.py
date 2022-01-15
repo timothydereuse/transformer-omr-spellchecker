@@ -45,11 +45,13 @@ class Params(object):
             elif '.' not in name:
                 assert name in self.__dict__.keys(), "modification name not found in params!"
                 self.__dict__[name] = val
+                self.params_dict[name] = val
             elif '.' in name:
                 pt1, pt2 = name.split('.')
                 assert pt1 in self.__dict__.keys(), "modification name not found in params!"
                 assert pt2 in self.__dict__[pt1].keys(), "modification name not found in params!"
                 self.__dict__[pt1][pt2] = val
+                self.params_dict[pt1][pt2] = val
 
 
 # -- constants that need to be here so that they can be referenced, but shouldn't be changed
