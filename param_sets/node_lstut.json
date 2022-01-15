@@ -1,5 +1,5 @@
 {
-    "params_name": "LSTUT_FELIX_DEFAULT",
+    "params_name": "ERRORS_JAN_2022",
     "num_epochs": 151,
     "early_stopping_patience": 5,
     "save_model_every": 4,
@@ -45,13 +45,14 @@
         {"batch_size": 256, "seq_length": 512},
         {"batch_size": 128, "seq_length": 1024},
         {"batch_size": 1024, "seq_length": 128},
+        {"batch_size": 2048, "seq_length": 64},
+        {"lr": 0.00005},
         {"lr": 0.0005},
         {"lr": 0.05},
         {"error_gen_smoothing": 1},
         {"error_gen_smoothing": 5},
         {"error_gen_smoothing": 10},
-        {"error_gen_smoothing": 1, "batch_size": 64, "seq_length": 1024},
-        {"error_gen_smoothing": 5, "batch_size": 64, "seq_length": 1024},
-        {"error_gen_smoothing": 10, "batch_size": 64, "seq_length": 1024}
+        {"lstut_settings.tf_depth": 3},
+        {"lstut_settings.tf_depth": 1}
     ]
 }

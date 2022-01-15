@@ -27,10 +27,10 @@
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 1,
+        "tf_layers": 0,
         "tf_heads": 1,
-        "tf_depth": 2,
-        "hidden_dim": 32,
+        "tf_depth": 0,
+        "hidden_dim": 64,
         "ff_dim": 32,
         "dropout": 0.1,
         "positional_encoding": false

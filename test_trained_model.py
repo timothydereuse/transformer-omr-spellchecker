@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import plot_outputs as po
 import numpy as np
+import sklearn.metrics
 # import make_supervised_examples as mse
 from torch.utils.data import DataLoader
 # import models.LSTUT_model as lstut
@@ -12,7 +13,8 @@ reload(params)
 reload(po)
 
 
-def f_measure(inps, targets, threshold=0.5):
+def f_measure(inps, targets, threshold=0.5, beta=1):
+    beta_squared = beta * beta
     thresh_predictions = (inps > threshold)
     tru_pos = np.logical_and(thresh_predictions, targets).sum()
     pred_pos = thresh_predictions.sum()
@@ -21,14 +23,14 @@ def f_measure(inps, targets, threshold=0.5):
     if pred_pos > 0 and targ_pos > 0 and tru_pos > 0:
         precision = tru_pos / pred_pos
         recall = tru_pos / targ_pos
-        F1 = (precision * recall * 2) / (precision + recall)
+        F1 = (1 + beta_squared) * (precision * recall) / ((precision * beta_squared) + recall)
     else:
         F1 = 0
 
     return F1
 
 
-def multilabel_thresholding(output, target, num_trials=1000):
+def multilabel_thresholding(output, target, num_trials=1000, beta=1):
     output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)
 
@@ -36,7 +38,7 @@ def multilabel_thresholding(output, target, num_trials=1000):
 
     F1s = np.zeros(thresholds.shape)
     for i, t in enumerate(thresholds):
-        F1s[i] = f_measure(output, target, t)
+        F1s[i] = f_measure(output, target, threshold=t, beta=beta)
 
     best_thresh = thresholds[np.argmax(F1s)]
     best_score = np.max(F1s)
@@ -50,16 +52,24 @@ class TestResults(object):
     def __init__(self, thresh):
         self.thresh = thresh
         self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
+        self.outputs = np.array([])
+        self.targets = np.array([])
 
     def update(self, output, target):
 
+        sigmoid = lambda x: 1 / (1 + np.exp(-x))
+
         output = output.cpu().detach().numpy()
         target = target.cpu().detach().numpy()
+        self.outputs = np.concatenate([self.outputs, sigmoid(output.reshape(-1))])
+        self.targets = np.concatenate([self.targets, target.reshape(-1).astype(int)])
 
-        predictions = (output > self.thresh)
+    def calculate_stats(self):
+
+        predictions = (self.outputs > self.thresh)
 
         cat_preds = predictions.reshape(-1).astype('bool')
-        cat_target = target.reshape(-1).astype('bool')
+        cat_target = self.targets.reshape(-1).astype('bool')
 
         t_pos = (cat_preds & cat_target).sum()
         self.results_dict['t_pos'].append(t_pos)
@@ -73,7 +83,6 @@ class TestResults(object):
         f_neg = (~cat_preds & cat_target).sum()
         self.results_dict['f_neg'].append(f_neg)
 
-    def calculate_stats(self):
         results_dict = {x: sum(self.results_dict[x]) for x in self.results_dict.keys()}
         r = {}
         r['precision'] = results_dict['t_pos'] / (results_dict['t_pos'] + results_dict['f_pos'])

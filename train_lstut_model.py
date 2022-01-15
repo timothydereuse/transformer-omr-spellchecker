@@ -165,7 +165,7 @@ for epoch in range(params.num_epochs):
             })
 
     # save an image
-    if not epoch % params.save_img_every and epoch > 0:
+    if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
         lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
         table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
         wandb.log({'examples': table})
@@ -200,7 +200,6 @@ for epoch in range(params.num_epochs):
         break
 
 end_time = time.time()
-wandb.run.summary["total_training_time"] = end_time - start_time
 print(
     f'Training over at epoch at epoch {epoch}.\n'
     f'Total training time: {end_time - start_time} s.'
@@ -225,10 +224,15 @@ for end_group in [(dloader_tst, 'data_aug_test'), (dloader_omr, 'real_omr_test')
         f'{end_name}_true negative:   {res_stats["true negative rate"]:1.6e}'
     )
 
-    wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
-    wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
-    wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
-    wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
+    if args['wandb']:
+        proba = np.stack([1 - test_results.outputs, test_results.outputs], 1)
+        wandb.log({'pr': wandb.plot.pr_curve(test_results.targets, proba)})
+        wandb.log({'roc': wandb.plot.roc_curve(test_results.targets, proba)})
+        wandb.run.summary["total_training_time"] = end_time - start_time
+        wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
+        wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
+        wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
+        wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
 
     for i in range(3):
         lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
