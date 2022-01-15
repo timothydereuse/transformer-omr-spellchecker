@@ -89,7 +89,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = (1 / params.simple_error_rate)
+class_ratio = (2 * params.error_gen_smoothing)
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 print('beginning training')
@@ -154,7 +154,7 @@ for epoch in range(params.num_epochs):
         f'val_f1     {val_f1:1.6f} | '
     )
 
-    if logging:
+    if args['wandb']:
         wandb.log({
             'epoch_s': (epoch_end_time - epoch_start_time), 
             'train_loss': train_loss,
