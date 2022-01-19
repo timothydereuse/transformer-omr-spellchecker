@@ -7,8 +7,8 @@
     "max_time_minutes": 340,
 
     "seq_length": 256,
-    "padding_amt": 16,
-    "lr": 0.005,
+    "padding_amt": 32,
+    "lr": 0.0005,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
     "num_feats": 1,
@@ -46,13 +46,12 @@
         {"batch_size": 128, "seq_length": 1024},
         {"batch_size": 1024, "seq_length": 128},
         {"batch_size": 2048, "seq_length": 64},
-        {"lr": 0.00005},
-        {"lr": 0.0005},
-        {"lr": 0.05},
+        {"batch_size": 64, "seq_length": 2048},
         {"error_gen_smoothing": 1},
-        {"error_gen_smoothing": 5},
-        {"error_gen_smoothing": 10},
+        {"error_gen_smoothing": 6},
+        {"error_gen_smoothing": 9},
         {"lstut_settings.tf_depth": 3},
-        {"lstut_settings.tf_depth": 1}
+        {"lstut_settings.tf_depth": 9},
+        {"simple_errors": true}
     ]
 }
