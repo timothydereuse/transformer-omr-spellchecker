@@ -68,13 +68,15 @@ dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
 dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
 dset_kwargs['dset_fname'] = params.dset_testing_path
 dset_kwargs['dataset_proportion'] = 1
-dset_omr = dl.AgnosticOMRDataset(base=None, **dset_kwargs)
+dset_omr = dl.AgnosticOMRDataset(base='omr', **dset_kwargs)
+dset_omr_onepass = dl.AgnosticOMRDataset(base='onepass', **dset_kwargs)
 
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
 dloader_omr = DataLoader(dset_omr, params.batch_size, pin_memory=True)
+dloader_omr_onepass = DataLoader(dset_omr_onepass, params.batch_size, pin_memory=True)
 
 lstut_settings = params.lstut_settings
 lstut_settings['vocab_size'] = v.num_words
@@ -205,7 +207,12 @@ print(
     f'Total training time: {end_time - start_time} s.'
 )
 
-for end_group in [(dloader_tst, 'data_aug_test'), (dloader_omr, 'real_omr_test')]:
+end_groups = [
+    (dloader_tst, 'data_aug_test'), 
+    (dloader_omr, 'real_omr_test'),
+    (dloader_omr_onepass, 'real_onepass_test')
+    ]
+for end_group in end_groups:
     end_dloader, end_name = end_group
     test_results = ttm.TestResults(tr_thresh)
     with torch.no_grad():
@@ -237,7 +244,8 @@ for end_group in [(dloader_tst, 'data_aug_test'), (dloader_omr, 'real_omr_test')
     for i in range(3):
         lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
         table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
-        wandb.run.summary[f'{end_name}_examples_final'] = table
+        if args['wandb']:
+            wandb.run.summary[f'{end_name}_examples_final'] = table
 
 # # if max_epochs reached, or early stopping condition reached, save best model
 # best_epoch = best_model['epoch']

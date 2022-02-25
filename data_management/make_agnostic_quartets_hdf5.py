@@ -14,8 +14,7 @@ possible_transpositions = ['m2', 'M2', 'm3', 'M3', 'P4', 'a4', 'd5', 'p5']
 possible_transpositions = possible_transpositions + ['-' + x for x in possible_transpositions]
 quartets_root = r"D:\Documents\datasets\just_quartets"
 
-all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
-# keys = ['felix_errors']
+# all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
 c = m21.converter.Converter()
 
 # # parse all files and build vocabulary, first.
@@ -68,7 +67,7 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
                 transpositions = np.random.choice(possible_transpositions, num_transpositions_per_file, replace=False)
                 transpositions = np.concatenate([[None], transpositions])
             else:
-                transpositions = []
+                transpositions = [None]
 
             agnostics = [sta.m21_parts_to_interleaved_agnostic(parts, transpose=x, remove=['+']) for x in transpositions]
             agnostic_vecs = [v.words_to_vec(x) for x in agnostics]
@@ -89,11 +88,11 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
 
                 for i, arr in enumerate(arrs):
                     name = rf'{k}-{fname}-{i}'
-                    dset = selected_subgrp.create_dataset(
+                    selected_subgrp.create_dataset(
                         name=name,
                         data=arr,
                         compression='gzip'
                     )
 
 # make_hdf5(r'./processed_datasets/all_string_quartets_agnostic.h5', ['ABC', 'kernscores', 'felix'], True)
-# make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic.h5', ['felix_errors', 'felix'], False)
+make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic.h5', ['felix_errors', 'felix', 'felix_errors_onepass'], False)

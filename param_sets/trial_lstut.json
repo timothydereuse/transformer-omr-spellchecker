@@ -30,7 +30,7 @@
         "tf_layers": 0,
         "tf_heads": 1,
         "tf_depth": 0,
-        "hidden_dim": 64,
+        "hidden_dim": 32,
         "ff_dim": 32,
         "dropout": 0.1,
         "positional_encoding": false
