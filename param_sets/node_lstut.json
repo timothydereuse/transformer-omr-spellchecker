@@ -1,13 +1,13 @@
 {
-    "params_name": "ERRORS_JAN_2022",
+    "params_name": "ERRORS_FEB_2022",
     "num_epochs": 151,
     "early_stopping_patience": 5,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 340,
+    "max_time_minutes": 360,
 
     "seq_length": 256,
-    "padding_amt": 32,
+    "padding_amt": 64,
     "lr": 0.0005,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
@@ -18,7 +18,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 3,
+    "error_gen_smoothing": 4,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
@@ -29,7 +29,7 @@
         "lstm_layers": 1,
         "tf_layers": 1,
         "tf_heads": 5,
-        "tf_depth": 6,
+        "tf_depth": 4,
         "hidden_dim": 128,
         "ff_dim": 128,
         "dropout": 0.1,
@@ -43,13 +43,8 @@
     },
     "param_sweep": [
         {"batch_size": 256, "seq_length": 512},
-        {"batch_size": 128, "seq_length": 1024},
-        {"batch_size": 1024, "seq_length": 128},
-        {"batch_size": 2048, "seq_length": 64},
-        {"batch_size": 64, "seq_length": 2048},
         {"error_gen_smoothing": 1},
         {"error_gen_smoothing": 6},
-        {"error_gen_smoothing": 9},
         {"simple_errors": true}
     ]
 }

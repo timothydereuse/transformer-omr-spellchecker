@@ -119,7 +119,7 @@ for epoch in range(params.num_epochs):
     train_loss, tr_exs = tr_funcs.run_epoch(
         dloader=dloader,
         train=True,
-        log_each_batch=True,
+        log_each_batch=False,
         **run_epoch_kwargs
     )
 
