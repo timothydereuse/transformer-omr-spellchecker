@@ -71,7 +71,6 @@ dset_kwargs['dataset_proportion'] = 1
 dset_omr = dl.AgnosticOMRDataset(base='omr', **dset_kwargs)
 dset_omr_onepass = dl.AgnosticOMRDataset(base='onepass', **dset_kwargs)
 
-
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
@@ -142,7 +141,7 @@ for epoch in range(params.num_epochs):
     scheduler.step(val_loss)
     # tr_funcs.log_gpu_info()
 
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(tr_exs['output'], tr_exs['target'])
+    tr_f1, tr_thresh = ttm.multilabel_thresholding(tr_exs['output'], tr_exs['target'], beta=2)
     val_f1 = ttm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
 
     epoch_end_time = time.time()

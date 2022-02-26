@@ -59,7 +59,7 @@ class ErrorGenerator(object):
             if len(errored_seq) >= len(seq):
                 break
             elif next_label == self.match_idx: # MATCH
-                errored_seq.append(seq[i])
+                errored_seq.append(int(seq[i]))
                 i += 1
             elif next_label == self.replace_idx: # REPLACE
                 rand_mod = np.random.randint(vocab_size)
@@ -71,7 +71,7 @@ class ErrorGenerator(object):
             elif next_label == self.delete_index: # DELETE
                 i += 1
 
-        return errored_seq, synthetic_error_alignment
+        return errored_seq, list(synthetic_error_alignment)
 
     def get_synthetic_error_sequence(self, seq):
         errored_seq = []
@@ -221,5 +221,8 @@ if __name__ == "__main__":
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
+        e.simple = False
+        X, Y = e.add_errors_to_batch(x.numpy())
+        e.simple = True
         X, Y = e.add_errors_to_batch(x.numpy())
         print(X.shape, Y.shape)

@@ -29,7 +29,6 @@ def f_measure(inps, targets, threshold=0.5, beta=1):
 
     return F1
 
-
 def multilabel_thresholding(output, target, num_trials=1000, beta=1):
     output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)

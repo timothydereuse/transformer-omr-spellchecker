@@ -19,7 +19,7 @@
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 5,
-    "simple_errors": false,
+    "simple_errors": true,
     "errors_parallel": 1,
     "simple_error_rate": 0.05,
 

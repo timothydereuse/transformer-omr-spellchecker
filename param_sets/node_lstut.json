@@ -50,8 +50,6 @@
         {"error_gen_smoothing": 1},
         {"error_gen_smoothing": 6},
         {"error_gen_smoothing": 9},
-        {"lstut_settings.tf_depth": 3},
-        {"lstut_settings.tf_depth": 9},
         {"simple_errors": true}
     ]
 }
