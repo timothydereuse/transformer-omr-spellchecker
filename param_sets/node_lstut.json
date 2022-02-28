@@ -42,9 +42,6 @@
         "verbose": true
     },
     "param_sweep": [
-        {"batch_size": 256, "seq_length": 512},
-        {"error_gen_smoothing": 1},
-        {"error_gen_smoothing": 6},
-        {"simple_errors": true}
+        {"simple_error_rate": 0.2, "simple_errors": true},
     ]
 }
