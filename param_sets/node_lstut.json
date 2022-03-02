@@ -43,5 +43,6 @@
     },
     "param_sweep": [
         {"simple_error_rate": 0.2, "simple_errors": true},
+        {"batch_size": 1024, "seq_length": 128}
     ]
 }
