@@ -27,7 +27,7 @@ c = m21.converter.Converter()
 #         fpath = os.path.join(os.path.join(quartets_root, k, fname))
 #         parsed_file = m21.converter.parse(fpath)
 #         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
-#         agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'])
+#         agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'], just_tokens=True)
 #         all_tokens.update(agnostic) 
 # v = vocab.Vocabulary(all_tokens)
 # v.save_vocabulary('./data_management/vocab.txt')
@@ -69,7 +69,10 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
             else:
                 transpositions = [None]
 
-            agnostics = [sta.m21_parts_to_interleaved_agnostic(parts, transpose=x, remove=['+']) for x in transpositions]
+            agnostics = [
+                sta.m21_parts_to_interleaved_agnostic(parts, transpose=x, remove=['+'], just_tokens=True) 
+                for x in transpositions
+            ]
             agnostic_vecs = [v.words_to_vec(x) for x in agnostics]
             arrs = [np.array(x) for x in agnostic_vecs]
 

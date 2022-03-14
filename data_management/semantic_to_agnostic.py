@@ -1,7 +1,9 @@
 import music21 as m21
 import os
 import math
+from collections import namedtuple
 
+AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'measure_idx', 'event_idx'])
 DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
 def get_reset_pitch_status(current_key_sig):
     cps = dict(DEFAULT_PITCH_STATUS)
@@ -115,13 +117,15 @@ def m21_part_to_agnostic(part):
 
     # types of things we want to deal with:
     # notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
-    for measure in part:
-        for e in measure:
+    for measure_idx, measure in enumerate(part):
+        for event_idx, e in enumerate(measure):
 
             # case if the current m21 element is a Note
             if type(e) == m21.note.Note:
-                glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status) 
-                agnostic.extend(glyphs)
+                glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status)
+
+                records = [AgnosticRecord(g, measure_idx, event_idx) for g in glyphs]
+                agnostic.extend(records)
 
                 tuplet_record[len(agnostic)] = tuplet
 
@@ -129,12 +133,15 @@ def m21_part_to_agnostic(part):
             elif type(e) == m21.note.Rest:
 
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
-                agnostic.extend(['+', f'rest.{dur_name}'])
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord(f'rest.{dur_name}', measure_idx, event_idx))
+                # agnostic.extend(['+', f'rest.{dur_name}'])
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
                 if dots > 0:
-                    agnostic.extend(['+', 'duration.dot.pos5'])
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord('duration.dot.pos5', measure_idx, event_idx))
 
             # case if the current m21 element is a Chord
             # (must be split into notes and individually processed)
@@ -154,10 +161,14 @@ def m21_part_to_agnostic(part):
                 sustain_list[0] = '+'
 
                 tuplet_record[len(agnostic)] = tuplet
-                agnostic.extend(sustain_list)
+                # agnostic.extend(sustain_list)
+                records = [AgnosticRecord(g, measure_idx, event_idx) for g in sustain_list]
+                agnostic.extend(records)
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx))
                 # agnostic.extend(['+', f'dynamics.{e.value}'])
                 pass
 
@@ -165,35 +176,51 @@ def m21_part_to_agnostic(part):
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.extend(['+', f'accid.{p.accidental.name}.pos{position}'])
+
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', measure_idx, event_idx))
+                    # agnostic.extend(['+', f'accid.{p.accidental.name}.pos{position}'])
                 current_key_sig = e 
             
             # case if the current m21 element is a Time Signature
             elif type(e) == m21.meter.TimeSignature:
                 current_time_sig = e
-                agnostic.extend(['+', f'timeSig.{e.ratioString}'])
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord(f'timeSig.{e.ratioString}', measure_idx, event_idx))
+                # agnostic.extend(['+', f'timeSig.{e.ratioString}'])
 
             # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
-                agnostic.extend(['+', f'clef.{e.name}'])
+                # agnostic.extend(['+', f'clef.{e.name}'])
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord(f'clef.{e.name}', measure_idx, event_idx))
                 current_clef = current_clef if (e.lowestLine is None) else e
 
             # case where the current m21 element is a systemLayout
             # (must check to be sure it actually makes a new system)
             elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
-                agnostic.extend(['+', f'lineBreak', '+', f'clef.{current_clef.name}'])
+                glyphs = ['+', f'lineBreak', '+', f'clef.{current_clef.name}']
+                records = [AgnosticRecord(g, measure_idx, event_idx) for g in glyphs]
+                agnostic.extend(records)
+                
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.extend(['+', f'accid.{p.accidental.name}.{position}'])
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.{position}', measure_idx, event_idx))
+                    # agnostic.extend(['+', f'accid.{p.accidental.name}.{position}'])
 
             # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
-                agnostic.extend(['+', f'barline.{e.type}'])
+                # agnostic.extend(['+', f'barline.{e.type}'])
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord(f'barline.{e.type}', measure_idx, event_idx))
 
         # at the end of every measure, add a bar if there isn't one already
         if not 'bar' in agnostic[-1]:
-            agnostic.extend(['+', 'barline.regular'])
+            # agnostic.extend(['+', 'barline.regular'])
+            agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
+            agnostic.append(AgnosticRecord(f'barline.regular', measure_idx, event_idx))
 
         # at the end of every measure, reset the pitch status to the key signature
         current_pitch_status = get_reset_pitch_status(current_key_sig)
@@ -203,17 +230,21 @@ def m21_part_to_agnostic(part):
     # insert starting from the end to not mess up later indices
     for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
-        agnostic.insert(pos, tuplet_str)
-        agnostic.insert(pos, '<')
+        measure_idx = agnostic[pos].measure_idx
+        event_idx = agnostic[pos].event_idx
+        tuplet_record = AgnosticRecord(tuplet_str, measure_idx, event_idx)
+        over_record = AgnosticRecord('<', measure_idx, event_idx)
+        agnostic.insert(pos, tuplet_record)
+        agnostic.insert(pos, over_record)
 
-    # make sure no spaces remain in any of the entries
-    for ind in range(len(agnostic)):
-        agnostic[ind] = agnostic[ind].replace(' ', '')
+    # # make sure no spaces remain in any of the entries
+    # for ind in range(len(agnostic)):
+    #     agnostic[ind] = agnostic[ind].replace(' ', '')
 
     return agnostic
 
 
-def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallback_num_bars_per_line=8):
+def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallback_num_bars_per_line=8, just_tokens=False):
 
     # get agnostic representation of each part
     if transpose:
@@ -223,21 +254,21 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallba
 
     if remove:
         agnostic_parts = [
-            [x for x in part if not x in remove]
+            [x for x in part if not x.agnostic_item in remove]
             for part
             in agnostic_parts
         ]
 
     # get locations of barlines in each part
     bar_break_points = [
-        [0] + [i for i, j in enumerate(part) if 'barline' in j]
+        [0] + [i for i, j in enumerate(part) if 'barline' in j.agnostic_item]
         for part
         in agnostic_parts
     ]
 
     # get locations of linebreaks in each part
     staff_break_points = [
-        [0] + [i for i, j in enumerate(part) if j == 'lineBreak']
+        [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
         for part
         in agnostic_parts
     ]
@@ -258,6 +289,9 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallba
             start = staff_break_points[j][i]
             end = staff_break_points[j][i + 1]
             interleaved_agnostic += agnostic_parts[j][start:end]
+
+    if just_tokens:
+        interleaved_agnostic = [x.agnostic_item for x in interleaved_agnostic]
 
     return interleaved_agnostic
 
@@ -284,6 +318,6 @@ if __name__ == '__main__':
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
         agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
-        all_tokens.update(agnostic)
+        all_tokens.update([x.agnostic_item for x  in agnostic])
 
             

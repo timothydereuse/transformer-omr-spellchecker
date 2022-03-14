@@ -83,6 +83,8 @@ pms = [
     (error_onepass_dset, error_onepass_fnames, 'onepass')
 ]
 
+X, Y = get_training_samples(correct_dset, error_onepass_dset)
+
 for t in pms:
     target_dset, target_dset_fnames, category = t
 
@@ -109,4 +111,14 @@ for t in pms:
             )
 
 
+# sharp_probs = e.regression.predict_proba(e.enc.transform([[198]]))[0] 
+# [
+#     (
+#         x, 
+#         sharp_probs[x],
+#         e.enc_labels.inverse_transform([x])[0][0],
+#         v.vec_to_words([int(e.enc_labels.inverse_transform([x])[0].split('.')[-1])])
+#     ) 
+#         for x in np.argsort(sharp_probs)
+# ]
 
