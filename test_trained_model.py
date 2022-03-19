@@ -3,11 +3,12 @@ import torch.nn as nn
 import plot_outputs as po
 import numpy as np
 import sklearn.metrics
-# import make_supervised_examples as mse
 from torch.utils.data import DataLoader
-# import models.LSTUT_model as lstut
+import models.LSTUT_model as lstut
 import model_params as params
 from importlib import reload
+import data_management.vocabulary as vocab
+
 
 reload(params)
 reload(po)
@@ -117,34 +118,22 @@ def test_results(output, target, results_dict, threshold):
 
 
 if __name__ == '__main__':
-    model_path = r'trained_models\lstut_best_2021-01-14 11-28_lstm-128-128-2_tf-256-256-128-4-5.pt'
+    model_path = r'trained_models\lstut_best_LSTUT_FELIX_TRIAL_0_(2022.03.14.20.21)_1-1-1-01-0-32-32.pt'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    dset_path = params.dset_path
     checkpoint = torch.load(model_path, map_location=device)
+    params = checkpoint['params']
 
-    dset_tst = dl.MidiNoteTupleDataset(
-        dset_fname=params.dset_path,
-        seq_length=params.seq_length,
-        base='test',
-        padding_amt=params.padding_amt,
-        trial_run=params.trial_run)
-    dloader = DataLoader(dset_tst, params.batch_size, pin_memory=True)
+    v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 
-    tst_model = lstut.LSTUTModel(**params.lstut_settings).to(device)
-    tst_model = nn.DataParallel(tst_model, device_ids=list(range(torch.cuda.device_count())))
-    tst_model.load_state_dict(checkpoint['model_state_dict'])
-    best_thresh = checkpoint['best_thresh']
+    lstut_settings = params.lstut_settings
+    lstut_settings['vocab_size'] = v.num_words
+    lstut_settings['seq_length'] = params.seq_length
+    model = lstut.LSTUT(**lstut_settings).to(device)
+    model = nn.DataParallel(model, device_ids=list(range(torch.cuda.device_count())))
+    model.load_state_dict(checkpoint['model_state_dict'])
+    # best_thresh = checkpoint['best_thresh']
 
-    results_dict = {
-        x: {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
-        for x in ['replace', 'insert', 'delete']}
-
-    def prepare_batch(batch):
-        inp, target = mse.error_indices(batch, **params.error_indices_settings)
-        return inp, target
-
-    tst_model.eval()
+    model.eval()
     with torch.no_grad():
         for i, batch in enumerate(dloader):
             batch = batch.float().cpu()

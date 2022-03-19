@@ -3,7 +3,7 @@ import os
 import math
 from collections import namedtuple
 
-AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'measure_idx', 'event_idx'])
+AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'measure_idx', 'event_idx', 'part_idx'])
 DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
 def get_reset_pitch_status(current_key_sig):
     cps = dict(DEFAULT_PITCH_STATUS)
@@ -98,7 +98,7 @@ def resolve_tuplet_record(tuplet_record):
     return to_insert
 
 
-def m21_part_to_agnostic(part):
+def m21_part_to_agnostic(part, part_idx):
 
     part = part.getElementsByClass(m21.stream.Measure)
         
@@ -124,7 +124,7 @@ def m21_part_to_agnostic(part):
             if type(e) == m21.note.Note:
                 glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status)
 
-                records = [AgnosticRecord(g, measure_idx, event_idx) for g in glyphs]
+                records = [AgnosticRecord(g, measure_idx, event_idx, part_idx) for g in glyphs]
                 agnostic.extend(records)
 
                 tuplet_record[len(agnostic)] = tuplet
@@ -133,15 +133,15 @@ def m21_part_to_agnostic(part):
             elif type(e) == m21.note.Rest:
 
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                agnostic.append(AgnosticRecord(f'rest.{dur_name}', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'rest.{dur_name}', measure_idx, event_idx, part_idx))
                 # agnostic.extend(['+', f'rest.{dur_name}'])
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
                 if dots > 0:
-                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                    agnostic.append(AgnosticRecord('duration.dot.pos5', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                    agnostic.append(AgnosticRecord('duration.dot.pos5', measure_idx, event_idx, part_idx))
 
             # case if the current m21 element is a Chord
             # (must be split into notes and individually processed)
@@ -162,13 +162,13 @@ def m21_part_to_agnostic(part):
 
                 tuplet_record[len(agnostic)] = tuplet
                 # agnostic.extend(sustain_list)
-                records = [AgnosticRecord(g, measure_idx, event_idx) for g in sustain_list]
+                records = [AgnosticRecord(g, measure_idx, event_idx, part_idx) for g in sustain_list]
                 agnostic.extend(records)
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx, part_idx))
                 # agnostic.extend(['+', f'dynamics.{e.value}'])
                 pass
 
@@ -177,23 +177,23 @@ def m21_part_to_agnostic(part):
                 for p in e.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
 
-                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', measure_idx, event_idx, part_idx))
                     # agnostic.extend(['+', f'accid.{p.accidental.name}.pos{position}'])
                 current_key_sig = e 
             
             # case if the current m21 element is a Time Signature
             elif type(e) == m21.meter.TimeSignature:
                 current_time_sig = e
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                agnostic.append(AgnosticRecord(f'timeSig.{e.ratioString}', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'timeSig.{e.ratioString}', measure_idx, event_idx, part_idx))
                 # agnostic.extend(['+', f'timeSig.{e.ratioString}'])
 
             # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
                 # agnostic.extend(['+', f'clef.{e.name}'])
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                agnostic.append(AgnosticRecord(f'clef.{e.name}', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'clef.{e.name}', measure_idx, event_idx, part_idx))
                 current_clef = current_clef if (e.lowestLine is None) else e
 
             # case where the current m21 element is a systemLayout
@@ -201,26 +201,26 @@ def m21_part_to_agnostic(part):
             elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
                 glyphs = ['+', f'lineBreak', '+', f'clef.{current_clef.name}']
-                records = [AgnosticRecord(g, measure_idx, event_idx) for g in glyphs]
+                records = [AgnosticRecord(g, measure_idx, event_idx, part_idx) for g in glyphs]
                 agnostic.extend(records)
                 
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.{position}', measure_idx, event_idx))
+                    agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.{position}', measure_idx, event_idx, part_idx))
                     # agnostic.extend(['+', f'accid.{p.accidental.name}.{position}'])
 
             # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
                 # agnostic.extend(['+', f'barline.{e.type}'])
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-                agnostic.append(AgnosticRecord(f'barline.{e.type}', measure_idx, event_idx))
+                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'barline.{e.type}', measure_idx, event_idx, part_idx))
 
         # at the end of every measure, add a bar if there isn't one already
         if not 'bar' in agnostic[-1]:
             # agnostic.extend(['+', 'barline.regular'])
-            agnostic.append(AgnosticRecord('+', measure_idx, event_idx))
-            agnostic.append(AgnosticRecord(f'barline.regular', measure_idx, event_idx))
+            agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+            agnostic.append(AgnosticRecord(f'barline.regular', measure_idx, event_idx, part_idx))
 
         # at the end of every measure, reset the pitch status to the key signature
         current_pitch_status = get_reset_pitch_status(current_key_sig)
@@ -232,8 +232,8 @@ def m21_part_to_agnostic(part):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
         measure_idx = agnostic[pos].measure_idx
         event_idx = agnostic[pos].event_idx
-        tuplet_record = AgnosticRecord(tuplet_str, measure_idx, event_idx)
-        over_record = AgnosticRecord('<', measure_idx, event_idx)
+        tuplet_record = AgnosticRecord(tuplet_str, measure_idx, event_idx, part_idx)
+        over_record = AgnosticRecord('<', measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
 
@@ -248,9 +248,9 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallba
 
     # get agnostic representation of each part
     if transpose:
-        agnostic_parts = [m21_part_to_agnostic(p.transpose(transpose)) for p in parts]
+        agnostic_parts = [m21_part_to_agnostic(p.transpose(transpose), i) for i, p in enumerate(parts)]
     else:
-        agnostic_parts = [m21_part_to_agnostic(p) for p in parts]
+        agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]
 
     if remove:
         agnostic_parts = [
