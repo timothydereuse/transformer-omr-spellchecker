@@ -40,7 +40,7 @@ class Vocabulary(object):
         for word in self.wtv.keys():
             lines.append(f'{word},{self.wtv[word]}\n')
 
-        with open(fname, 'a') as f:
+        with open(fname, 'w') as f:
             for l in lines:
                 f.write(l)
 
@@ -58,7 +58,7 @@ class Vocabulary(object):
         self.num_words = np.max(list(self.wtv.values())) + 1
 
     def words_to_vec(self, words):
-        res = np.zeros(len(words), dtype=np.uint8)
+        res = np.zeros(len(words), dtype=np.uintc)
         for i, w in enumerate(words):
             try:
                 res[i] = self.wtv[w]
@@ -77,27 +77,27 @@ if __name__ == '__main__':
     import os
     from collections import Counter
 
-    keys = ['felix', 'ABC', 'felix_errors', 'kernscores']
-    quartets_root = r'D:\Documents\datasets\just_quartets'
-    all_tokens = Counter()
+    # keys = ['felix', 'ABC', 'felix_errors', 'kernscores']
+    # quartets_root = r'D:\Documents\datasets\just_quartets'
+    # all_tokens = Counter()
 
-    for k in keys:
-        files = os.listdir(os.path.join(quartets_root, k))
-        for fname in files:
-            print(f'processing {fname}')
-            fpath = os.path.join(os.path.join(quartets_root, k, fname))
-            parsed_file = m21.converter.parse(fpath)
-            parts = list(parsed_file.getElementsByClass(m21.stream.Part))
-            # part = parts[0].getElementsByClass(m21.stream.Measure)
-            print(f'processing {k}.{fname}')
-            print(f'ntokens {len(all_tokens)}')
+    # for k in keys:
+    #     files = os.listdir(os.path.join(quartets_root, k))
+    #     for fname in files:
+    #         print(f'processing {fname}')
+    #         fpath = os.path.join(os.path.join(quartets_root, k, fname))
+    #         parsed_file = m21.converter.parse(fpath)
+    #         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+    #         # part = parts[0].getElementsByClass(m21.stream.Measure)
+    #         print(f'processing {k}.{fname}')
+    #         print(f'ntokens {len(all_tokens)}')
 
-            for p in parts:
-                agnostic = sta.m21_part_to_agnostic(p)
-                all_tokens.update(agnostic)
+    #         for p in parts:
+    #             agnostic = sta.m21_part_to_agnostic(p)
+    #             all_tokens.update(agnostic)
     
-    v = Vocabulary(all_tokens)
-    v.save_vocabulary('./data_management/vocab.txt') 
+    # v = Vocabulary(all_tokens)
+    # v.save_vocabulary('./data_management/vocab.txt') 
     vv = Vocabulary(load_from_file='./data_management/vocab.txt')
 
-    vecs = vv.words_to_vec(agnostic)
+    # vecs = vv.words_to_vec(agnostic)
