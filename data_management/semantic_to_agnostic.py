@@ -167,8 +167,8 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
-                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx, part_idx))
+                # agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
+                # agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx, part_idx))
                 # agnostic.extend(['+', f'dynamics.{e.value}'])
                 pass
 
@@ -244,13 +244,13 @@ def m21_part_to_agnostic(part, part_idx):
     return agnostic
 
 
-def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallback_num_bars_per_line=8, just_tokens=False):
+def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
 
     # get agnostic representation of each part
     if transpose:
         agnostic_parts = [m21_part_to_agnostic(p.transpose(transpose), i) for i, p in enumerate(parts)]
     else:
-        agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]
+        agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]        
 
     if remove:
         agnostic_parts = [
@@ -258,6 +258,13 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, fallba
             for part
             in agnostic_parts
         ]
+
+    if not interleave:
+        outp = [item for sublist in agnostic_parts for item in sublist]
+        if just_tokens:
+            outp = [x.agnostic_item for x in outp]
+        return outp
+
 
     # get locations of barlines in each part
     bar_break_points = [
