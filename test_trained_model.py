@@ -24,7 +24,7 @@ def precision_recall(inps, targets, threshold=0.5):
 
     return precision, recall
 
-def find_thresh_for_given_recall(output, target, num_trials=1000, target_recall=0.5):
+def find_thresh_for_given_recall(output, target, num_trials=10000, target_recall=0.5):
     output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)
 

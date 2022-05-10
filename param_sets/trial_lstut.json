@@ -1,6 +1,6 @@
 {
     "params_name": "LSTUT_FELIX_TRIAL",
-    "num_epochs": 15,
+    "num_epochs": 4,
     "early_stopping_patience": 20,
     "save_model_every": 100,
     "save_img_every": 1,
@@ -30,9 +30,9 @@
         "lstm_layers": 1,
         "tf_layers": 1,
         "tf_heads": 1,
-        "tf_depth": 2,
+        "tf_depth": 3,
         "hidden_dim": 32,
-        "ff_dim": 32,
+        "ff_dim": 64,
         "dropout": 0.1,
         "positional_encoding": false
     },

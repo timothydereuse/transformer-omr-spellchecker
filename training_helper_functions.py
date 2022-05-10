@@ -30,7 +30,7 @@ def log_gpu_info():
 
 def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
               train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None,
-              autoregressive=False, return_names=False):
+              autoregressive=False, batch_includes_training_data=False):
     '''
     Performs a training or validation epoch.
     @model: the model to use.
@@ -48,9 +48,10 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     total_loss = 0.
 
     for i, dloader_output in enumerate(dloader):
-        batch, batch_name = dloader_output
+        batch = dloader_output[0]
+        batch_name = dloader_output[1]
 
-        if type(batch) == list and len(batch) == 2:
+        if batch_includes_training_data and len(batch) == 2:
             inp, target = batch
         else:
             batch = batch.float().cpu()
@@ -88,7 +89,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
     mean_loss = total_loss / num_seqs_used
     example_dict = {
-        'orig': batch,
+        'orig': batch if not batch_includes_training_data else inp,
         'input': inp,
         'target': target,
         'output': output, 

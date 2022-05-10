@@ -92,7 +92,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = (2 * params.error_gen_smoothing)
+class_ratio = (1 * params.error_gen_smoothing)
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 print('beginning training')
@@ -210,20 +210,21 @@ print(
 )
 
 end_groups = [
-    (dloader_tst, 'data_aug_test'), 
-    (dloader_omr, 'real_omr_test'),
-    (dloader_omr_onepass, 'real_onepass_test')
+    (dloader_tst, 'data_aug_test', False), 
+    (dloader_omr, 'real_omr_test', True),
+    (dloader_omr_onepass, 'real_onepass_test', True)
     ]
 
 for end_group in end_groups:
-    end_dloader, end_name = end_group
+    end_dloader, end_name, end_train_data_mode = end_group
     test_results = ttm.TestResults(val_threshes)
     with torch.no_grad():
         tst_loss, tst_exs = tr_funcs.run_epoch(
-            dloader=dloader_tst,
+            dloader=end_dloader,
             train=False,
             log_each_batch=False,
             test_results=test_results,
+            batch_includes_training_data=end_train_data_mode,
             **run_epoch_kwargs
         )
     res_stats = test_results.calculate_stats()
@@ -235,22 +236,36 @@ for end_group in end_groups:
     )
 
     if args['wandb']:
-        proba = np.stack([1 - test_results.outputs, test_results.outputs], 1)
-        wandb.log({'pr': wandb.plot.pr_curve(test_results.targets, proba)})
-        wandb.log({'roc': wandb.plot.roc_curve(test_results.targets, proba)})
+        from sklearn.metrics import precision_recall_curve
+
+        # necessary to downsample PR graphs because wandb only does graphs of 10000 pts
+        precision, recall, thresholds = precision_recall_curve(test_results.targets, test_results.outputs)
+        downsample_amt = (len(precision) // 10001) + 1
+        precision = precision[::downsample_amt]
+        recall = recall[::downsample_amt]
+        thresholds = thresholds[::downsample_amt]
+        
+        pr_lines = []
+        for i in range(len(precision)):
+            pr_lines.append([precision[i], recall[i], precision[i]])
+        pr_table = wandb.Table(columns=['PRECISION', 'RECALL', 'THRESH'], data=pr_lines)
+        wandb.log({f'{end_name}.pr': pr_table})
+
+        # wandb.log({f'{end_name}.pr': wandb.plot.pr_curve(downsample_targets, proba)})
+        # wandb.log({f'{end_name}.roc': wandb.plot.roc_curve(downsample_targets, proba)})
         wandb.run.summary["total_training_time"] = end_time - start_time
         wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
         wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
         # wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
         wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
 
-    for thresh in val_threshes:
-        for i in range(min(2, len(tst_exs['output']))):
+    for j, thresh in enumerate(val_threshes):
+        for i in range(min(10, len(tst_exs['output']))):
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=i)
             batch_name = tst_exs['batch_names'][i]
             table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
             if args['wandb']:
-                wandb.run.summary[f'{end_name}_exsfinal_thresh{thresh}_{batch_name}'] = table
+                wandb.run.summary[f'{end_name}_exsfinal_recall{params.target_recalls}_{batch_name}'] = table
 
 # if max_epochs reached, or early stopping condition reached, save best model
 best_epoch = best_model['epoch']
