@@ -260,9 +260,10 @@ for end_group in end_groups:
         wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
 
     for j, thresh in enumerate(val_threshes):
-        for i in range(min(10, len(tst_exs['output']))):
-            lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=i)
-            batch_name = tst_exs['batch_names'][i]
+        for i in range(min(params.num_examples_to_save, len(tst_exs['output']))):
+            ind_to_save = np.random.choice(len(tst_exs['output']))
+            lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
+            batch_name = tst_exs['batch_names'][ind_to_save]
             table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
             if args['wandb']:
                 wandb.run.summary[f'{end_name}_exsfinal_recall{params.target_recalls}_{batch_name}'] = table
