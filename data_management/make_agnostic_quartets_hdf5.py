@@ -12,7 +12,7 @@ beat_multiplier = 48
 num_transpositions_per_file = 3
 possible_transpositions = ['m2', 'M2', 'm3', 'M3', 'P4', 'a4', 'd5', 'p5']
 possible_transpositions = possible_transpositions + ['-' + x for x in possible_transpositions]
-quartets_root = r"D:\Documents\datasets\just_quartets"
+quartets_root = r"/Users/tim/Documents/Datasets/felix_quartets"
 
 # all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
 c = m21.converter.Converter()
@@ -98,4 +98,4 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
                     )
 
 # make_hdf5(r'./processed_datasets/all_string_quartets_agnostic.h5', ['ABC', 'kernscores', 'felix'], True)
-make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic.h5', ['felix_errors', 'felix', 'felix_errors_onepass'], False)
+make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic2.h5', ['felix_omr', 'felix_correct', 'felix_onepass'], False)

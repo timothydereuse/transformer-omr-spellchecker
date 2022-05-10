@@ -12,9 +12,9 @@ from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 from importlib import reload
 reload(tr_funcs)
@@ -40,9 +40,11 @@ args = vars(parser.parse_args())
 
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
+run_name = params.params_id_str + ' ' + params.mod_string
 
 if (not dry_run) and args['wandb']:
     wandb.init(project=args['wandb'].strip("'"), config=params.params_dict, entity="timothydereuse")
+    wandb.run.name = run_name
 
 device, num_gpus = tr_funcs.get_cuda_info()
 print('defining datasets...')
@@ -143,6 +145,7 @@ for epoch in range(params.num_epochs):
 
     tr_f1, tr_thresh = ttm.multilabel_thresholding(tr_exs['output'], tr_exs['target'], beta=2)
     val_f1 = ttm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
+    val_threshes = ttm.find_thresh_for_given_recalls(val_exs['output'].cpu(), val_exs['target'].cpu(), params.target_recalls)
 
     epoch_end_time = time.time()
     print(
@@ -211,9 +214,10 @@ end_groups = [
     (dloader_omr, 'real_omr_test'),
     (dloader_omr_onepass, 'real_onepass_test')
     ]
+
 for end_group in end_groups:
     end_dloader, end_name = end_group
-    test_results = ttm.TestResults(tr_thresh)
+    test_results = ttm.TestResults(val_threshes)
     with torch.no_grad():
         tst_loss, tst_exs = tr_funcs.run_epoch(
             dloader=dloader_tst,
@@ -224,10 +228,10 @@ for end_group in end_groups:
         )
     res_stats = test_results.calculate_stats()
     print(
-        f'{end_name}_precision: {res_stats["precision"]:1.6e} | '
-        f'{end_name}_recall:    {res_stats["recall"]:1.6e} | '
-        f'{end_name}_true positive: {res_stats["true positive rate"]:1.6e} | '
-        f'{end_name}_true negative:   {res_stats["true negative rate"]:1.6e}'
+        f'{end_name}_precision: {res_stats["precision"]} | '
+        f'{end_name}_recall:    {res_stats["recall"]} | '
+        f'{end_name}_true positive: {res_stats["true positive rate"]} | '
+        f'{end_name}_true negative:   {res_stats["true negative rate"]}'
     )
 
     if args['wandb']:
@@ -237,16 +241,18 @@ for end_group in end_groups:
         wandb.run.summary["total_training_time"] = end_time - start_time
         wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
         wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
-        wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
+        # wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
         wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
 
-    for i in range(3):
-        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-        table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
-        if args['wandb']:
-            wandb.run.summary[f'{end_name}_examples_final'] = table
+    for thresh in val_threshes:
+        for i in range(min(2, len(tst_exs['output']))):
+            lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=i)
+            batch_name = tst_exs['batch_names'][i]
+            table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+            if args['wandb']:
+                wandb.run.summary[f'{end_name}_exsfinal_thresh{thresh}_{batch_name}'] = table
 
-# # if max_epochs reached, or early stopping condition reached, save best model
-# best_epoch = best_model['epoch']
-# m_name = (f'lstut_best_{params.start_training_time}_{params.lstut_summary_str}.pt')
-# torch.save(best_model, m_name)
+# if max_epochs reached, or early stopping condition reached, save best model
+best_epoch = best_model['epoch']
+m_name = (f'lstut_best_{params.params_id_str}.pt')
+torch.save(best_model, m_name)

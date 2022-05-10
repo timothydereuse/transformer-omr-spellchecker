@@ -1,5 +1,6 @@
 import json
 import logging, datetime
+from unittest import skip
 
 
 class Params(object):
@@ -20,6 +21,7 @@ class Params(object):
             '{tf_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
 
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
+        self.start_training_time = start_training_time
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
         self.log_fname = f'./logs/training_{self.params_id_str}.log'
         self.results_fname = f'./logs/test_results_{self.params_id_str}.log'
@@ -28,7 +30,8 @@ class Params(object):
                                 format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
             if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
                 logging.getLogger().addHandler(logging.StreamHandler())
-
+        self.mod_num = mod_num
+        self.mod_string = ''
         if mod_num > 0 and not hasattr(self, 'param_sweep'):
             raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
                                 'but the Params class was passed mod number {mod_num}.')
@@ -36,6 +39,8 @@ class Params(object):
             self.apply_mod(self.param_sweep[mod_num - 1])
 
     def apply_mod(self, mod):
+        sk = sorted(list(mod.keys()))
+        self.mod_string = ' '.join([f'{k}-{mod[k]}' for k in sk])
 
         for k in mod.keys():
             name = k

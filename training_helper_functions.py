@@ -29,7 +29,8 @@ def log_gpu_info():
 
 
 def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
-              train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None, autoregressive=False):
+              train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None,
+              autoregressive=False, return_names=False):
     '''
     Performs a training or validation epoch.
     @model: the model to use.
@@ -46,7 +47,8 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     num_seqs_used = 0
     total_loss = 0.
 
-    for i, batch in enumerate(dloader):
+    for i, dloader_output in enumerate(dloader):
+        batch, batch_name = dloader_output
 
         if type(batch) == list and len(batch) == 2:
             inp, target = batch
@@ -85,7 +87,13 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             print(f'    batch {i}, loss {log_loss:2.7e}')
 
     mean_loss = total_loss / num_seqs_used
-    example_dict = {'orig': batch, 'input': inp, 'target': target, 'output': output}
+    example_dict = {
+        'orig': batch,
+        'input': inp,
+        'target': target,
+        'output': output, 
+        'batch_names': batch_name
+        }
     return mean_loss, example_dict
 
 
@@ -129,7 +137,7 @@ if __name__ == '__main__':
     dload = DataLoader(dset, batch_size=3)
     dload_test = DataLoader(dset_test, batch_size=3)
     for i, batch in enumerate(dload):
-        batch = batch.float()
+        batch = batch[0].float()
         inp, target = error_generator.add_errors_to_batch(batch)
         print(inp.shape, batch.shape)
         if i > 2:

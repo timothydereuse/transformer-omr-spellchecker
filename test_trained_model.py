@@ -13,6 +13,37 @@ import data_management.vocabulary as vocab
 reload(params)
 reload(po)
 
+def precision_recall(inps, targets, threshold=0.5):
+    thresh_predictions = (inps > threshold)
+    tru_pos = np.logical_and(thresh_predictions, targets).sum()
+    pred_pos = thresh_predictions.sum()
+    targ_pos = targets.sum()
+
+    precision = tru_pos / pred_pos if pred_pos > 0 else 0
+    recall = tru_pos / targ_pos if targ_pos > 0 else 0
+
+    return precision, recall
+
+def find_thresh_for_given_recall(output, target, num_trials=1000, target_recall=0.5):
+    output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
+    target = target.cpu().detach().numpy().reshape(-1)
+
+    thresholds = np.linspace(min(output), max(output), num_trials)
+
+    recalls = np.zeros(thresholds.shape)
+    for i, t in enumerate(thresholds):
+        _, recalls[i] = precision_recall(output, target, threshold=t)
+
+    closest_thresh = thresholds[np.argmin(np.abs(recalls - target_recall))]
+
+    return closest_thresh
+
+def find_thresh_for_given_recalls(output, target, target_recalls, num_trials=1000):
+    return [
+        find_thresh_for_given_recall(output, target, num_trials, x)
+        for x
+        in target_recalls
+    ]
 
 def f_measure(inps, targets, threshold=0.5, beta=1):
     beta_squared = beta * beta
@@ -49,8 +80,8 @@ def multilabel_thresholding(output, target, num_trials=1000, beta=1):
 
 class TestResults(object):
 
-    def __init__(self, thresh):
-        self.thresh = thresh
+    def __init__(self, threshes):
+        self.threshes = threshes
         self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
         self.outputs = np.array([])
         self.targets = np.array([])
@@ -65,8 +96,16 @@ class TestResults(object):
         self.targets = np.concatenate([self.targets, target.reshape(-1).astype(int)])
 
     def calculate_stats(self):
+        r = {x:[] for x in ['precision', 'recall', 'true positive rate', 'true negative rate']}
+        for t in self.threshes:
+            thresh_res = self.calculate_stats_for_thresh(t)
+            for k in thresh_res.keys():
+                r[k].append(thresh_res[k])
+        return r
 
-        predictions = (self.outputs > self.thresh)
+    def calculate_stats_for_thresh(self, thresh):
+
+        predictions = (self.outputs > thresh)
 
         cat_preds = predictions.reshape(-1).astype('bool')
         cat_target = self.targets.reshape(-1).astype('bool')

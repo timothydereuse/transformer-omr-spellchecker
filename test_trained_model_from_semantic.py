@@ -58,9 +58,6 @@ if __name__ == '__main__':
 
     pieces = make_pieces_dict(quartets_root, v)
 
-            
-            
-
     lstut_settings = params.lstut_settings
     lstut_settings['vocab_size'] = v.num_words
     lstut_settings['seq_length'] = params.seq_length

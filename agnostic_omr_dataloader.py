@@ -110,7 +110,7 @@ class AgnosticOMRDataset(IterableDataset):
                 end = (i+1) * self.seq_length + offset
                 seq = (padded_glyphs[0, st:end], padded_glyphs[1, st:end]) if with_targets else padded_glyphs[st:end] 
 
-                yield seq
+                yield seq, (f'fname-seq{i}')
 
 
 if __name__ == '__main__':
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     for j in range(1):
         batches = []
         for i, x in enumerate(dload):
-            print(i, x.shape)
+            print(i, x[0].shape)
             batches.append(x)
         print(i, len(batches))
 
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     batches = []
     for i, x in enumerate(dload):
-        print(i, x[0].shape, x[1].shape)
+        print(i, x[0].shape, x[1])
         batches.append(x)
     print(i, len(batches))
 
