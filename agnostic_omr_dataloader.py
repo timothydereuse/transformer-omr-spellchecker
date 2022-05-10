@@ -110,7 +110,7 @@ class AgnosticOMRDataset(IterableDataset):
                 end = (i+1) * self.seq_length + offset
                 seq = (padded_glyphs[0, st:end], padded_glyphs[1, st:end]) if with_targets else padded_glyphs[st:end] 
 
-                yield seq, (f'fname-seq{i}')
+                yield seq, (f'{fname}-{i}')
 
 
 if __name__ == '__main__':
