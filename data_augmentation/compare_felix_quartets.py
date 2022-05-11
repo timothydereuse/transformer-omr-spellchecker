@@ -5,7 +5,7 @@ from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./processed_datasets/quartets_felix_omr_agnostic2.h5'
+dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
 
 with h5py.File(dset_path, 'r') as f:
     correct_fnames = sorted([x for x in f.keys() if 'correct' in x])

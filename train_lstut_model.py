@@ -92,7 +92,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = (1 * params.error_gen_smoothing)
+class_ratio = (3 * params.error_gen_smoothing)
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 print('beginning training')
@@ -247,7 +247,7 @@ for end_group in end_groups:
         
         pr_lines = []
         for i in range(len(precision)):
-            pr_lines.append([precision[i], recall[i], precision[i]])
+            pr_lines.append([precision[i], recall[i], thresholds[i]])
         pr_table = wandb.Table(columns=['PRECISION', 'RECALL', 'THRESH'], data=pr_lines)
         wandb.log({f'{end_name}.pr': pr_table})
 
