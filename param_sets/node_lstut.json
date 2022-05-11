@@ -1,11 +1,11 @@
 {
-    "params_name": "NODE_LSTUT",
+    "params_name": "NODE_LSTUT_SWEEP",
     "num_epochs": 151,
     "early_stopping_patience": 5,
     "num_examples_to_save": 20,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 510,
+    "max_time_minutes": 480,
 
     "seq_length": 256,
     "padding_amt": 64,
@@ -19,12 +19,11 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
     "error_model": "data_augmentation/quartet_omr_error_models.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 4,
+    "error_gen_smoothing": 3,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
     "target_recalls": [0.9, 0.95, 0.975, 0.99],
-
 
     "lstut_settings": {
         "num_feats": 1,
@@ -40,12 +39,17 @@
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 3,
+        "patience": 4,
         "threshold": 0.001,
         "verbose": true
     },
     "param_sweep": [
         {"simple_error_rate": 0.2, "simple_errors": true},
-        {"batch_size": 1024, "seq_length": 128}
+        {"error_gen_smoothing": 6},
+        {"error_gen_smoothing": 9},
+        {"batch_size": 1024, "seq_length": 128},
+        {"batch_size": 256, "seq_length": 512},
+        {"batch_size": 128, "seq_length": 1024},
+        {"batch_size": 2048, "seq_length": 64}
     ]
 }
