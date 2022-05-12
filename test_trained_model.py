@@ -8,10 +8,37 @@ import models.LSTUT_model as lstut
 import model_params as params
 from importlib import reload
 import data_management.vocabulary as vocab
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import PrecisionRecallDisplay
 
 
 reload(params)
 reload(po)
+
+
+def test_results(output, target, results_dict, threshold):
+    output = output.cpu().detach().numpy()
+    target = target.cpu().detach().numpy()
+
+    predictions = (output > threshold)
+
+    for i, cat in enumerate(['replace', 'insert', 'delete']):
+        cat_preds = predictions[:, :, i].reshape(-1).astype('bool')
+        cat_target = target[:, :, i].reshape(-1).astype('bool')
+
+        t_pos = (cat_preds & cat_target).sum()
+        results_dict[cat]['t_pos'].append(t_pos)
+
+        t_neg = (~cat_preds & ~cat_target).sum()
+        results_dict[cat]['t_neg'].append(t_neg)
+
+        f_pos = (cat_preds & ~cat_target).sum()
+        results_dict[cat]['f_pos'].append(f_pos)
+
+        f_neg = (~cat_preds & cat_target).sum()
+        results_dict[cat]['f_neg'].append(f_neg)
+
+    return results_dict
 
 def precision_recall(inps, targets, threshold=0.5):
     thresh_predictions = (inps > threshold)
@@ -25,8 +52,13 @@ def precision_recall(inps, targets, threshold=0.5):
     return precision, recall
 
 def find_thresh_for_given_recall(output, target, num_trials=10000, target_recall=0.5):
-    output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
-    target = target.cpu().detach().numpy().reshape(-1)
+    if type(output) == torch.Tensor:
+        output = output.cpu().detach().numpy()
+    output = output.reshape(-1)
+
+    if type(target) == torch.Tensor:
+        target = target.cpu().detach().numpy()
+    target = target.reshape(-1)
 
     thresholds = np.linspace(min(output), max(output), num_trials)
 
@@ -62,7 +94,7 @@ def f_measure(inps, targets, threshold=0.5, beta=1):
     return F1
 
 def multilabel_thresholding(output, target, num_trials=1000, beta=1):
-    output = torch.sigmoid(output).cpu().detach().numpy().reshape(-1)
+    output = output.cpu().detach().numpy().reshape(-1)
     target = target.cpu().detach().numpy().reshape(-1)
 
     thresholds = np.linspace(min(output), max(output), num_trials)
@@ -77,14 +109,13 @@ def multilabel_thresholding(output, target, num_trials=1000, beta=1):
     return best_score, best_thresh
 
 
-
 class TestResults(object):
 
     def __init__(self, threshes):
         self.threshes = threshes
-        self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
         self.outputs = np.array([])
         self.targets = np.array([])
+        self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
 
     def update(self, output, target):
 
@@ -92,15 +123,17 @@ class TestResults(object):
 
         output = output.cpu().detach().numpy()
         target = target.cpu().detach().numpy()
-        self.outputs = np.concatenate([self.outputs, sigmoid(output.reshape(-1))])
+
+        self.outputs = np.concatenate([self.outputs, output.reshape(-1)])
         self.targets = np.concatenate([self.targets, target.reshape(-1).astype(int)])
 
     def calculate_stats(self):
-        r = {x:[] for x in ['precision', 'recall', 'true positive rate', 'true negative rate']}
+
+        r = {x:{} for x in ['precision', 'recall', 'true negative rate']}
         for t in self.threshes:
             thresh_res = self.calculate_stats_for_thresh(t)
             for k in thresh_res.keys():
-                r[k].append(thresh_res[k])
+                r[k][t] = (thresh_res[k])
         return r
 
     def calculate_stats_for_thresh(self, thresh):
@@ -111,93 +144,42 @@ class TestResults(object):
         cat_target = self.targets.reshape(-1).astype('bool')
 
         t_pos = (cat_preds & cat_target).sum()
-        self.results_dict['t_pos'].append(t_pos)
 
         t_neg = (~cat_preds & ~cat_target).sum()
-        self.results_dict['t_neg'].append(t_neg)
 
         f_pos = (cat_preds & ~cat_target).sum()
-        self.results_dict['f_pos'].append(f_pos)
 
         f_neg = (~cat_preds & cat_target).sum()
-        self.results_dict['f_neg'].append(f_neg)
 
-        results_dict = {x: sum(self.results_dict[x]) for x in self.results_dict.keys()}
         r = {}
-        r['precision'] = results_dict['t_pos'] / (results_dict['t_pos'] + results_dict['f_pos'])
-        r['recall'] = results_dict['t_pos'] / (results_dict['t_pos'] + results_dict['f_neg'])
-        r['true positive rate'] = results_dict['t_pos'] / (results_dict['t_pos'] + results_dict['f_neg'])
-        r['true negative rate'] = results_dict['t_neg'] / (results_dict['t_neg'] + results_dict['f_pos'])
+        r['precision'] = t_pos / (t_pos + f_pos) if (t_pos + f_pos) > 0 else 0
+        r['recall'] = t_pos / (t_pos + f_neg) if (t_pos + f_neg) > 0 else 0
+        r['true negative rate'] = t_neg / (t_neg + f_pos) if (t_neg + f_pos) > 0 else 0
         return r
 
+    def make_pr_curve(self):
+        # necessary to downsample PR graphs because wandb only does graphs of 10000 pts
+        precision, recall, thresholds = precision_recall_curve(self.targets, self.outputs)
+        # downsample_amt = (len(precision) // 10001) + 1
+        # precision = precision[::downsample_amt]
+        # recall = recall[::downsample_amt]
+        # thresholds = thresholds[::downsample_amt]
 
-def test_results(output, target, results_dict, threshold):
-    output = output.cpu().detach().numpy()
-    target = target.cpu().detach().numpy()
-
-    predictions = (output > threshold)
-
-    for i, cat in enumerate(['replace', 'insert', 'delete']):
-        cat_preds = predictions[:, :, i].reshape(-1).astype('bool')
-        cat_target = target[:, :, i].reshape(-1).astype('bool')
-
-        t_pos = (cat_preds & cat_target).sum()
-        results_dict[cat]['t_pos'].append(t_pos)
-
-        t_neg = (~cat_preds & ~cat_target).sum()
-        results_dict[cat]['t_neg'].append(t_neg)
-
-        f_pos = (cat_preds & ~cat_target).sum()
-        results_dict[cat]['f_pos'].append(f_pos)
-
-        f_neg = (~cat_preds & cat_target).sum()
-        results_dict[cat]['f_neg'].append(f_neg)
-
-    return results_dict
+        return precision, recall, thresholds
 
 
 if __name__ == '__main__':
-    model_path = r'trained_models\lstut_best_LSTUT_FELIX_TRIAL_0_(2022.03.14.20.21)_1-1-1-01-0-32-32.pt'
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    checkpoint = torch.load(model_path, map_location=device)
-    params = checkpoint['params']
+    num_trials = 100
 
-    v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
+    tr = TestResults(threshes=[0.1, 0.5, 0.9])
 
-    lstut_settings = params.lstut_settings
-    lstut_settings['vocab_size'] = v.num_words
-    lstut_settings['seq_length'] = params.seq_length
-    model = lstut.LSTUT(**lstut_settings).to(device)
-    model = nn.DataParallel(model, device_ids=list(range(torch.cuda.device_count())))
-    model.load_state_dict(checkpoint['model_state_dict'])
-    # best_thresh = checkpoint['best_thresh']
+    for x in range(10):
+        targets = torch.tensor(np.random.randint(0, 2, num_trials))
+        outputs = (targets * 2 - 1) + torch.tensor(np.random.normal(0, 3, num_trials))
+        # targets = torch.round(outputs)
+        tr.update(torch.sigmoid(outputs), targets)
 
-    model.eval()
-    with torch.no_grad():
-        for i, batch in enumerate(dloader):
-            batch = batch.float().cpu()
-            inp, target = prepare_batch(batch)
+    asdf = find_thresh_for_given_recall(torch.Tensor(tr.outputs), torch.Tensor(tr.targets), target_recall=0.33)
 
-            batch = batch.to(device)
-            inp = inp.to(device)
-            target = target.to(device)
-
-            output = tst_model(inp)
-            results_dict = test_results(output, target, results_dict, best_thresh)
-
-    for k in results_dict.keys():
-        # for c in results_dict[k].keys():
-        #     results_dict[k][c] = np.sum(results_dict[k][c])
-        results_dict[k]['precision'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_pos'])
-        results_dict[k]['recall'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_neg'])
-        results_dict[k]['True positive rate'] = results_dict[k]['t_pos'] / (results_dict[k]['t_pos'] + results_dict[k]['f_neg'])
-        results_dict[k]['True negative rate'] = results_dict[k]['t_neg'] / (results_dict[k]['t_neg'] + results_dict[k]['f_pos'])
-
-    print(results_dict)
-        # epoch = checkpoint['epoch']
-        # loss = checkpoint['loss']
-
-    ind = 93
-    fig, axs = po.plot_pianoroll_corrections(batch[ind], inp[ind], target[ind], output[ind], best_thresh)
-    # fg.show()
-    fig.savefig(f'./out_imgs/ind_{ind}.png', bbox_inches='tight')
+    res = tr.calculate_stats()
+    p, r, t = tr.make_pr_curve()

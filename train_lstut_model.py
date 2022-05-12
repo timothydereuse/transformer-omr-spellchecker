@@ -143,9 +143,12 @@ for epoch in range(params.num_epochs):
     scheduler.step(val_loss)
     # tr_funcs.log_gpu_info()
 
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(tr_exs['output'], tr_exs['target'], beta=2)
-    val_f1 = ttm.f_measure(val_exs['output'].cpu(), val_exs['target'].cpu(), tr_thresh)
-    val_threshes = ttm.find_thresh_for_given_recalls(val_exs['output'].cpu(), val_exs['target'].cpu(), params.target_recalls)
+    # get thresholds that maximize f1 and match required recall scores
+    sig_val_output = torch.sigmoid(val_exs['output'])
+    sig_train_output = torch.sigmoid(tr_exs['output'])
+    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=2)
+    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh)
+    val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
 
     epoch_end_time = time.time()
     print(
@@ -227,46 +230,34 @@ for end_group in end_groups:
             batch_includes_training_data=end_train_data_mode,
             **run_epoch_kwargs
         )
+    tst_threshes = ttm.find_thresh_for_given_recalls(test_results.outputs, test_results.targets, params.target_recalls)
+    test_results.threshes = tst_threshes
     res_stats = test_results.calculate_stats()
     print(
         f'{end_name}_precision: {res_stats["precision"]} | '
         f'{end_name}_recall:    {res_stats["recall"]} | '
-        f'{end_name}_true positive: {res_stats["true positive rate"]} | '
         f'{end_name}_true negative:   {res_stats["true negative rate"]}'
     )
 
     if args['wandb']:
-        from sklearn.metrics import precision_recall_curve
-
-        # necessary to downsample PR graphs because wandb only does graphs of 10000 pts
-        precision, recall, thresholds = precision_recall_curve(test_results.targets, test_results.outputs)
-        downsample_amt = (len(precision) // 10001) + 1
-        precision = precision[::downsample_amt]
-        recall = recall[::downsample_amt]
-        thresholds = thresholds[::downsample_amt]
-        
-        pr_lines = []
-        for i in range(len(precision)):
-            pr_lines.append([precision[i], recall[i], thresholds[i]])
-        pr_table = wandb.Table(columns=['PRECISION', 'RECALL', 'THRESH'], data=pr_lines)
-        wandb.log({f'{end_name}.pr': pr_table})
-
-        # wandb.log({f'{end_name}.pr': wandb.plot.pr_curve(downsample_targets, proba)})
-        # wandb.log({f'{end_name}.roc': wandb.plot.roc_curve(downsample_targets, proba)})
         wandb.run.summary["total_training_time"] = end_time - start_time
-        wandb.run.summary[f"{end_name}_precision"] = res_stats["precision"]
-        wandb.run.summary[f"{end_name}_recall"] = res_stats["recall"]
-        # wandb.run.summary[f"{end_name}_true_positive"] = res_stats["true positive rate"]
-        wandb.run.summary[f"{end_name}_true_negative"] = res_stats["true negative rate"]
+        for i, thresh in enumerate(tst_threshes):
+            target_recall = params.target_recalls[i]
+            wandb.run.summary[f"{end_name}_{target_recall}_precision"] = res_stats["precision"][thresh]
+            wandb.run.summary[f"{end_name}_{target_recall}_recall"] = res_stats["recall"][thresh]
+            wandb.run.summary[f"{end_name}_{target_recall}_true_negative"] = res_stats["true negative rate"][thresh]
 
     for j, thresh in enumerate(val_threshes):
+        wandb_dict = {}
         for i in range(min(params.num_examples_to_save, len(tst_exs['output']))):
             ind_to_save = np.random.choice(len(tst_exs['output']))
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
             batch_name = tst_exs['batch_names'][ind_to_save]
             table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
-            if args['wandb']:
-                wandb.run.summary[f'{end_name}_exsfinal_recall{params.target_recalls}_{batch_name}'] = table
+            wandb_dict[f'{end_name}_{i}_{params.target_recalls[j]}_{batch_name}'] = table
+        
+        if args['wandb']:
+            wandb.run.summary[f'{end_name}_exs_final_recall{params.target_recalls[j]}'] = wandb_dict
 
 # if max_epochs reached, or early stopping condition reached, save best model
 best_epoch = best_model['epoch']

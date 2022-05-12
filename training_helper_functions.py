@@ -72,7 +72,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         loss = criterion(output, target)
         
         if test_results:
-            test_results.update(output, target)
+            test_results.update(torch.sigmoid(output), target)
 
         if train:
             loss.backward()
