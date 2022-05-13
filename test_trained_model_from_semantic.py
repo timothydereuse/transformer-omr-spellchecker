@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 
-    pieces = make_pieces_dict(quartets_root, v)
+    pieces = make_pieces_dict(quartets_root, v)            
 
     lstut_settings = params.lstut_settings
     lstut_settings['vocab_size'] = v.num_words
