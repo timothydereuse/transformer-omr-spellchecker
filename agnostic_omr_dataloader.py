@@ -26,7 +26,7 @@ def all_hdf5_keys(obj):
 class AgnosticOMRDataset(IterableDataset):
 
     def __init__(self, dset_fname, seq_length, vocabulary, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, dataset_proportion=False):
+                 padding_amt=None, random_offsets=True, all_subsequences=False, dataset_proportion=False):
         """
         @dset_fname - the file name of the processed hdf5 dataset
         @seq_length - length to chop sequences into
@@ -35,6 +35,8 @@ class AgnosticOMRDataset(IterableDataset):
         @padding_amt - amount of padding to add to beginning and end of each song (optional,
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
+        @all_subsequences - take all overlapping subsequences of all inputs, instead of
+            cutting them into non-overlapping segments
         @dataset_proportion - set to true to dramatically reduce size of dataset
         """
         super(AgnosticOMRDataset).__init__()
@@ -46,6 +48,7 @@ class AgnosticOMRDataset(IterableDataset):
         self.dataset_proportion = dataset_proportion
         self.flags = params.notetuple_flags
         self.vocabulary = vocabulary
+        self.all_subsequences = all_subsequences
 
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
@@ -94,22 +97,28 @@ class AgnosticOMRDataset(IterableDataset):
 
             padded_length = padded_glyphs.shape[1] if with_targets else padded_glyphs.shape[0]
             # figure out how many sequences we can get out of this
-            num_seqs = np.floor(padded_length / self.seq_length)
+            if not self.all_subsequences:
+                num_seqs = np.floor(padded_length / self.seq_length)
+                remainder = padded_length - (num_seqs * self.seq_length)
+                offset = np.random.randint(remainder + 1) if self.random_offsets else 0
+            else:
+                num_seqs = (padded_length - self.seq_length)
+                offset = 0
 
             # check if the current file is too short to be used with the seq_length desired
             if num_seqs == 0:
                 continue
 
-            remainder = padded_length - (num_seqs * self.seq_length)
-            offset = np.random.randint(remainder + 1) if self.random_offsets else 0
-
             # return sequences of notes from each file, seq_length in length.
             # move to the next file when the current one has been exhausted.
             for i in range(int(num_seqs)):
-                st = i * self.seq_length + offset
-                end = (i+1) * self.seq_length + offset
+                if not self.all_subsequences:
+                    st = i * self.seq_length + offset
+                    end = (i+1) * self.seq_length + offset
+                else:
+                    st = i
+                    end = i + self.seq_length
                 seq = (padded_glyphs[0, st:end], padded_glyphs[1, st:end]) if with_targets else padded_glyphs[st:end] 
-
                 yield seq, (f'{fname}-{i}')
 
 
@@ -117,9 +126,9 @@ if __name__ == '__main__':
     from data_management.vocabulary import Vocabulary
     fname = 'processed_datasets/all_string_quartets_agnostic.h5'
     seq_len = 500
-    proportion = 0.2
+    proportion = 0.02
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=0.5, shuffle_files=False)
+    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=0.5, shuffle_files=False, all_subsequences=True)
 
     dload = DataLoader(dset, batch_size=15)
     for j in range(1):
@@ -136,7 +145,7 @@ if __name__ == '__main__':
 
     batches = []
     for i, x in enumerate(dload):
-        print(i, x[0].shape, x[1])
+        print(i, len(x[0]), len(x[1]))
         batches.append(x)
     print(i, len(batches))
 
