@@ -1,5 +1,5 @@
 {
-    "params_name": "LSTUT_FELIX_DEFAULT",
+    "params_name": "VANILLA_TF_NODE",
     "num_epochs": 50,
     "early_stopping_patience": 20,
     "num_examples_to_save": 20,
@@ -23,7 +23,7 @@
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.05,
-    "target_recalls": [0.9, 0.95, 0.975, 0.99],
+    "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
 
 
     "lstut_settings": {

@@ -1,8 +1,8 @@
 {
-    "params_name": "NODE_LSTUT_SWEEP",
+    "params_name": "NODE_LSTUT_SWEEP_FINAL",
     "num_epochs": 151,
     "early_stopping_patience": 5,
-    "num_examples_to_save": 20,
+    "num_examples_to_save": 10,
     "save_model_every": 4,
     "save_img_every": 1,
     "max_time_minutes": 460,
@@ -13,7 +13,7 @@
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
     "num_feats": 1,
-    "dataset_proportion": 1,
+    "dataset_proportion": 1.0,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets.h5",
@@ -23,7 +23,7 @@
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
-    "target_recalls": [0.9, 0.95, 0.975, 0.995],
+    "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
 
     "lstut_settings": {
         "num_feats": 1,
@@ -45,8 +45,7 @@
     },
     "param_sweep": [
         {"simple_error_rate": 0.2, "simple_errors": true},
-        {"error_gen_smoothing": 6},
-        {"error_gen_smoothing": 9},
+        {"error_gen_smoothing": 7},
         {"batch_size": 1024, "seq_length": 128},
         {"batch_size": 256, "seq_length": 512},
         {"batch_size": 128, "seq_length": 1024},
