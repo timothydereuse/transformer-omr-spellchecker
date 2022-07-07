@@ -35,7 +35,7 @@ class AgnosticOMRDataset(IterableDataset):
         @padding_amt - amount of padding to add to beginning and end of each song (optional,
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
-        @all_subsequences - take all overlapping subsequences of all inputs, instead of
+        @mode - take all overlapping subsequences of all inputs, instead of
             cutting them into non-overlapping segments
         @dataset_proportion - set to true to dramatically reduce size of dataset
         """
@@ -70,7 +70,7 @@ class AgnosticOMRDataset(IterableDataset):
             np.random.shuffle(self.fnames)
 
         # iterate through all given fnames, breaking them into chunks of seq_length...
-        for fname in self.fnames:
+        for fname_ind, fname in enumerate(self.fnames):
             glyphs = self.f[fname]
 
             # determine if this is raw input for data augmentation or data along with targets
@@ -119,8 +119,24 @@ class AgnosticOMRDataset(IterableDataset):
                     st = i
                     end = i + self.seq_length
                 seq = (padded_glyphs[0, st:end], padded_glyphs[1, st:end]) if with_targets else padded_glyphs[st:end] 
-                yield seq, (f'{fname}-{i}')
+                yield seq, (fname_ind, i, fname)
+    
+    def iter_file(self):
+        file_ind = 0
+        seqs = []
+        fnames = []
+        for entry in self.__iter__():
+            seq, f = entry
 
+            # monitor for change in file index
+            if not f[0] == file_ind:
+                yield torch.stack(seqs), fnames
+                file_ind = f[0]
+                seqs = []
+                fnames = []
+
+            seqs.append(torch.tensor(seq))
+            fnames.append(f)
 
 if __name__ == '__main__':
     from data_management.vocabulary import Vocabulary
@@ -128,18 +144,23 @@ if __name__ == '__main__':
     seq_len = 500
     proportion = 0.02
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=0.5, shuffle_files=False, all_subsequences=True)
+    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False, all_subsequences=True)
 
     dload = DataLoader(dset, batch_size=15)
-    for j in range(1):
-        batches = []
-        for i, x in enumerate(dload):
-            print(i, x[0].shape)
-            batches.append(x)
-        print(i, len(batches))
+    batches = []
+    for i, x in enumerate(dload):
+        print(i, x[0].shape)
+        batches.append(x)
+        break
+
+    batches = []
+    for i, x in enumerate(dset.iter_file()):
+        print(i, x[0].shape)
+        batches.append(x)
+    print(i, len(batches))
 
     fname = 'processed_datasets/supervised_omr_targets.h5'
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=1, shuffle_files=False)
+    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False)
 
     dload = DataLoader(dset, batch_size=15)
 
