@@ -162,7 +162,9 @@ def m21_part_to_agnostic(part, part_idx):
 
                 tuplet_record[len(agnostic)] = tuplet
                 # agnostic.extend(sustain_list)
-                records = [AgnosticRecord(g, measure_idx, event_idx, part_idx) for g in sustain_list]
+                records = [
+                    AgnosticRecord(g, measure_idx, event_idx, part_idx)
+                    for i, g in enumerate(sustain_list)]
                 agnostic.extend(records)
 
             # case if the current m21 element is a Dynamic marking
@@ -217,7 +219,7 @@ def m21_part_to_agnostic(part, part_idx):
                 agnostic.append(AgnosticRecord(f'barline.{e.type}', measure_idx, event_idx, part_idx))
 
         # at the end of every measure, add a bar if there isn't one already
-        if not 'bar' in agnostic[-1]:
+        if not 'barline' in agnostic[-1].agnostic_item:
             # agnostic.extend(['+', 'barline.regular'])
             agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
             agnostic.append(AgnosticRecord(f'barline.regular', measure_idx, event_idx, part_idx))
@@ -259,48 +261,21 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
             in agnostic_parts
         ]
 
+    all_parts_concat = [item for sublist in agnostic_parts for item in sublist]
     if not interleave:
-        outp = [item for sublist in agnostic_parts for item in sublist]
         if just_tokens:
-            outp = [x.agnostic_item for x in outp]
-        return outp
+            return [x.agnostic_item for x in all_parts_concat]
+        return all_parts_concat
 
-
-    # get locations of barlines in each part
-    bar_break_points = [
-        [0] + [i for i, j in enumerate(part) if 'barline' in j.agnostic_item]
-        for part
-        in agnostic_parts
-    ]
-
-    # get locations of linebreaks in each part
-    staff_break_points = [
-        [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
-        for part
-        in agnostic_parts
-    ]
-
-    # if there are no notated line breaks, insert them manually every couple of bars
-    if any([len(x) == 1 for x in staff_break_points]):
-        staff_break_points = [x[::fallback_num_bars_per_line] for x in bar_break_points]
-
-    # if there is somehow a discrepancy in the number of staves per part, choose the minimum number per part
-    num_bars = [len(x) for x in staff_break_points]
-    if not all([num_bars[0] == x for x in num_bars]):
-        staff_break_points = [x[:min(num_bars)] for x in staff_break_points]
-
-    # interleave parts together every few line breaks
-    interleaved_agnostic = []
-    for i in range(min(num_bars) - 1):
-        for j in range(len(agnostic_parts)):
-            start = staff_break_points[j][i]
-            end = staff_break_points[j][i + 1]
-            interleaved_agnostic += agnostic_parts[j][start:end]
+    interleaved = sorted(
+        all_parts_concat,
+        key=lambda t: (t.measure_idx, t.part_idx, t.event_idx)
+        )
 
     if just_tokens:
-        interleaved_agnostic = [x.agnostic_item for x in interleaved_agnostic]
+        interleaved = [x.agnostic_item for x in interleaved]
 
-    return interleaved_agnostic
+    return interleaved
 
 
 
@@ -308,16 +283,16 @@ if __name__ == '__main__':
     from collections import Counter
 
     k = 'kernscores'
-    quartets_root = r'D:\Documents\datasets\just_quartets'
-    files = os.listdir(os.path.join(quartets_root, k))
+    # quartets_root = r'D:\Documents\datasets\just_quartets'
+    # files = os.listdir(os.path.join(quartets_root, k))
+    files = [r'data_management/3_op44i_2_aligned_crop.mxl']
     all_tokens = Counter()
 
-    for fname in files:
-        fpath = os.path.join(os.path.join(quartets_root, k, fname))
+    for fpath in files:
         parsed_file = m21.converter.parse(fpath)
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
         # part = parts[0].getElementsByClass(m21.stream.Measure)
-        print(f'processing {k}.{fname}')
+        print(f'processing {k}')
         print(f'ntokens {len(all_tokens)}')
 
         # for p in parts:
