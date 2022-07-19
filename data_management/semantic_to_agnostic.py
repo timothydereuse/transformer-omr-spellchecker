@@ -1,7 +1,9 @@
+from tokenize import group
 import music21 as m21
 import os
 import math
 from collections import namedtuple
+from itertools import groupby
 
 AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'measure_idx', 'event_idx', 'part_idx'])
 DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
@@ -135,7 +137,6 @@ def m21_part_to_agnostic(part, part_idx):
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
                 agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                 agnostic.append(AgnosticRecord(f'rest.{dur_name}', measure_idx, event_idx, part_idx))
-                # agnostic.extend(['+', f'rest.{dur_name}'])
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
@@ -161,7 +162,6 @@ def m21_part_to_agnostic(part, part_idx):
                 sustain_list[0] = '+'
 
                 tuplet_record[len(agnostic)] = tuplet
-                # agnostic.extend(sustain_list)
                 records = [
                     AgnosticRecord(g, measure_idx, event_idx, part_idx)
                     for i, g in enumerate(sustain_list)]
@@ -171,7 +171,6 @@ def m21_part_to_agnostic(part, part_idx):
             elif type(e) == m21.dynamics.Dynamic:
                 # agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                 # agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx, part_idx))
-                # agnostic.extend(['+', f'dynamics.{e.value}'])
                 pass
 
             # case if the current m21 element is a Key Signature
@@ -181,7 +180,6 @@ def m21_part_to_agnostic(part, part_idx):
 
                     agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                     agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', measure_idx, event_idx, part_idx))
-                    # agnostic.extend(['+', f'accid.{p.accidental.name}.pos{position}'])
                 current_key_sig = e 
             
             # case if the current m21 element is a Time Signature
@@ -189,11 +187,9 @@ def m21_part_to_agnostic(part, part_idx):
                 current_time_sig = e
                 agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                 agnostic.append(AgnosticRecord(f'timeSig.{e.ratioString}', measure_idx, event_idx, part_idx))
-                # agnostic.extend(['+', f'timeSig.{e.ratioString}'])
 
             # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
-                # agnostic.extend(['+', f'clef.{e.name}'])
                 agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                 agnostic.append(AgnosticRecord(f'clef.{e.name}', measure_idx, event_idx, part_idx))
                 current_clef = current_clef if (e.lowestLine is None) else e
@@ -214,13 +210,11 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
-                # agnostic.extend(['+', f'barline.{e.type}'])
                 agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
                 agnostic.append(AgnosticRecord(f'barline.{e.type}', measure_idx, event_idx, part_idx))
 
         # at the end of every measure, add a bar if there isn't one already
         if not 'barline' in agnostic[-1].agnostic_item:
-            # agnostic.extend(['+', 'barline.regular'])
             agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
             agnostic.append(AgnosticRecord(f'barline.regular', measure_idx, event_idx, part_idx))
 
@@ -238,10 +232,6 @@ def m21_part_to_agnostic(part, part_idx):
         over_record = AgnosticRecord('<', measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
-
-    # # make sure no spaces remain in any of the entries
-    # for ind in range(len(agnostic)):
-    #     agnostic[ind] = agnostic[ind].replace(' ', '')
 
     return agnostic
 
@@ -267,10 +257,26 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
             return [x.agnostic_item for x in all_parts_concat]
         return all_parts_concat
 
-    interleaved = sorted(
-        all_parts_concat,
-        key=lambda t: (t.measure_idx, t.part_idx, t.event_idx)
-        )
+    last_measure = 1 + max([p[-1].measure_idx for p in agnostic_parts])
+
+    # gets all parts grouped by measure index. nested comprehension to make sure it's a list
+    # before groupby's weird ways mess up the iterators
+    agnostic_parts_grouped = [
+        [list(group) for key, group in groupby(p, key=lambda t: t.measure_idx)] 
+        for p in agnostic_parts
+    ]
+
+    interleaved = []
+    for i in range(last_measure):
+        for p in agnostic_parts_grouped:
+            try:
+                interleaved.extend(p[i])
+            except IndexError:
+                pass
+        l = interleaved[-1]
+        interleaved.append(
+            AgnosticRecord('barline.return-to-top', l.measure_idx, l.event_idx, l.part_idx)
+            )
 
     if just_tokens:
         interleaved = [x.agnostic_item for x in interleaved]
