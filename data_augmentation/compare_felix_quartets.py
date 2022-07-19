@@ -5,12 +5,14 @@ from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
+dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_interleaved.h5'
+supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_interleaved.h5'
+error_generator_fname = r'./data_augmentation/quartet_omr_error_models_interleaved.joblib'
 
 with h5py.File(dset_path, 'r') as f:
-    correct_fnames = sorted([x for x in f.keys() if 'correct' in x])
-    error_fnames = sorted([x for x in f.keys() if 'omr' in x])
-    error_onepass_fnames = sorted([x for x in f.keys() if 'onepass' in x])
+    correct_fnames = sorted([x for x in f.keys() if 'felix_correct' in x and not 'op80' in x])
+    error_fnames = sorted([x for x in f.keys() if 'felix_omr' in x])
+    error_onepass_fnames = sorted([x for x in f.keys() if 'felix_onepass' in x])
 
     correct_dset = [f[x][:].astype(np.uint8) for x in correct_fnames]
     error_dset = [f[x][:].astype(np.uint8) for x in error_fnames]
@@ -72,22 +74,20 @@ def get_training_samples(correct_dset, error_dset):
 X, Y = get_training_samples(correct_dset, error_dset)
 X = np.array(X).reshape(-1, 1)
 err_gen = elgr.ErrorGenerator(labeled_data=[X,Y])
-err_gen.save_models('./data_augmentation/quartet_omr_error_models.joblib')
+err_gen.save_models(error_generator_fname)
 # err_gen = elgr.ErrorGenerator(3, models_fpath='./data_augmentation/quartet_omr_error_models.joblib' )
 
 # now, make .h5 file of test sequences
-
 pms = [
     (error_dset, error_fnames, 'omr'), 
     (error_onepass_dset, error_onepass_fnames, 'onepass')
 ]
 
 # X, Y = get_training_samples(correct_dset, error_onepass_dset)
-
 for t in pms:
     target_dset, target_dset_fnames, category = t
 
-    with h5py.File('./processed_datasets/supervised_omr_targets2.h5', 'a') as f:
+    with h5py.File(supervised_targets_fname, 'a') as f:
         f.create_group(category)
 
     # X, Y = get_training_samples(correct_dset, target_dset)
@@ -100,7 +100,7 @@ for t in pms:
         err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
         arr = np.stack([err, Y])    
 
-        with h5py.File('./processed_datasets/supervised_omr_targets2.h5', 'a') as f:
+        with h5py.File(supervised_targets_fname, 'a') as f:
             name = target_dset_fnames[ind]
             g = f[category]
             dset = g.create_dataset(
