@@ -58,7 +58,7 @@ class Vocabulary(object):
         self.num_words = np.max(list(self.wtv.values())) + 1
 
     def words_to_vec(self, words):
-        res = np.zeros(len(words), dtype=np.uintc)
+        res = np.zeros(len(words), dtype=np.uint16)
         for i, w in enumerate(words):
             try:
                 res[i] = self.wtv[w]
