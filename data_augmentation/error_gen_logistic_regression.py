@@ -214,7 +214,7 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='./data_augmentation/quartet_omr_error_models.joblib')
+    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='./data_augmentation/quartet_omr_error_models_interleaved.joblib')
 
     synth_error = e.get_synthetic_error_sequence(x[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(x[0].numpy())

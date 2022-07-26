@@ -107,7 +107,7 @@ class AgnosticOMRDataset(IterableDataset):
 
             # check if the current file is too short to be used with the seq_length desired
             if num_seqs == 0:
-                continue
+                num_seqs = 1
 
             # return sequences of notes from each file, seq_length in length.
             # move to the next file when the current one has been exhausted.
