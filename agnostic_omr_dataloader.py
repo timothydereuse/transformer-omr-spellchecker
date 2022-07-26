@@ -107,7 +107,7 @@ class AgnosticOMRDataset(IterableDataset):
 
             # check if the current file is too short to be used with the seq_length desired
             if num_seqs == 0:
-                num_seqs = 1
+                break
 
             # return sequences of notes from each file, seq_length in length.
             # move to the next file when the current one has been exhausted.
@@ -140,24 +140,23 @@ class AgnosticOMRDataset(IterableDataset):
 
 if __name__ == '__main__':
     from data_management.vocabulary import Vocabulary
-    fname = 'processed_datasets/all_string_quartets_agnostic.h5'
-    seq_len = 500
-    proportion = 0.02
+    fname = 'processed_datasets/all_string_quartets_agnostic_interleaved.h5'
+    seq_len = 256
+    proportion = 0.5
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False, all_subsequences=True)
+    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False, all_subsequences=False)
 
-    dload = DataLoader(dset, batch_size=15)
+    dload = DataLoader(dset, batch_size=500)
     batches = []
     for i, x in enumerate(dload):
         print(i, x[0].shape)
         batches.append(x)
-        break
 
-    batches = []
-    for i, x in enumerate(dset.iter_file()):
-        print(i, x[0].shape)
-        batches.append(x)
-    print(i, len(batches))
+    # batches = []
+    # for i, x in enumerate(dset.iter_file()):
+    #     print(i, x[0].shape)
+    #     batches.append(x)
+    # print(i, len(batches))
 
     fname = 'processed_datasets/supervised_omr_targets.h5'
     dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False)
