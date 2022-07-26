@@ -32,8 +32,8 @@
         "tf_layers": 1,
         "tf_heads": 1,
         "tf_depth": 3,
-        "hidden_dim": 32,
-        "ff_dim": 64,
+        "hidden_dim": 16,
+        "ff_dim": 32,
         "dropout": 0.1,
         "positional_encoding": false
     },

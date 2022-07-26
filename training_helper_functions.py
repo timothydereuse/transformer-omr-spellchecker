@@ -49,7 +49,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
 
     for i, dloader_output in enumerate(dloader):
         batch = dloader_output[0]
-        batch_name = dloader_output[1]
+        batch_metadata = dloader_output[1]
 
         if batch_includes_training_data and len(batch) == 2:
             inp, target = batch
@@ -93,7 +93,9 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         'input': inp,
         'target': target,
         'output': output, 
-        'batch_names': batch_name
+        'batch_names': batch_metadata[2],
+        'batch_offsets': batch_metadata[1],
+        'batch_file_inds': batch_metadata[0]
         }
     return mean_loss, example_dict
 
