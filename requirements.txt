@@ -1,0 +1,6 @@
+numpy
+h5py
+sklearn>1.0.0
+torch
+numba
+pytorch-fast-transformers
