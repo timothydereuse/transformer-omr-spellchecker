@@ -4,6 +4,7 @@ from sklearn import preprocessing
 from joblib import dump, load, Parallel, delayed
 import data_augmentation.needleman_wunsch_alignment as align
 import numpy as np
+import torch
 
 def rolling_window(a, window):
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
@@ -169,7 +170,7 @@ class ErrorGenerator(object):
         X = np.stack([np.array(x[0]) for x in out], 0)
         Y = np.stack([np.array(x[1]) for x in out], 0)
 
-        return X, Y
+        return torch.from_numpy(X), torch.from_numpy(Y)
 
     def use_errors_from_existing_batch(self, batch):
         b, e = batch

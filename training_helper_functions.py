@@ -58,8 +58,8 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             inp, target = example_generator.add_errors_to_batch(batch)
 
         # batch = batch.to(device)
-        inp = torch.tensor(inp, device=device).type(torch.long)
-        target = torch.tensor(target, device=device)
+        inp = inp.to(device).type(torch.long)
+        target = target.to(device)
 
         if train:
             optimizer.zero_grad()
