@@ -92,7 +92,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = (params.error_gen_smoothing)
+class_ratio = 1 # (params.error_gen_smoothing)
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 print('beginning training')
