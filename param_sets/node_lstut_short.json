@@ -1,6 +1,6 @@
 {
     "params_name": "NODE_LSTUT_SHORT_SWEEP",
-    "num_epochs": 8,
+    "num_epochs": 12,
     "early_stopping_patience": 5,
     "num_examples_to_save": 2,
     "save_model_every": 4,
