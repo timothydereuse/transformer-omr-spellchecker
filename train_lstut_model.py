@@ -67,9 +67,9 @@ dset_kwargs = {
 }
 dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
 dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
+dset_kwargs['dataset_proportion'] = 1
 dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
 dset_kwargs['dset_fname'] = params.dset_testing_path
-dset_kwargs['dataset_proportion'] = 1
 dset_omr = dl.AgnosticOMRDataset(base='omr', **dset_kwargs)
 dset_omr_onepass = dl.AgnosticOMRDataset(base='onepass', **dset_kwargs)
 
@@ -235,7 +235,7 @@ for end_group in end_groups:
     res_stats = test_results.calculate_stats()
     print(
         f'{end_name}_precision: {res_stats["precision"]} | '
-        f'{end_name}_recall:    {res_stats["recall"]} | '
+        # f'{end_name}_recall:    {res_stats["recall"]} | '
         f'{end_name}_true negative:   {res_stats["true negative rate"]}'
     )
 
@@ -244,8 +244,11 @@ for end_group in end_groups:
         for i, thresh in enumerate(tst_threshes):
             target_recall = params.target_recalls[i]
             wandb.run.summary[f"{end_name}_{target_recall}_precision"] = res_stats["precision"][thresh]
-            wandb.run.summary[f"{end_name}_{target_recall}_recall"] = res_stats["recall"][thresh]
+            # wandb.run.summary[f"{end_name}_{target_recall}_recall"] = res_stats["recall"][thresh]
             wandb.run.summary[f"{end_name}_{target_recall}_true_negative"] = res_stats["true negative rate"][thresh]
+            wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
+            wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
+
 
     for j, thresh in enumerate(val_threshes):
         wandb_dict = {}

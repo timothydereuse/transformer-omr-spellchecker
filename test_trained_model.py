@@ -129,7 +129,7 @@ class TestResults(object):
 
     def calculate_stats(self):
 
-        r = {x:{} for x in ['precision', 'recall', 'true negative rate']}
+        r = {x:{} for x in ['precision', 'recall', 'true negative rate', 'prop_positive_predictions', 'prop_positive_targets']}
         for t in self.threshes:
             thresh_res = self.calculate_stats_for_thresh(t)
             for k in thresh_res.keys():
@@ -151,10 +151,16 @@ class TestResults(object):
 
         f_neg = (~cat_preds & cat_target).sum()
 
+        prop_positive_predictions = np.sum(cat_preds) / len(cat_preds)
+        prop_positive_targets = np.sum(cat_target) / len(cat_target)
+
+
         r = {}
         r['precision'] = t_pos / (t_pos + f_pos) if (t_pos + f_pos) > 0 else 0
         r['recall'] = t_pos / (t_pos + f_neg) if (t_pos + f_neg) > 0 else 0
         r['true negative rate'] = t_neg / (t_neg + f_pos) if (t_neg + f_pos) > 0 else 0
+        r['prop_positive_predictions'] = prop_positive_predictions
+        r['prop_positive_targets'] = prop_positive_targets
         return r
 
     def make_pr_curve(self):
