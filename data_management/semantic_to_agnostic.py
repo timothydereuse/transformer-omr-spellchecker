@@ -259,20 +259,55 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
 
     last_measure = 1 + max([p[-1].measure_idx for p in agnostic_parts])
 
-    # gets all parts grouped by measure index. nested comprehension to make sure it's a list
-    # before groupby's weird ways mess up the iterators
-    agnostic_parts_grouped = [
-        [list(group) for key, group in groupby(p, key=lambda t: t.measure_idx)] 
-        for p in agnostic_parts
+    # # gets all parts grouped by measure index. nested comprehension to make sure it's a list
+    # # before groupby's weird ways mess up the iterators
+    # agnostic_parts_grouped = [
+    #     [list(group) for key, group in groupby(p, key=lambda t: t.measure_idx)] 
+    #     for p in agnostic_parts
+    # ]
+
+    # interleaved = []
+    # for i in range(last_measure):
+    #     for p in agnostic_parts_grouped:
+    #         try:
+    #             interleaved.extend(p[i])
+    #         except IndexError:
+    #             pass
+    #     l = interleaved[-1]
+    #     interleaved.append(
+    #         AgnosticRecord('barline.return-to-top', l.measure_idx, l.event_idx, l.part_idx)
+    #         )
+
+    # get locations of linebreaks in each part
+    staff_break_points = [
+        [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
+        for part
+        in agnostic_parts
     ]
 
+    # get locations of barlines in each part
+    bar_break_points = [
+        [0] + [i for i, j in enumerate(part) if 'barline' in j.agnostic_item]
+        for part
+        in agnostic_parts
+    ]
+
+    # if there are no notated line breaks, insert them manually every couple of bars
+    if any([len(x) == 1 for x in staff_break_points]):
+        staff_break_points = [x[::fallback_num_bars_per_line] for x in bar_break_points]
+
+    # if there is somehow a discrepancy in the number of staves per part, choose the minimum number per part
+    num_bars = [len(x) for x in staff_break_points]
+    if not all([num_bars[0] == x for x in num_bars]):
+        staff_break_points = [x[:min(num_bars)] for x in staff_break_points]
+
+    # interleave parts together every few line breaks
     interleaved = []
-    for i in range(last_measure):
-        for p in agnostic_parts_grouped:
-            try:
-                interleaved.extend(p[i])
-            except IndexError:
-                pass
+    for i in range(min(num_bars) - 1):
+        for j in range(len(agnostic_parts)):
+            start = staff_break_points[j][i]
+            end = staff_break_points[j][i + 1]
+            interleaved += agnostic_parts[j][start:end]
         l = interleaved[-1]
         interleaved.append(
             AgnosticRecord('barline.return-to-top', l.measure_idx, l.event_idx, l.part_idx)
@@ -291,7 +326,7 @@ if __name__ == '__main__':
     k = 'kernscores'
     # quartets_root = r'D:\Documents\datasets\just_quartets'
     # files = os.listdir(os.path.join(quartets_root, k))
-    files = [r'data_management/3_op44i_2_aligned_crop.mxl']
+    files = [r"C:\Users\tim\Documents\datasets\just_quartets\felix_errors_onepass\1_op12_4_corrected.musicxml"]
     all_tokens = Counter()
 
     for fpath in files:
