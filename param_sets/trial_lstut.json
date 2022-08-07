@@ -15,9 +15,9 @@
     "num_feats": 1,
     "dataset_proportion": 0.005,
 
-    "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
-    "dset_testing_path": "processed_datasets/supervised_omr_targets_interleaved.h5",
-    "error_model": "data_augmentation/quartet_omr_error_models_interleaved.joblib",
+    "dset_path": "processed_datasets/all_string_quartets_agnostic_concat.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets_concat.h5",
+    "error_model": "data_augmentation/quartet_omr_error_models_concat.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
     "error_gen_smoothing": 3,
     "simple_errors": false,

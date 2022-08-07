@@ -5,9 +5,9 @@ from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_interleaved.h5'
-supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_interleaved.h5'
-error_generator_fname = r'./data_augmentation/quartet_omr_error_models_interleaved.joblib'
+dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_concat.h5'
+supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_concat.h5'
+error_generator_fname = r'./data_augmentation/quartet_omr_error_models_concat.joblib'
 
 with h5py.File(dset_path, 'r') as f:
     correct_fnames = sorted([x for x in f.keys() if 'felix_correct' in x and not 'op80' in x])
