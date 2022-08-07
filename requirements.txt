@@ -4,3 +4,4 @@ sklearn>1.0.0
 torch
 numba
 pytorch-fast-transformers
+music21
