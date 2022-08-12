@@ -25,6 +25,10 @@ reload(po)
 reload(err_gen)
 reload(ttm)
 
+################################################
+# SETTING UP DATASETS AND MODEL FOR TRAINING
+################################################
+
 parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
 parser.add_argument('parameters', default='default_params.json',
                     help='Parameter file in .json format.')
@@ -92,8 +96,13 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer, **params.scheduler_settings)
 
-class_ratio = 1 # (params.error_gen_smoothing)
+class_ratio = (params.error_gen_smoothing)
+f1beta = class_ratio
 criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
+
+#########################
+# TRAINING MODEL
+#########################
 
 print('beginning training')
 start_time = time.time()
@@ -146,8 +155,8 @@ for epoch in range(params.num_epochs):
     # get thresholds that maximize f1 and match required recall scores
     sig_val_output = torch.sigmoid(val_exs['output'])
     sig_train_output = torch.sigmoid(tr_exs['output'])
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=2)
-    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh)
+    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=class_ratio)
+    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh, beta=class_ratio)
     val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
 
     epoch_end_time = time.time()
@@ -171,7 +180,7 @@ for epoch in range(params.num_epochs):
             'val_f1': val_f1
             })
 
-    # save an image
+    # save an example
     if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
         lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
         table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
@@ -201,6 +210,7 @@ for epoch in range(params.num_epochs):
         logging.info(f'stopping early at epoch {epoch} because validation score stopped increasing')
         break
 
+    # stopping based on time limit defined in params file
     elapsed = time.time() - start_time
     if elapsed > (params.max_time_minutes * 60):
         logging.info(f'stopping early at epoch {epoch} because of time limit')
@@ -212,15 +222,25 @@ print(
     f'Total training time: {end_time - start_time} s.'
 )
 
+#########################
+# TESTING TRAINED MODEL 
+#########################
+
+# define (dloader, group name, end_train_data_mode) for each end group to test through
 end_groups = [
-    (dloader_tst, 'data_aug_test', False), 
+    (dloader_tst, 'data_aug_test', False),
+    # (dloader_val, 'data_val_test', False), 
     (dloader_omr, 'real_omr_test', True),
     (dloader_omr_onepass, 'real_onepass_test', True)
     ]
 
 for end_group in end_groups:
     end_dloader, end_name, end_train_data_mode = end_group
-    test_results = ttm.TestResults(val_threshes)
+
+    # make test_results with dummy threshes object, to fill in later
+    test_results = ttm.TestResults(threshes=[], target_recalls=params.target_recalls)
+
+    # run single epoch over test set
     with torch.no_grad():
         tst_loss, tst_exs = tr_funcs.run_epoch(
             dloader=end_dloader,
@@ -230,13 +250,24 @@ for end_group in end_groups:
             batch_includes_training_data=end_train_data_mode,
             **run_epoch_kwargs
         )
+        
+    # get actual thresholds for given recalls
     tst_threshes = ttm.find_thresh_for_given_recalls(test_results.outputs, test_results.targets, params.target_recalls)
     test_results.threshes = tst_threshes
     res_stats = test_results.calculate_stats()
+
+    for k in res_stats:
+        for k2 in res_stats[k]:
+            res_stats[k][k2] = np.round(res_stats[k][k2], 3)
+
     print(
-        f'{end_name}_precision: {res_stats["precision"]} | '
-        # f'{end_name}_recall:    {res_stats["recall"]} | '
-        f'{end_name}_true negative:   {res_stats["true negative rate"]}'
+        f'{end_name} STATS:\n'
+        f'{end_name} threshes:                    {tst_threshes}\n'
+        f'{end_name}_precision:                   {res_stats["precision"]} | \n'
+        f'{end_name}_recall:                      {res_stats["recall"]} | \n'
+        f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
+        f'{end_name}_prop_positive_predictions:   {res_stats["prop_positive_predictions"]} \n'
+        f'{end_name}_prop_positive_targets:       {res_stats["prop_positive_targets"]} \n'
     )
 
     if args['wandb']:
@@ -249,10 +280,10 @@ for end_group in end_groups:
             wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
             wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
 
-
-    for j, thresh in enumerate(val_threshes):
+    num_examples_to_save = min(params.num_examples_to_save, len(tst_exs['output']))
+    for j, thresh in enumerate(tst_threshes):
         wandb_dict = {}
-        for i in range(min(params.num_examples_to_save, len(tst_exs['output']))):
+        for i in range(num_examples_to_save):
             ind_to_save = np.random.choice(len(tst_exs['output']))
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
             batch_name = tst_exs['batch_names'][ind_to_save]
