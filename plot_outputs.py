@@ -88,7 +88,10 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
     if ind < 0:
         ind = np.random.choice(exs['input'].shape[0])
     target = exs['target'][ind].detach().cpu().numpy().astype('int')
-    output = (exs['output'][ind].detach().cpu().numpy() > thresh).astype('int')
+
+    sig_output = torch.sigmoid(exs['output'][ind])
+    output = (sig_output.detach().cpu().numpy() > thresh).astype('int')
+    
     orig = exs['orig'][ind].detach().cpu().numpy().astype('int')
     input = exs['input'][ind].detach().cpu().numpy().astype('int')
 

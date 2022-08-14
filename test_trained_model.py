@@ -111,8 +111,9 @@ def multilabel_thresholding(output, target, num_trials=1000, beta=1):
 
 class TestResults(object):
 
-    def __init__(self, threshes):
+    def __init__(self, threshes, target_recalls):
         self.threshes = threshes
+        self.target_recalls = target_recalls
         self.outputs = np.array([])
         self.targets = np.array([])
         self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
@@ -121,7 +122,7 @@ class TestResults(object):
 
         sigmoid = lambda x: 1 / (1 + np.exp(-x))
 
-        output = output.cpu().detach().numpy()
+        output = sigmoid(output.cpu().detach().numpy())
         target = target.cpu().detach().numpy()
 
         self.outputs = np.concatenate([self.outputs, output.reshape(-1)])
@@ -130,10 +131,11 @@ class TestResults(object):
     def calculate_stats(self):
 
         r = {x:{} for x in ['precision', 'recall', 'true negative rate', 'prop_positive_predictions', 'prop_positive_targets']}
-        for t in self.threshes:
+        for i, t in enumerate(self.threshes):
             thresh_res = self.calculate_stats_for_thresh(t)
             for k in thresh_res.keys():
-                r[k][t] = (thresh_res[k])
+                target_recall = self.target_recalls[i]
+                r[k][target_recall] = (thresh_res[k])
         return r
 
     def calculate_stats_for_thresh(self, thresh):
@@ -181,9 +183,9 @@ if __name__ == '__main__':
 
     for x in range(10):
         targets = torch.tensor(np.random.randint(0, 2, num_trials))
-        outputs = (targets * 2 - 1) + torch.tensor(np.random.normal(0, 3, num_trials))
+        outputs = torch.linspace(0, 1, num_trials)
         # targets = torch.round(outputs)
-        tr.update(torch.sigmoid(outputs), targets)
+        tr.update(outputs, targets)
 
     asdf = find_thresh_for_given_recall(torch.Tensor(tr.outputs), torch.Tensor(tr.targets), target_recall=0.33)
 
