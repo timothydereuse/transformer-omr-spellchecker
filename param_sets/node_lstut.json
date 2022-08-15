@@ -13,17 +13,17 @@
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
     "num_feats": 1,
-    "dataset_proportion": 1.0,
+    "dataset_proportion": 0.4,
 
-    "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
-    "dset_testing_path": "processed_datasets/supervised_omr_targets_interleaved.h5",
-    "error_model": "data_augmentation/quartet_omr_error_models_interleaved.joblib",
+    "dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",
+    "error_model": "data_augmentation/quartet_omr_error_models_byline.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 5,
+    "error_gen_smoothing": 6,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
-    "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
+    "target_recalls": [0.8, 0.9, 0.95, 0.99],
 
     "lstut_settings": {
         "num_feats": 1,
