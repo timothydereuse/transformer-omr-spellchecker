@@ -5,24 +5,10 @@ from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
-dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_concat.h5'
-supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_concat.h5'
-error_generator_fname = r'./data_augmentation/quartet_omr_error_models_concat.joblib'
 
-with h5py.File(dset_path, 'r') as f:
-    correct_fnames = sorted([x for x in f.keys() if 'felix_correct' in x and not 'op80' in x])
-    error_fnames = sorted([x for x in f.keys() if 'felix_omr' in x])
-    error_onepass_fnames = sorted([x for x in f.keys() if 'felix_onepass' in x])
+def get_training_samples(correct_dset, error_dset, correct_fnames):
+    error_notes = {x:[] for x in ['replace_mod', 'insert_mod']}
 
-    correct_dset = [f[x][:].astype(np.uint8) for x in correct_fnames]
-    error_dset = [f[x][:].astype(np.uint8) for x in error_fnames]
-    error_onepass_dset = [f[x][:].astype(np.uint8) for x in error_onepass_fnames]
-
-error_notes = {x:[] for x in ['replace_mod', 'insert_mod']}
-correct_seqs_all = []
-all_align_records = []
-
-def get_training_samples(correct_dset, error_dset):
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
     # features in X are: [ngram of past 5 classes || note vector]
     X = []
@@ -36,8 +22,6 @@ def get_training_samples(correct_dset, error_dset):
 
         print(''.join(r))
 
-        all_align_records.append(r)
-        correct_seqs_all.extend(correct_seq)
         errors = []
 
         err_to_class = {'O': 0, '~': 1, '+': 2, '-': 3}
@@ -71,43 +55,31 @@ def get_training_samples(correct_dset, error_dset):
             Y.append(label)
     return X, Y
 
-X, Y = get_training_samples(correct_dset, error_dset)
-X = np.array(X).reshape(-1, 1)
-err_gen = elgr.ErrorGenerator(labeled_data=[X,Y])
-err_gen.save_models(error_generator_fname)
-# err_gen = elgr.ErrorGenerator(3, models_fpath='./data_augmentation/quartet_omr_error_models.joblib' )
 
-# now, make .h5 file of test sequences
-pms = [
-    (error_dset, error_fnames, 'omr'), 
-    (error_onepass_dset, error_onepass_fnames, 'onepass')
-]
-
-# X, Y = get_training_samples(correct_dset, error_onepass_dset)
-for t in pms:
-    target_dset, target_dset_fnames, category = t
-
-    with h5py.File(supervised_targets_fname, 'a') as f:
-        f.create_group(category)
-
-    # X, Y = get_training_samples(correct_dset, target_dset)
-    for ind in range(len(correct_dset)):
-        print(f'aligning {error_fnames[ind]}...')
-
-        correct_seq = correct_dset[ind]
-        error_seq = target_dset[ind]
-
-        err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
-        arr = np.stack([err, Y])    
+def make_supervised_examples(pms, supervised_targets_fname, err_gen, correct_dset):
+    for t in pms:
+        target_dset, target_dset_fnames, category = t
 
         with h5py.File(supervised_targets_fname, 'a') as f:
-            name = target_dset_fnames[ind]
-            g = f[category]
-            dset = g.create_dataset(
-                name=name,
-                data=arr,
-                compression='gzip'
-            )
+            f.create_group(category)
+
+        for ind in range(len(correct_dset)):
+            print(f'making training sequence for {target_dset_fnames[ind]}...')
+
+            correct_seq = correct_dset[ind]
+            error_seq = target_dset[ind]
+
+            err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
+            arr = np.stack([err, Y])    
+
+            with h5py.File(supervised_targets_fname, 'a') as f:
+                name = target_dset_fnames[ind]
+                g = f[category]
+                dset = g.create_dataset(
+                    name=name,
+                    data=arr,
+                    compression='gzip'
+                )
 
 
 # sharp_probs = e.regression.predict_proba(e.enc.transform([[198]]))[0] 
