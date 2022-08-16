@@ -111,6 +111,13 @@ def perform_alignment(transcript, ocr, match_weights=None, gap_penalties=None, i
     else:
         raise ValueError('gap_penalties argument {} invalid: must be a list of either 4 or 2 elements'.format(gap_penalties))
 
+    if not len(transcript) > 0:
+        print(ocr, transcript)
+        raise ValueError('Transcript must have more than 0 elements.')
+    if not len(ocr) > 0:
+        print(ocr, transcript)
+        raise ValueError('OCR sequence must have more than 0 elements.')
+
     transcript = transcript + [transcript[-1]]
     ocr = ocr + [ocr[-1]]
 

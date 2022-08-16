@@ -1,19 +1,19 @@
 {
     "params_name": "LSTUT_FELIX_TRIAL",
-    "num_epochs": 15,
+    "num_epochs": 2,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "save_img_every": 1,
     "max_time_minutes": 10,
 
-    "seq_length": 32,
+    "seq_length": 16,
     "padding_amt": 16,
     "lr": 0.0005,
     "batch_size": 32,
     "clip_gradient_norm": 0.5,
     "num_feats": 1,
-    "dataset_proportion": 0.005,
+    "dataset_proportion": 0.001,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",
@@ -28,12 +28,12 @@
     "lstut_settings": {
         "num_feats": 1,
         "output_feats": 1,
-        "lstm_layers": 2,
+        "lstm_layers": 1,
         "tf_layers": 0,
         "tf_heads": 1,
         "tf_depth": 0,
-        "hidden_dim": 32,
-        "ff_dim": 64,
+        "hidden_dim": 16,
+        "ff_dim": 32,
         "dropout": 0.1,
         "positional_encoding": false
     },

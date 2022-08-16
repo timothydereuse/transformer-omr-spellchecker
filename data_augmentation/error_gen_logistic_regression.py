@@ -87,27 +87,36 @@ class ErrorGenerator(object):
         for p in predictions:
             p = p / np.sum(p)
             labels.append(np.random.choice(len(p), p=p))
-            
-        edit_instructions = [(int(x[0]), int(x[2:])) for x in self.enc_labels.inverse_transform(labels)]
+        
+        # recall that the output of the inverse transform here
+        # is a string of 'operation.applicable vocab element'
+        instructions = self.enc_labels.inverse_transform(labels)
+        err_instructions = np.array([int(x[0]) for x in instructions])
+        ind_instructions = np.array([int(x[2:]) for x in instructions])
+
+        if sum(err_instructions != 3) < 3:
+            err_instructions[0:3] = self.match_idx
 
         i = 0
-        for label in edit_instructions:
-            type, ind = label
-            if type == self.match_idx: # MATCH
+        for j in range(len(err_instructions)):
+            err_type = err_instructions[j]
+            ind = ind_instructions[j]
+            # err_type, ind = label
+            if err_type == self.match_idx: # MATCH
                 errored_seq.append(int(seq[i]))
                 i += 1
-            elif type == self.replace_idx: # REPLACE
+            elif err_type == self.replace_idx: # REPLACE
                 errored_seq.append(ind)                
                 i += 1
-            elif type == self.insert_idx: # INSERT
+            elif err_type == self.insert_idx: # INSERT
                 errored_seq.append(int(seq[i]))
                 errored_seq.append(ind)
                 i += 1
-            elif type == self.delete_index: # DELETE
+            elif err_type == self.delete_index: # DELETE
                 i += 1
         
-        fake_alignment = [x[0] for x in edit_instructions]
-        return errored_seq, fake_alignment
+        # fake_alignment = [x[0] for x in edit_instructions]
+        return errored_seq, err_instructions
 
     def err_seq_string(self, labels):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
@@ -129,9 +138,15 @@ class ErrorGenerator(object):
         if given_err_seq is not None:
             err_seq = list(given_err_seq)
         elif self.simple:
-            err_seq, _ = self.get_simple_synthetic_error_sequence(orig_seq)
+            err_seq, err_record = self.get_simple_synthetic_error_sequence(orig_seq)
         else:
-            err_seq, _ = self.get_synthetic_error_sequence(orig_seq)
+            err_seq, err_record = self.get_synthetic_error_sequence(orig_seq)
+
+        assert len(err_seq) > 0, f"{err_seq}, {orig_seq} ,{err_record} ,{given_err_seq}"
+        assert len(orig_seq) > 0, f"{err_seq} ,{orig_seq} ,{err_record} ,{given_err_seq}"
+
+            
+
 
         _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[3, -2], gap_penalties=[-2, -2, -1, -1])
 
@@ -199,7 +214,7 @@ if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from data_management.vocabulary import Vocabulary
 
-    dset_path = r'./processed_datasets/quartets_felix_omr_agnostic.h5'
+    dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_bymeasure.h5'
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
 
     seq_len = 256
@@ -209,21 +224,23 @@ if __name__ == "__main__":
     dload = DataLoader(dset, batch_size=50)
     batches = []
     for i, x in enumerate(dload):
-        print(i, x.shape)
-        batches.append(x)
+        batch, metadata = x
+        print(i, len(batch))
+        batches.append(batch)
         if i > 2:
             break
+    
 
     print('creating error generator')
-    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='./data_augmentation/quartet_omr_error_models_interleaved.joblib')
+    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='processed_datasets\quartet_omr_error_models_bymeasure.joblib')
 
-    synth_error = e.get_synthetic_error_sequence(x[0].numpy())
-    simple_error = e.get_simple_synthetic_error_sequence(x[0].numpy())
+    synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
+    simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
         e.simple = False
-        X, Y = e.add_errors_to_batch(x.numpy())
+        X, Y = e.add_errors_to_batch(batch.numpy())
         e.simple = True
-        X, Y = e.add_errors_to_batch(x.numpy())
+        X, Y = e.add_errors_to_batch(batch.numpy())
         print(X.shape, Y.shape)

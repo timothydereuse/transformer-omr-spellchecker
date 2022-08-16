@@ -271,13 +271,12 @@ for end_group in end_groups:
 
     if args['wandb']:
         wandb.run.summary["total_training_time"] = end_time - start_time
-        for i, thresh in enumerate(tst_threshes):
-            target_recall = params.target_recalls[i]
-            wandb.run.summary[f"{end_name}_{target_recall}_precision"] = res_stats["precision"][thresh]
-            # wandb.run.summary[f"{end_name}_{target_recall}_recall"] = res_stats["recall"][thresh]
-            wandb.run.summary[f"{end_name}_{target_recall}_true_negative"] = res_stats["true negative rate"][thresh]
-            wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
-            wandb.run.summary[f"{end_name}_{target_recall}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
+        for i, thresh in enumerate(params.target_recalls):
+            # target_recall = params.target_recalls[i]
+            wandb.run.summary[f"{end_name}_{thresh}_precision"] = res_stats["precision"][thresh]
+            wandb.run.summary[f"{end_name}_{thresh}_true_negative"] = res_stats["true negative rate"][thresh]
+            wandb.run.summary[f"{end_name}_{thresh}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
+            wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
 
     num_examples_to_save = min(params.num_examples_to_save, len(tst_exs['output']))
     for j, thresh in enumerate(tst_threshes):
