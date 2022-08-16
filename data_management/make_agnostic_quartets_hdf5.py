@@ -13,7 +13,7 @@ num_transpositions_per_file = 4
 possible_transpositions = ['m2', 'M2', 'm3', 'M3', 'P4', 'a4']
 possible_transpositions = possible_transpositions + ['-' + x for x in possible_transpositions]
 quartets_root = r"C:\Users\tim\Documents\datasets\just_quartets"
-
+interleave = True
 all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
 c = m21.converter.Converter()
 
@@ -27,7 +27,7 @@ c = m21.converter.Converter()
 #         fpath = os.path.join(os.path.join(quartets_root, k, fname))
 #         parsed_file = m21.converter.parse(fpath)
 #         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
-#         agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'], just_tokens=True)
+#         agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'], just_tokens=True, interleave=True)
 #         all_tokens.update(agnostic) 
 # v = vocab.Vocabulary(all_tokens)
 # v.save_vocabulary('./data_management/vocab_jul.txt')
@@ -64,13 +64,13 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
             parts = list(parsed_file.getElementsByClass(m21.stream.Part))
 
             if transpose:
-                transpositions = np.random.choice(possible_transpositions, num_transpositions_per_file, replace=False, interleave=interleave)
+                transpositions = np.random.choice(possible_transpositions, num_transpositions_per_file, replace=False)
                 transpositions = np.concatenate([[None], transpositions])
             else:
                 transpositions = [None]
 
             agnostics = [
-                sta.m21_parts_to_interleaved_agnostic(parts, transpose=x, remove=['+'], just_tokens=True) 
+                sta.m21_parts_to_interleaved_agnostic(parts, transpose=x, remove=['+'], just_tokens=True, interleave=interleave) 
                 for x in transpositions
             ]
             agnostic_vecs = [v.words_to_vec(x) for x in agnostics]
@@ -98,5 +98,3 @@ def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, t
                         compression='gzip'
                     )
 
-# make_hdf5(r'./processed_datasets/all_string_quartets_agnostic_concat.h5', ['ABC', 'kernscores', 'felix_correct'], True, interleave=False)
-make_hdf5(r'./processed_datasets/quartets_felix_omr_agnostic_concat.h5', ['felix_omr', 'felix_correct', 'felix_onepass'], train_val_test_split=False, interleave=False)
