@@ -57,7 +57,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             batch = batch.float().cpu()
             inp, target = example_generator.add_errors_to_batch(batch)
 
-        # batch = batch.to(device)
+        batch = batch.to(device)
         inp = inp.to(device).type(torch.long)
         target = target.to(device)
 

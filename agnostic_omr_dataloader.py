@@ -54,7 +54,7 @@ class AgnosticOMRDataset(IterableDataset):
         if base is not None:
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
-        if dataset_proportion:
+        if dataset_proportion and dataset_proportion < 1.0:
             self.fnames = self.fnames[:int(np.ceil(len(self.fnames) * dataset_proportion))]
 
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
@@ -107,7 +107,7 @@ class AgnosticOMRDataset(IterableDataset):
 
             # check if the current file is too short to be used with the seq_length desired
             if num_seqs == 0:
-                break
+                continue
 
             # return sequences of notes from each file, seq_length in length.
             # move to the next file when the current one has been exhausted.
@@ -140,17 +140,18 @@ class AgnosticOMRDataset(IterableDataset):
 
 if __name__ == '__main__':
     from data_management.vocabulary import Vocabulary
-    fname = 'processed_datasets/all_string_quartets_agnostic_interleaved.h5'
+    fname = 'processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
     seq_len = 256
-    proportion = 0.5
+    proportion = 0.99
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False, all_subsequences=False)
+    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=True, all_subsequences=False)
 
     dload = DataLoader(dset, batch_size=500)
     batches = []
-    for i, x in enumerate(dload):
-        print(i, x[0].shape)
-        batches.append(x)
+    for j in range(10):
+        for i, x in enumerate(dload):
+            # print(i, x[0].shape)
+            batches.append(x)
 
     # batches = []
     # for i, x in enumerate(dset.iter_file()):
@@ -158,15 +159,16 @@ if __name__ == '__main__':
     #     batches.append(x)
     # print(i, len(batches))
 
-    fname = 'processed_datasets/supervised_omr_targets.h5'
+    fname = 'processed_datasets/supervised_omr_targets_bymeasure.h5'
     dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False)
 
     dload = DataLoader(dset, batch_size=15)
 
     batches = []
-    for i, x in enumerate(dload):
-        print(i, len(x[0]), len(x[1]))
-        batches.append(x)
+    for j in range(10):
+        for i, x in enumerate(dload):
+            print(i, len(x[0]), len(x[1]))
+            batches.append(x)
     print(i, len(batches))
 
 
