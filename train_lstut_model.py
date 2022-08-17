@@ -204,15 +204,15 @@ for epoch in range(params.num_epochs):
         best_model = copy.deepcopy(cur_model)
 
     # early stopping
-    time_since_best = epoch - train_losses.index(min(train_losses))
+    time_since_best = epoch - val_losses.index(min(val_losses))
     if time_since_best > params.early_stopping_patience:
-        logging.info(f'stopping early at epoch {epoch} because validation score stopped increasing')
+        print(f'stopping early at epoch {epoch} because validation score stopped increasing')
         break
 
     # stopping based on time limit defined in params file
     elapsed = time.time() - start_time
     if elapsed > (params.max_time_minutes * 60):
-        logging.info(f'stopping early at epoch {epoch} because of time limit')
+        print(f'stopping early at epoch {epoch} because of time limit')
         break
 
 end_time = time.time()
