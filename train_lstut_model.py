@@ -228,7 +228,6 @@ print(
 # define (dloader, group name, end_train_data_mode) for each end group to test through
 end_groups = [
     (dloader_tst, 'data_aug_test', False),
-    # (dloader_val, 'data_val_test', False), 
     (dloader_omr, 'real_omr_test', True),
     (dloader_omr_onepass, 'real_onepass_test', True)
     ]
@@ -236,32 +235,11 @@ end_groups = [
 for end_group in end_groups:
     end_dloader, end_name, end_train_data_mode = end_group
 
-    # make test_results with dummy threshes object, to fill in later
-    test_results = ttm.TestResults(threshes=[], target_recalls=params.target_recalls)
-
-    # run single epoch over test set
-    with torch.no_grad():
-        tst_loss, tst_exs = tr_funcs.run_epoch(
-            dloader=end_dloader,
-            train=False,
-            log_each_batch=False,
-            test_results=test_results,
-            batch_includes_training_data=end_train_data_mode,
-            **run_epoch_kwargs
-        )
-        
-    # get actual thresholds for given recalls
-    tst_threshes = ttm.find_thresh_for_given_recalls(test_results.outputs, test_results.targets, params.target_recalls)
-    test_results.threshes = tst_threshes
-    res_stats = test_results.calculate_stats()
-
-    for k in res_stats:
-        for k2 in res_stats[k]:
-            res_stats[k][k2] = np.round(res_stats[k][k2], 3)
+    res_stats, tst_exs = tr_funcs.test_end_group(end_group, run_epoch_kwargs, params.target_recalls)
 
     print(
         f'{end_name} STATS:\n'
-        f'{end_name} threshes:                    {tst_threshes}\n'
+        f'{end_name} threshes:                    {res_stats["threshes"]}\n'
         f'{end_name}_precision:                   {res_stats["precision"]} | \n'
         f'{end_name}_recall:                      {res_stats["recall"]} | \n'
         f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
@@ -279,7 +257,7 @@ for end_group in end_groups:
             wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
 
     num_examples_to_save = min(params.num_examples_to_save, len(tst_exs['output']))
-    for j, thresh in enumerate(tst_threshes):
+    for j, thresh in enumerate(res_stats['threshes']):
         wandb_dict = {}
         for i in range(num_examples_to_save):
             ind_to_save = np.random.choice(len(tst_exs['output']))

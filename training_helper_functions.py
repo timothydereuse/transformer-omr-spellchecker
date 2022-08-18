@@ -2,6 +2,7 @@ import torch
 import logging
 import numpy as np
 import plot_outputs as po
+import test_trained_model as ttm
 
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
@@ -98,6 +99,38 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         'batch_file_inds': batch_metadata[0]
         }
     return mean_loss, example_dict
+
+
+
+def test_end_group(end_group, run_epoch_kwargs, target_recalls):
+
+    end_dloader, end_name, end_train_data_mode = end_group
+
+    # make test_results with dummy threshes object, to fill in later
+    test_results = ttm.TestResults(threshes=[], target_recalls=target_recalls)
+
+    # run single epoch over test set
+    with torch.no_grad():
+        tst_loss, tst_exs = run_epoch(
+            dloader=end_dloader,
+            train=False,
+            log_each_batch=False,
+            test_results=test_results,
+            batch_includes_training_data=end_train_data_mode,
+            **run_epoch_kwargs
+        )
+        
+    # get actual thresholds for given recalls
+    tst_threshes = ttm.find_thresh_for_given_recalls(test_results.outputs, test_results.targets, target_recalls)
+    test_results.threshes = tst_threshes
+    res_stats = test_results.calculate_stats()
+
+    for k in res_stats:
+        for k2 in res_stats[k]:
+            res_stats[k][k2] = np.round(res_stats[k][k2], 3)
+    res_stats['threshes'] = tst_threshes
+
+    return res_stats, tst_exs
 
 
 if __name__ == '__main__':

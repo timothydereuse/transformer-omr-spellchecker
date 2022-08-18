@@ -156,7 +156,6 @@ class TestResults(object):
         prop_positive_predictions = np.sum(cat_preds) / len(cat_preds)
         prop_positive_targets = np.sum(cat_target) / len(cat_target)
 
-
         r = {}
         r['precision'] = t_pos / (t_pos + f_pos) if (t_pos + f_pos) > 0 else 0
         r['recall'] = t_pos / (t_pos + f_neg) if (t_pos + f_neg) > 0 else 0
@@ -179,7 +178,7 @@ class TestResults(object):
 if __name__ == '__main__':
     num_trials = 100
 
-    tr = TestResults(threshes=[0.1, 0.5, 0.9])
+    tr = TestResults(threshes=[0.1, 0.5, 0.9], target_recalls=[0.1, 0.5, 0.9])
 
     for x in range(10):
         targets = torch.tensor(np.random.randint(0, 2, num_trials))
