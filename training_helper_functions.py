@@ -73,7 +73,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         loss = criterion(output, target)
         
         if test_results:
-            test_results.update(torch.sigmoid(output), target)
+            test_results.update(output, target)
 
         if train:
             loss.backward()
@@ -87,17 +87,20 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         if log_each_batch:
             log_loss = (batch_loss / target.numel())
             print(f'    batch {i}, loss {log_loss:2.7e}')
+        
+        if i == 0:
+            example_dict = {
+            'orig': batch if not batch_includes_training_data else inp,
+            'input': inp,
+            'target': target,
+            'output': output, 
+            'batch_names': batch_metadata[2],
+            'batch_offsets': batch_metadata[1],
+            'batch_file_inds': batch_metadata[0]
+            }
 
     mean_loss = total_loss / max(1, num_seqs_used)
-    example_dict = {
-        'orig': batch if not batch_includes_training_data else inp,
-        'input': inp,
-        'target': target,
-        'output': output, 
-        'batch_names': batch_metadata[2],
-        'batch_offsets': batch_metadata[1],
-        'batch_file_inds': batch_metadata[0]
-        }
+
     return mean_loss, example_dict
 
 
@@ -121,7 +124,10 @@ def test_end_group(end_group, run_epoch_kwargs, target_recalls):
         )
         
     # get actual thresholds for given recalls
-    tst_threshes = ttm.find_thresh_for_given_recalls(test_results.outputs, test_results.targets, target_recalls)
+    sig_tst_outputs = test_results.sigmoid_outputs()
+    tst_threshes = ttm.find_thresh_for_given_recalls(sig_tst_outputs, test_results.targets, target_recalls)
+    f1_score, f1_thresh = ttm.multilabel_thresholding(sig_tst_outputs, test_results.targets, beta=1 )
+    tst_threshes.append(f1_thresh)
     test_results.threshes = tst_threshes
     res_stats = test_results.calculate_stats()
 
@@ -129,8 +135,9 @@ def test_end_group(end_group, run_epoch_kwargs, target_recalls):
         for k2 in res_stats[k]:
             res_stats[k][k2] = np.round(res_stats[k][k2], 3)
     res_stats['threshes'] = tst_threshes
+    res_stats['max_f1'] = f1_score
 
-    return res_stats, tst_exs
+    return res_stats, tst_exs, test_results
 
 
 if __name__ == '__main__':

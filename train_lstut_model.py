@@ -71,8 +71,8 @@ dset_kwargs = {
 }
 dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
 dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
-dset_kwargs['dataset_proportion'] = 1
 dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
+dset_kwargs['dataset_proportion'] = 1
 dset_kwargs['dset_fname'] = params.dset_testing_path
 dset_omr = dl.AgnosticOMRDataset(base='omr', **dset_kwargs)
 dset_omr_onepass = dl.AgnosticOMRDataset(base='onepass', **dset_kwargs)
@@ -235,7 +235,7 @@ end_groups = [
 for end_group in end_groups:
     end_dloader, end_name, end_train_data_mode = end_group
 
-    res_stats, tst_exs = tr_funcs.test_end_group(end_group, run_epoch_kwargs, params.target_recalls)
+    res_stats, tst_exs, test_results = tr_funcs.test_end_group(end_group, run_epoch_kwargs, params.target_recalls)
 
     print(
         f'{end_name} STATS:\n'
@@ -245,6 +245,7 @@ for end_group in end_groups:
         f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
         f'{end_name}_prop_positive_predictions:   {res_stats["prop_positive_predictions"]} \n'
         f'{end_name}_prop_positive_targets:       {res_stats["prop_positive_targets"]} \n'
+        f'{end_name}_max_f1:                      {res_stats["max_f1"]} \n'
     )
 
     if args['wandb']:
@@ -259,15 +260,24 @@ for end_group in end_groups:
     num_examples_to_save = min(params.num_examples_to_save, len(tst_exs['output']))
     for j, thresh in enumerate(res_stats['threshes']):
         wandb_dict = {}
-        for i in range(num_examples_to_save):
-            ind_to_save = np.random.choice(len(tst_exs['output']))
+
+        # all_predictions = (torch.sigmoid(tst_exs['output']) > thresh).float().mean()
+        # print(all_predictions)
+
+        # the 0 represents thresh optimized for f1 score instead
+        target_recalls = params.target_recalls + ['F1']
+
+        inds_to_save = np.random.choice(len(tst_exs['output']), num_examples_to_save, replace=False)
+        for ind_to_save in (inds_to_save):
+            
+            batch_name = f"{tst_exs['batch_names'][ind_to_save]} {tst_exs['batch_offsets'][ind_to_save]}"
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
-            batch_name = tst_exs['batch_names'][ind_to_save]
             table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
-            wandb_dict[f'{end_name}_{i}_{params.target_recalls[j]}_{batch_name}'] = table
+
+            wandb_dict[f'{end_name}_{inds_to_save}_{target_recalls[j]}_{batch_name}'] = table
         
         if args['wandb']:
-            wandb.run.summary[f'{end_name}_exs_final_recall{params.target_recalls[j]}'] = wandb_dict
+            wandb.run.summary[f'{end_name}_exs_final_recall{target_recalls[j]}'] = wandb_dict
 
 # if max_epochs reached, or early stopping condition reached, save best model
 best_epoch = best_model['epoch']

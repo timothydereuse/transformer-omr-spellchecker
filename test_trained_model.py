@@ -11,10 +11,8 @@ import data_management.vocabulary as vocab
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import PrecisionRecallDisplay
 
-
 reload(params)
 reload(po)
-
 
 def test_results(output, target, results_dict, threshold):
     output = output.cpu().detach().numpy()
@@ -93,9 +91,13 @@ def f_measure(inps, targets, threshold=0.5, beta=1):
 
     return F1
 
-def multilabel_thresholding(output, target, num_trials=1000, beta=1):
-    output = output.cpu().detach().numpy().reshape(-1)
-    target = target.cpu().detach().numpy().reshape(-1)
+def multilabel_thresholding(output, target, num_trials=2000, beta=1):
+
+    if type(output) is torch.Tensor:
+        output = output.cpu().detach().numpy()
+        target = target.cpu().detach().numpy()
+    output = output.reshape(-1)
+    target = target.reshape(-1)
 
     thresholds = np.linspace(min(output), max(output), num_trials)
 
@@ -113,16 +115,14 @@ class TestResults(object):
 
     def __init__(self, threshes, target_recalls):
         self.threshes = threshes
-        self.target_recalls = target_recalls
+        self.target_recalls = target_recalls + [0]
         self.outputs = np.array([])
         self.targets = np.array([])
         self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
 
     def update(self, output, target):
 
-        sigmoid = lambda x: 1 / (1 + np.exp(-x))
-
-        output = sigmoid(output.cpu().detach().numpy())
+        output = output.cpu().detach().numpy()
         target = target.cpu().detach().numpy()
 
         self.outputs = np.concatenate([self.outputs, output.reshape(-1)])
@@ -138,9 +138,13 @@ class TestResults(object):
                 r[k][target_recall] = (thresh_res[k])
         return r
 
-    def calculate_stats_for_thresh(self, thresh):
+    def sigmoid_outputs(self):
+        sigmoid = lambda x: 1 / (1 + np.exp(-x))
+        return sigmoid(self.outputs)
 
-        predictions = (self.outputs > thresh)
+    def calculate_stats_for_thresh(self, thresh):
+        
+        predictions = (self.sigmoid_outputs() > thresh)
 
         cat_preds = predictions.reshape(-1).astype('bool')
         cat_target = self.targets.reshape(-1).astype('bool')

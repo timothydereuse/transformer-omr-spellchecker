@@ -19,7 +19,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab.txt",
-    "error_gen_smoothing": 5,
+    "error_gen_smoothing": 4,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
