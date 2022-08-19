@@ -277,7 +277,7 @@ for end_group in end_groups:
             wandb_dict[f'{end_name}_{inds_to_save}_{target_recalls[j]}_{batch_name}'] = table
         
         if args['wandb']:
-            wandb.run.summary[f'{end_name}_exs_final_recall{target_recalls[j]}'] = wandb_dict
+            wandb.run.summary[f'final_examples'] = wandb_dict
 
 # if max_epochs reached, or early stopping condition reached, save best model
 best_epoch = best_model['epoch']

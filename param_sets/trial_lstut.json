@@ -1,6 +1,6 @@
 {
     "params_name": "LSTUT_FELIX_TRIAL",
-    "num_epochs": 20,
+    "num_epochs": 2,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
