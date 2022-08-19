@@ -182,7 +182,7 @@ for epoch in range(params.num_epochs):
     # save an example
     if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
         lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-        table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+        table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
         wandb.log({'examples': table})
 
     # save a model checkpoint
@@ -272,7 +272,7 @@ for end_group in end_groups:
             
             batch_name = f"{tst_exs['batch_names'][ind_to_save]} {tst_exs['batch_offsets'][ind_to_save]}"
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
-            table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT'])
+            table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
 
             wandb_dict[f'{end_name}_{inds_to_save}_{target_recalls[j]}_{batch_name}'] = table
         

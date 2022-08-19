@@ -13,6 +13,7 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
 
     sig_output = torch.sigmoid(exs['output'][ind])
     output = (sig_output.detach().cpu().numpy() > thresh).astype('int')
+    sig_output_round = torch.round(sig_output, decimals=4)
     
     orig = exs['orig'][ind].detach().cpu().numpy().astype('int')
     input = exs['input'][ind].detach().cpu().numpy().astype('int')
@@ -25,15 +26,16 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
     if return_arrays:
         res = []
         for i in range(len(input)):
-            res.append([orig_words[i], input_words[i], target[i], output[i]])
+            res.append([orig_words[i], input_words[i], target[i], output[i], sig_output_round[i]])
         return res
 
-    lines = ['ORIG | ERRORED INPUT | TARGET | OUTPUT \n']
+    lines = ['ORIG | ERRORED INPUT | TARGET | OUTPUT | RAW \n']
     for i in range(len(input)):
         line = (
             f'{orig_words[i]:25} | {input_words[i]:25} '
             f' | {mark if target[i] else space}'
-            f' | {mark if output[i] else space} | \n'
+            f' | {mark if output[i] else space}'
+            f' | {mark if sig_output_round[i] else space} | \n'
             )
         lines.append(line)
 
