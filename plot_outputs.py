@@ -13,7 +13,7 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
 
     sig_output = torch.sigmoid(exs['output'][ind])
     output = (sig_output.detach().cpu().numpy() > thresh).astype('int')
-    sig_output_round = torch.round(sig_output, decimals=4)
+    sig_output_round = torch.round(sig_output * 1e3) / 1e3
     
     orig = exs['orig'][ind].detach().cpu().numpy().astype('int')
     input = exs['input'][ind].detach().cpu().numpy().astype('int')
