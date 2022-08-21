@@ -1,5 +1,5 @@
 {
-    "params_name": "NODE_LSTUT_PRELIM2",
+    "params_name": "NODE_LSTUT_FINAL2",
     "num_epochs": 151,
     "early_stopping_patience": 8,
     "num_examples_to_save": 10,
@@ -45,7 +45,7 @@
     },
     "param_sweep": [
         {"simple_error_rate": 0.1, "simple_errors": true},
-        {"error_gen_smoothing": 7},
+        {"error_gen_smoothing": 10},
         {"batch_size": 1024, "seq_length": 128},
         {"batch_size": 256, "seq_length": 512},
         {"batch_size": 128, "seq_length": 1024},
