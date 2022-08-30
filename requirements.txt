@@ -1,7 +1,7 @@
-numpy
-h5py
-sklearn>1.0.0
-torch
-numba
-pytorch-fast-transformers
-music21
+numpy>=1.22.0
+h5py>=3.0.0
+sklearn>=1.0.0
+torch>=1.10
+numba>=0.56.0
+pytorch-fast-transformers==0.2.2
+music21>=7.0.0
