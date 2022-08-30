@@ -12,30 +12,23 @@ from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
 
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
-
-from importlib import reload
-reload(tr_funcs)
-reload(dl)
-reload(lstut)
-reload(model_params)
-reload(po)
-reload(err_gen)
-reload(ttm)
-
 ################################################
 # SETTING UP DATASETS AND MODEL FOR TRAINING
 ################################################
 
-parser = argparse.ArgumentParser(description='Training script, with optional parameter searching.')
+parser = argparse.ArgumentParser(description=
+    'Training and testing script for the transformer-omr-spellchecker project. '
+    'Must reference a .json parameters file (in the /param_sets folder. '
+    'Requires processed .h5 files containing quartets in agnostic format; '
+    'some of these .h5 files are included with the transformer-omr-spellchecker repository on GitHub. '
+    'Use the script run_all_data_preparation to make these files from scratch, or from another dataset.')
 parser.add_argument('parameters', default='default_params.json',
                     help='Parameter file in .json format.')
 parser.add_argument('-m', '--mod_number', type=int, default=0,
                     help='Index of specific modification to apply to given parameter set.')
 parser.add_argument('-w', '--wandb', type=ascii, action='store', default=None,
-                    help='Index of specific modification to apply to given parameter set.')
+                    help='Name of wandb project to log results to. '
+                         'Results are otherwise just printed to stdout and log file if -l is used.')
 parser.add_argument('-l', '--logging', action='store_true',
                     help='Whether or not to log training results to file.')
 parser.add_argument('-d', '--dryrun', action='store_true',

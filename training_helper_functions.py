@@ -21,14 +21,6 @@ def log_gpu_info():
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
 
 
-# def make_point_set_target(batch, dloader, device='cpu', make_examples_settings={}):
-#     errored_input, error_locs = mse.error_indices(batch, **make_examples_settings)
-#     # dset = dloader.dataset
-#     # errored_input = dset.normalize_batch(errored_input).to(device)
-#     # error_locs = dset.normalize_batch(error_locs).to(device)
-#     return errored_input, error_locs
-
-
 def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
               train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None,
               autoregressive=False, batch_includes_training_data=False):
@@ -42,8 +34,14 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     @train: if true, performs a gradient update on the model's weights. if false, treated as
             a validation run.
     @log_each_batch: if true, logs information about each batch's loss / time elapsed.
+    @if a TestResults object, then logs all targets and outputs encountered during training
+        into that TestResults object so that the results can be evaluated later.
     @autoregressive: if true, feeds the target into the model along with the input, for
         autoregressive teacher forcing.
+    @batch_includes_training_data: if true, assumes that the dataloader will return a
+        tuple of (input, target), so use the targets instead of creating synthetic
+        errored data for training.
+
     '''
     num_seqs_used = 0
     total_loss = 0.
@@ -102,7 +100,6 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     mean_loss = total_loss / max(1, num_seqs_used)
 
     return mean_loss, example_dict
-
 
 
 def test_end_group(end_group, run_epoch_kwargs, target_recalls):

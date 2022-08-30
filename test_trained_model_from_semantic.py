@@ -12,9 +12,6 @@ import os
 import music21 as m21
 import data_management.semantic_to_agnostic as sta
 
-reload(params)
-reload(po)
-
 def make_pieces_dict(quartets_root, vocabulary):
     folders = []
     for k in ['felix', 'felix_errors_onepass']:
