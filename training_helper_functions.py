@@ -200,7 +200,7 @@ if __name__ == '__main__':
     print('defining model')
     model = LSTUT(**lstut_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = torch.nn.BCEWithLogitsLoss()
+    criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
     print('running epoch')
     loss, exs = run_epoch(model, dload, optimizer, criterion, error_generator, log_each_batch=True)
