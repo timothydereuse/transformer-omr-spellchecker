@@ -52,7 +52,7 @@ class ErrorGenerator(object):
             )
 
         # get number of valid words from encoder
-        vocab_size = len(self.enc.get_feature_names())
+        vocab_size = len(self.enc.get_feature_names_out())
 
         errored_seq = []
         i = 0  # seq position
