@@ -1,3 +1,7 @@
+import sys
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 import numpy as np
 import torch
 import agnostic_omr_dataloader as dl
@@ -12,6 +16,7 @@ import training_helper_functions as tr_funcs
 import time
 import datetime
 from embedding_utils import CBOW_Model, CBOWTrainingDataGenerator
+
 
 
 if __name__ == '__main__':
