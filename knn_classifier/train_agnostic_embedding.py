@@ -23,14 +23,16 @@ if __name__ == '__main__':
     max_lr = 0.1
     ngram_length = 3
     early_stopping_patience = 5
-    max_num_epochs = 300
-    model_output_name = 'knn_classifier/agnostic_embedding'
+    max_num_epochs = 1000
+    dataset_proportion = 1
+    model_output_name = 'knn_classifier/embedding_n3_bymeasure'
+    dset_fname = './processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
 
     dset_kwargs = {
-        'dset_fname': 'processed_datasets/all_string_quartets_agnostic_bymeasure.h5',
+        'dset_fname': dset_fname,
         'seq_length': ngram_length * 2 + 1,
         'padding_amt': 7,
-        'dataset_proportion': 1,
+        'dataset_proportion': dataset_proportion,
         'vocabulary': v,
         'all_subsequences': True
     }
