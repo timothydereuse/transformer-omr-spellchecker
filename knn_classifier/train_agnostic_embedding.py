@@ -10,61 +10,27 @@ from sklearn.manifold import TSNE
 import torch.nn as nn 
 import training_helper_functions as tr_funcs
 import time
+import datetime
+from embedding_utils import CBOW_Model, CBOWTrainingDataGenerator
 
-
-EMBED_DIMENSION = 300 
-EMBED_MAX_NORM = 1
-
-class CBOW_Model(nn.Module):
-    def __init__(self, vocab_size):
-        super(CBOW_Model, self).__init__()
-
-        self.embeddings = nn.Embedding(
-            num_embeddings=vocab_size,
-            embedding_dim=EMBED_DIMENSION,
-            max_norm=EMBED_MAX_NORM,
-        )
-
-        self.linear = nn.Linear(
-            in_features=EMBED_DIMENSION,
-            out_features=vocab_size,
-        )
-
-    def forward(self, inputs_):
-        x = self.embeddings(inputs_)
-        x = x.mean(axis=1)
-        x = self.linear(x)
-        return x
-
-def rolling_window(a, window):
-    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-    strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
-
-class CBOWTrainingDataGenerator(object):
-    def __init__(self):
-        pass
-
-    def add_errors_to_batch(self, batch):
-        seq_len = batch.shape[1]
-        middle = (seq_len // 2) + 1
-
-        targets = batch[:, middle]
-        inputs = torch.concat((batch[:, :middle], batch[:, middle + 1:]), 1)
-
-        return (inputs.long()), (targets.long())
 
 if __name__ == '__main__':
 
     device, num_gpus = tr_funcs.get_cuda_info()
     v = Vocabulary(load_from_file='./data_management/vocab.txt')
     batch_size = 500000
+    base_lr = 0.005
+    max_lr = 0.1
+    ngram_length = 3
+    early_stopping_patience = 5
+    max_num_epochs = 300
+    model_output_name = 'knn_classifier/agnostic_embedding'
 
     dset_kwargs = {
         'dset_fname': 'processed_datasets/all_string_quartets_agnostic_bymeasure.h5',
-        'seq_length': 7,
+        'seq_length': ngram_length * 2 + 1,
         'padding_amt': 7,
-        'dataset_proportion': 0.5,
+        'dataset_proportion': 1,
         'vocabulary': v,
         'all_subsequences': True
     }
@@ -78,7 +44,8 @@ if __name__ == '__main__':
     dloader_tst = DataLoader(dset_tst, batch_size, pin_memory=True)
 
     model = CBOW_Model(len(v.vtw))
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=max_lr)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=base_lr, max_lr=max_lr, verbose=True, cycle_momentum=False)
     criterion = nn.CrossEntropyLoss()
     error_generator = CBOWTrainingDataGenerator()
     # inputs, targets = error_generator.add_errors_to_batch(batch)
@@ -94,7 +61,7 @@ if __name__ == '__main__':
     val_losses = []
     train_losses = []
 
-    for epoch in range(10):
+    for epoch in range(max_num_epochs):
         epoch_start_time = time.time()
 
         # perform training epoch
@@ -120,6 +87,7 @@ if __name__ == '__main__':
 
         val_losses.append(val_loss)
         train_losses.append(train_loss)
+        scheduler.step()
 
         epoch_end_time = time.time()
         print(
@@ -128,18 +96,21 @@ if __name__ == '__main__':
             f'train_loss {train_loss:1.6e} | '
             f'val_loss   {val_loss:1.6e} | '
         )
+
+        # early stopping
+        time_since_best = epoch - val_losses.index(min(val_losses))
+        if time_since_best > early_stopping_patience:
+            print(f'stopping early at epoch {epoch} because validation score stopped increasing')
+            break
+
+    print(train_losses, '\n\n',  val_losses)
     
     embeddings = list(model.parameters())[0].detach().numpy()
 
-    reduction = TSNE()
-
-    reduced_embeddings = reduction.fit_transform(embeddings)
-
-
-    import datetime
-
+    # reduction = TSNE()
+    # reduced_embeddings = reduction.fit_transform(embeddings)
     start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
-    model_path = f'./embedding_model_{start_training_time}.pt'
+    model_path = f'./{model_output_name}_{start_training_time}.pt'
     torch.save(model, model_path)
 
     # import plotly.graph_objects as go
