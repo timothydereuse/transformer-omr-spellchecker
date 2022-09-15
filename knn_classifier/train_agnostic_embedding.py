@@ -1,6 +1,6 @@
 import sys
 from os import path
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+# sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ import torch.nn as nn
 import training_helper_functions as tr_funcs
 import time
 import datetime
-from embedding_utils import CBOW_Model, CBOWTrainingDataGenerator
+from knn_classifier.embedding_utils import CBOW_Model, CBOWTrainingDataGenerator
 
 
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     ngram_length = 3
     early_stopping_patience = 5
     max_num_epochs = 1000
-    dataset_proportion = 1
+    dataset_proportion = 1.0
     model_output_name = 'knn_classifier/embedding_n3_bymeasure'
     dset_fname = './processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
 
