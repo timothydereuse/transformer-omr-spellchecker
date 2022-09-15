@@ -22,7 +22,7 @@ class CBOWTrainingDataGenerator(object):
         middle = (seq_len // 2) + 1
 
         targets = batch[:, middle]
-        inputs = torch.concat((batch[:, :middle], batch[:, middle + 1:]), 1)
+        inputs = torch.cat((batch[:, :middle], batch[:, middle + 1:]), 1)
 
         return (inputs.long()), (targets.long())
 
