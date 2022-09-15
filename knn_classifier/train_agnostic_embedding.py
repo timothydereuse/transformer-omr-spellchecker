@@ -30,8 +30,8 @@ if __name__ == '__main__':
     early_stopping_patience = 5
     max_num_epochs = 1000
     dataset_proportion = 1.0
-    model_output_name = 'knn_classifier/embedding_n3_bymeasure'
-    dset_fname = './processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
+    model_output_name = 'knn_classifier/embedding_n3_byline'
+    dset_fname = './processed_datasets/all_string_quartets_agnostic_byline.h5'
 
     dset_kwargs = {
         'dset_fname': dset_fname,
