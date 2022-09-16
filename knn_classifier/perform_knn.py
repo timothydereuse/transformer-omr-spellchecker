@@ -50,7 +50,6 @@ def process_closest(closest, reduced_vectors, knn_bypass_thresh):
 
 def test_knn_detection(dset_tr, error_generator, embedding_vectors, window_size=3, n_nearest_neighbors=200,
     embedding_dim_reduce=9, knn_bypass_thresh=3, metric_order=2, smoothing=500, use_big_dset=False, pieces_to_try=25):
-    print('running knn detection')
 
     SVD = TruncatedSVD(n_components=embedding_dim_reduce)
     reduced_vectors = SVD.fit_transform(embedding_vectors)
@@ -116,7 +115,6 @@ def test_knn_detection(dset_tr, error_generator, embedding_vectors, window_size=
         if i >= pieces_to_try:
             break
 
-    print(scores)
     return scores
 
 if __name__ == "__main__":

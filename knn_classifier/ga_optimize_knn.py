@@ -6,7 +6,7 @@ import knn_classifier.perform_knn as perform_knn
 import pygad
 import numpy as np
 
-pieces_to_try = 10
+pieces_to_try = 8
 parallel = 8
 embedding_name = r'./knn_classifier/agnostic_embedding_vectors_byline.npy'
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         'knn_bypass_thresh', 'metric_order', 'use_big_dset']
     gene_space = [
         [3, 5, 7, 9, 11, 13, 15], # window size
-        [30, 40, 50, 60, 70, 80, 90, 100, 120, 140], # n nearest neighbors
+        [30, 40, 50, 60, 70, 80, 90, 100, 120, 130, 140, 150, 170, 200, 250], # n nearest neighbors
         list(range(3, 25)), # embedding reduction dims
         list(range(2, 50)), # knn bypass thresh
         [1, 2], # metric_order
@@ -51,13 +51,12 @@ if __name__ == "__main__":
         for i, a in enumerate(argument_order):
             kwargs[a] = int(solution[i])
 
-        print(solution, solution_idx)
         try:
             scores = perform_knn.test_knn_detection(
                 dset_tr,
                 error_generator,
                 embedding_vectors,
-                pieces_to_try=2,
+                pieces_to_try=pieces_to_try,
                 smoothing=500,
                 **kwargs
             )
@@ -65,6 +64,7 @@ if __name__ == "__main__":
             scores = [0, 0]
 
         fitness = np.mean(scores)
+        print(solution, solution_idx, fitness)
 
         return fitness
     
@@ -76,8 +76,8 @@ if __name__ == "__main__":
     # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
     ga_instance = pygad.GA(num_generations=200,
                         fitness_func=fitness_func,
-                        num_parents_mating=10,
-                        sol_per_pop=20,
+                        num_parents_mating=8,
+                        sol_per_pop=16,
                         num_genes=len(gene_space),
                         gene_space=gene_space,
                         mutation_type="adaptive",
