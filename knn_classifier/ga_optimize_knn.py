@@ -8,7 +8,7 @@ import numpy as np
 
 pieces_to_try = 10
 parallel = 8
-embedding_name = r'knn_classifier\agnostic_embedding_vectors_byline.npy'
+embedding_name = r'./knn_classifier/agnostic_embedding_vectors_byline.npy'
 
 if __name__ == "__main__":
     error_generator = ErrorGenerator(
