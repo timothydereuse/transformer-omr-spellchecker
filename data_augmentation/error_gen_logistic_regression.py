@@ -23,6 +23,7 @@ class ErrorGenerator(object):
         self.simple_error_rate = simple_error_rate
         self.simple = simple
         self.parallel = parallel
+        self.simple_probs = [1/3, 1/3, 1/3]
 
         if labeled_data is None:
             models = load(models_fpath)
@@ -48,8 +49,17 @@ class ErrorGenerator(object):
             [self.match_idx, self.replace_idx, self.insert_idx, self.delete_index],
             size=len(seq),
             replace=True,
-            p=[1 - err_prob, err_prob / 3, err_prob / 3, err_prob / 3]
+            p=[
+                1 - err_prob,
+                err_prob * self.simple_probs[0],
+                err_prob * self.simple_probs[1],
+                err_prob * self.simple_probs[2],
+                ]
             )
+
+        # if by chance we end up with no errors, force an error for compliance
+        if all(synthetic_error_alignment == self.match_idx):
+            synthetic_error_alignment[len(synthetic_error_alignment) // 2] = self.replace_idx
 
         # get number of valid words from encoder
         vocab_size = len(self.enc.get_feature_names_out())

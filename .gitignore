@@ -1,4 +1,3 @@
-*.pt
 *.hdf5
 *.png
 wandb/
