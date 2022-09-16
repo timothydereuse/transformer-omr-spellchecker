@@ -99,7 +99,10 @@ def multilabel_thresholding(output, target, num_trials=2000, beta=1):
     output = output.reshape(-1)
     target = target.reshape(-1)
 
-    thresholds = np.linspace(min(output), max(output), num_trials)
+    upper_positive = np.max(output[target == 1])
+    lower_positive = np.min(output[target == 1])
+
+    thresholds = np.linspace(lower_positive, upper_positive, num_trials)
 
     F1s = np.zeros(thresholds.shape)
     for i, t in enumerate(thresholds):
