@@ -5,12 +5,22 @@ from data_augmentation.error_gen_logistic_regression import ErrorGenerator
 import knn_classifier.perform_knn as perform_knn
 import pygad
 import numpy as np
+import logging, datetime
 
 pieces_to_try = 8
 parallel = 8
 embedding_name = r'./knn_classifier/agnostic_embedding_vectors_byline.npy'
 
 if __name__ == "__main__":
+
+    start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
+    logname = f'./logs/ga_train_{start_training_time}.log'
+    logging.basicConfig(filename=logname,
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+
     error_generator = ErrorGenerator(
         models_fpath='./processed_datasets/quartet_omr_error_models_byline.joblib',
         smoothing=1,
@@ -69,9 +79,10 @@ if __name__ == "__main__":
         return fitness
     
     def callback_gen(ga_instance):
-        print("Generation : ", ga_instance.generations_completed)
-        print("Fitness of the best solution :", ga_instance.best_solution()[1])
-        print("Best solution :", ga_instance.best_solution()[0])
+        print('callback func')
+        logging.info(f"Generation : {ga_instance.generations_completed}")
+        logging.info(f"Fitness of the best solution : {ga_instance.best_solution()[1]}")
+        logging.info(f"Best solution : {ga_instance.best_solution()[0]}")
 
     # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
     ga_instance = pygad.GA(num_generations=200,
@@ -82,7 +93,7 @@ if __name__ == "__main__":
                         gene_space=gene_space,
                         mutation_type="adaptive",
                         mutation_num_genes=(3, 1),
-                        stop_criteria='saturate_9',
+                        stop_criteria='saturate_3',
                         on_generation=callback_gen,
                         parallel_processing=['thread', parallel])
 
