@@ -7,7 +7,7 @@ import pygad
 import numpy as np
 import logging, datetime
 
-pieces_to_try = 8
+pieces_to_try = 10
 parallel = 8
 embedding_name = r'./knn_classifier/agnostic_embedding_vectors_byline.npy'
 
