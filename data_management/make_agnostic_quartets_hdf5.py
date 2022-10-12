@@ -12,29 +12,32 @@ beat_multiplier = 48
 num_transpositions_per_file = 4
 possible_transpositions = ['m2', 'M2', 'm3', 'M3', 'P4', 'a4']
 possible_transpositions = possible_transpositions + ['-' + x for x in possible_transpositions]
-quartets_root = r"C:\Users\tim\Documents\datasets\just_quartets"
-interleave = True
-all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
-c = m21.converter.Converter()
+# interleave = True
+# all_keys = ['ABC', 'kernscores', 'felix', 'felix_errors']
+# c = m21.converter.Converter()
 
-# # parse all files and build vocabulary, first.
-# all_tokens = Counter()
-# print('building vocabulary...')
-# for k in all_keys:
-#     files = os.listdir(os.path.join(quartets_root, k))
-#     for fname in files:
-#         print(f'processing {fname}...')
-#         fpath = os.path.join(os.path.join(quartets_root, k, fname))
-#         parsed_file = m21.converter.parse(fpath)
-#         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
-#         agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'], just_tokens=True, interleave=True)
-#         all_tokens.update(agnostic) 
-# v = vocab.Vocabulary(all_tokens)
-# v.save_vocabulary('./data_management/vocab_jul.txt')
-v = vocab.Vocabulary(load_from_file='./data_management/vocab.txt')
+# parse all files and build vocabulary, first.
+def build_vocab(all_keys, out_fname, quartets_root, interleave=True):
+    all_tokens = Counter()
+    print('building vocabulary...')
+    for k in all_keys:
+        files = os.listdir(os.path.join(quartets_root, k))
+        for fname in files:
+            print(f'processing {fname}...')
+            fpath = os.path.join(os.path.join(quartets_root, k, fname))
+            try:
+                parsed_file = m21.converter.parse(fpath)
+            except Exception:
+                print(f'parsing {fname} failed, skipping file')
+                continue
+            parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+            agnostic = sta.m21_parts_to_interleaved_agnostic(parts, remove=['+'], just_tokens=True, interleave=interleave)
+            all_tokens.update(agnostic) 
+    v = vocab.Vocabulary(all_tokens)
+    v.save_vocabulary(out_fname)
 
 # then parse them again to actually save them. yeah, yeah, this is not great
-def make_hdf5(dset_path, keys, train_val_test_split=True, split_by_keys=False, transpose=False, interleave=True):
+def make_hdf5(dset_path, keys, v, quartets_root, train_val_test_split=True, split_by_keys=False, transpose=False, interleave=True):
     with h5py.File(dset_path, 'a') as f:
         f.attrs['beat_multiplier'] = beat_multiplier
 

@@ -1,30 +1,46 @@
 from data_augmentation.compare_felix_quartets import get_training_samples, make_supervised_examples
 from data_augmentation.error_gen_logistic_regression import ErrorGenerator
-from data_management.make_agnostic_quartets_hdf5 import make_hdf5
+from data_management.make_agnostic_quartets_hdf5 import make_hdf5, build_vocab
+from data_management.vocabulary import Vocabulary
 import h5py
 import numpy as np
 
-
-all_quartets_dset_path = r'./processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
-felix_dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_bymeasure.h5'
-supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_bymeasure.h5'
-error_generator_fname = r'./processed_datasets/quartet_omr_error_models_bymeasure.joblib'
+quartets_root = r"C:\Users\tim\Documents\datasets\just_quartets"
+all_quartets_dset_path = r'./processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
+felix_dset_path = r'./processed_datasets/quartets_felix_omr_big_agnostic_bymeasure.h5'
+supervised_targets_fname = r'./processed_datasets/supervised_omr_targets_big_bymeasure.h5'
+error_generator_fname = r'./processed_datasets/quartet_omr_error_models_big_bymeasure.joblib'
+vocab_name = r'./data_management/vocab_big.txt'
 interleave = True
 
-make_hdf5(
-    felix_dset_path,
-    ['felix_omr', 'felix_correct', 'felix_onepass'],
-    train_val_test_split=False,
-    split_by_keys=True,
-    transpose=False,
-    interleave=interleave
-    )
+build_vocab(
+    all_keys=['musescore_misc', 'ABC', 'kernscores', 'felix_correct', 'musescore_misc', 'felix_omr', 'felix_onepass'],
+    out_fname=vocab_name,
+    quartets_root=quartets_root
+)
 
+v = Vocabulary(load_from_file=vocab_name)
+
+# make hdf5 of CORRECT string quartets
 make_hdf5(all_quartets_dset_path,
-    ['ABC', 'kernscores', 'felix_correct'],
+    ['musescore_misc', 'ABC', 'kernscores', 'felix_correct'],
+    v=v,
+    quartets_root=quartets_root,
     train_val_test_split=True,
     split_by_keys=False,
     transpose=True,
+    interleave=interleave
+    )
+
+# make hdf5 of CORRECT / ERROR PAIRED string quartets
+make_hdf5(
+    felix_dset_path,
+    ['felix_omr', 'felix_correct', 'felix_onepass'],
+    v=v,
+    quartets_root=quartets_root,
+    train_val_test_split=False,
+    split_by_keys=True,
+    transpose=False,
     interleave=interleave
     )
 
