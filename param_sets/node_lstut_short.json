@@ -18,7 +18,7 @@
     "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_interleaved.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_interleaved.joblib",
-    "saved_vocabulary": "data_management/vocab.txt",
+    "saved_vocabulary": "data_management/vocab_big.txt",
     "error_gen_smoothing": 10,
     "simple_errors": false,
     "errors_parallel": 1,
@@ -50,8 +50,8 @@
         {"dset_path": "processed_datasets/all_string_quartets_agnostic_bypart.h5",
         "dset_testing_path": "processed_datasets/supervised_omr_targets_bypart.h5",
         "error_model": "data_augmentation/quartet_omr_error_models_bypart.joblib"},
-        {"dset_path": "processed_datasets/all_string_quartets_agnostic_bymeasure.h5",
-        "dset_testing_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
+        {"dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
+        "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
         "error_model": "data_augmentation/quartet_omr_error_models_bymeasure.joblib"}
     ]
 }

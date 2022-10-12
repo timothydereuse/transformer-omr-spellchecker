@@ -18,7 +18,7 @@
     "dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_byline.joblib",
-    "saved_vocabulary": "data_management/vocab.txt",
+    "saved_vocabulary": "data_management/vocab_big.txt",
     "error_gen_smoothing": 2,
     "simple_errors": false,
     "errors_parallel": 1,
