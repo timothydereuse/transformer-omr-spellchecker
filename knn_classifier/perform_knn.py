@@ -8,7 +8,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import TruncatedSVD
 import training_helper_functions as tr_funcs
 import time
-import test_trained_model as ttm
+import test_results_metrics as ttm
 from knn_classifier.embedding_utils import CBOW_Model, CBOWTrainingDataGenerator, rolling_window
 # import matplotlib.pyplot as plt
 import itertools

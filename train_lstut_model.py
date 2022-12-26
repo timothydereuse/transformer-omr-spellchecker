@@ -3,7 +3,7 @@ import numpy as np
 import torch, wandb
 import torch.nn as nn
 import agnostic_omr_dataloader as dl
-import test_trained_model as ttm
+import test_results_metrics as ttm
 import models.LSTUT_model as lstut
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
@@ -19,7 +19,7 @@ import model_params
 parser = argparse.ArgumentParser(description=
     'Training and testing script for the transformer-omr-spellchecker project. '
     'Must reference a .json parameters file (in the /param_sets folder. '
-    'Requires processed .h5 files containing quartets in agnostic format; '
+    'Requires pre-processed .h5 files containing symbolic music files in agnostic format; '
     'some of these .h5 files are included with the transformer-omr-spellchecker repository on GitHub. '
     'Use the script run_all_data_preparation to make these files from scratch, or from another dataset.')
 parser.add_argument('parameters', default='default_params.json',
@@ -28,7 +28,7 @@ parser.add_argument('-m', '--mod_number', type=int, default=0,
                     help='Index of specific modification to apply to given parameter set.')
 parser.add_argument('-w', '--wandb', type=ascii, action='store', default=None,
                     help='Name of wandb project to log results to. '
-                         'Results are otherwise just printed to stdout and log file if -l is used.')
+                         'If none supplied, results are printed to stdout (and log file if -l is used).')
 parser.add_argument('-l', '--logging', action='store_true',
                     help='Whether or not to log training results to file.')
 parser.add_argument('-d', '--dryrun', action='store_true',
@@ -62,6 +62,7 @@ dset_kwargs = {
     'dataset_proportion': params.dataset_proportion,
     'vocabulary': v
 }
+
 dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
 dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
 dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
@@ -267,7 +268,7 @@ for end_group in end_groups:
             lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
             table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
 
-            wandb_dict[f'{end_name}_{inds_to_save}_{target_recalls[j]}_{batch_name}'] = table
+            wandb_dict[f'{end_name}_{target_recalls[j]}_{batch_name}'] = table
         
         if args['wandb']:
             wandb.run.summary[f'final_examples'] = wandb_dict

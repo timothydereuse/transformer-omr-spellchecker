@@ -2,7 +2,7 @@ import torch
 import logging
 import numpy as np
 import plot_outputs as po
-import test_trained_model as ttm
+import test_results_metrics as ttm
 
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
