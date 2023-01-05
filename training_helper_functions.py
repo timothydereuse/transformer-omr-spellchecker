@@ -28,7 +28,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     Performs a training or validation epoch.
     @model: the model to use.
     @dloader: the dataloader to fetch data from.
-    @optimizer: the optimizer to use, if training.
+    @optimizer: the optimizer to use, if training. May set to None for inference.
     @criterion: the loss function to use.
     @device: the device on which to perform training.
     @train: if true, performs a gradient update on the model's weights. if false, treated as
@@ -102,9 +102,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
     return mean_loss, example_dict
 
 
-def test_end_group(end_group, run_epoch_kwargs, target_recalls):
-
-    end_dloader, end_name, end_train_data_mode = end_group
+def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_recalls):
 
     # make test_results with dummy threshes object, to fill in later
     test_results = ttm.TestResults(threshes=[], target_recalls=target_recalls)
@@ -136,6 +134,21 @@ def test_end_group(end_group, run_epoch_kwargs, target_recalls):
 
     return res_stats, tst_exs, test_results
 
+
+def get_nice_results_string(end_name, res_stats):
+
+    result_string = (''
+        f'{end_name} STATS:\n'
+        f'{end_name} threshes:                    {res_stats["threshes"]}\n'
+        f'{end_name}_precision:                   {res_stats["precision"]} | \n'
+        f'{end_name}_recall:                      {res_stats["recall"]} | \n'
+        f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
+        f'{end_name}_prop_positive_predictions:   {res_stats["prop_positive_predictions"]} \n'
+        f'{end_name}_prop_positive_targets:       {res_stats["prop_positive_targets"]} \n'
+        f'{end_name}_max_f1:                      {res_stats["max_f1"]} \n'
+    )
+
+    return result_string
 
 if __name__ == '__main__':
 

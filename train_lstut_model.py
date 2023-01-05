@@ -5,6 +5,7 @@ import torch.nn as nn
 import agnostic_omr_dataloader as dl
 import test_results_metrics as ttm
 import models.LSTUT_model as lstut
+import test_lstut_model as tlm
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
 import data_management.vocabulary as vocab
@@ -65,17 +66,9 @@ dset_kwargs = {
 
 dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
 dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
-dset_tst = dl.AgnosticOMRDataset(base='test', **dset_kwargs)
-dset_kwargs['dataset_proportion'] = 1
-dset_kwargs['dset_fname'] = params.dset_testing_path
-dset_omr = dl.AgnosticOMRDataset(base='omr', **dset_kwargs)
-dset_omr_onepass = dl.AgnosticOMRDataset(base='onepass', **dset_kwargs)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
-dloader_tst = DataLoader(dset_tst, params.batch_size, pin_memory=True)
-dloader_omr = DataLoader(dset_omr, params.batch_size, pin_memory=True)
-dloader_omr_onepass = DataLoader(dset_omr_onepass, params.batch_size, pin_memory=True)
 
 lstut_settings = params.lstut_settings
 lstut_settings['vocab_size'] = v.num_words
@@ -173,18 +166,11 @@ for epoch in range(params.num_epochs):
             'val_f1': val_f1
             })
 
-    # save an example
-    if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
-        lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-        table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
-        wandb.log({'examples': table})
-
-    # save a model checkpoint
-    # if (not epoch % params.save_model_every) and epoch > 0 and params.save_model_every > 0:
-    #     m_name = (
-    #         f'lstut_{params.start_training_time}'
-    #         f'_{params.lstut_summary_str}.pt')
-    #     torch.save(cur_model, m_name)
+    # # save an example
+    # if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
+    #     lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
+    #     table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
+    #     wandb.log({'examples': table})
 
     # keep snapshot of best model
     cur_model = {
@@ -215,65 +201,39 @@ print(
     f'Total training time: {end_time - start_time} s.'
 )
 
+# save a model checkpoint
+# if max_epochs reached, or early stopping condition reached, save best model
+best_epoch = best_model['epoch']
+m_name = (f'./trained_models/lstut_best_{params.params_id_str}.pt')
+torch.save(best_model, m_name)
+
 #########################
 # TESTING TRAINED MODEL 
 #########################
 
-# define (dloader, group name, end_train_data_mode) for each end group to test through
-end_groups = [
-    (dloader_tst, 'data_aug_test', False),
-    (dloader_omr, 'real_omr_test', True),
-    (dloader_omr_onepass, 'real_onepass_test', True)
-    ]
+if args['wandb']:
+    wandb.run.summary["total_training_time"] = end_time - start_time
+
+end_groups = tlm.make_test_dataloaders(params, dset_kwargs)
 
 for end_group in end_groups:
-    end_dloader, end_name, end_train_data_mode = end_group
 
-    res_stats, tst_exs, test_results = tr_funcs.test_end_group(end_group, run_epoch_kwargs, params.target_recalls)
+    res_stats, tst_exs, test_results = tr_funcs.test_end_group(
+        end_group.dloader,
+        end_group.with_targets,
+        run_epoch_kwargs,
+        params.target_recalls
+        )
 
-    print(
-        f'{end_name} STATS:\n'
-        f'{end_name} threshes:                    {res_stats["threshes"]}\n'
-        f'{end_name}_precision:                   {res_stats["precision"]} | \n'
-        f'{end_name}_recall:                      {res_stats["recall"]} | \n'
-        f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
-        f'{end_name}_prop_positive_predictions:   {res_stats["prop_positive_predictions"]} \n'
-        f'{end_name}_prop_positive_targets:       {res_stats["prop_positive_targets"]} \n'
-        f'{end_name}_max_f1:                      {res_stats["max_f1"]} \n'
-    )
+    res_string = tr_funcs.get_nice_results_string(end_group.name, res_stats)
+    print(res_string)
 
     if args['wandb']:
-        wandb.run.summary["total_training_time"] = end_time - start_time
-        for i, thresh in enumerate(params.target_recalls):
-            # target_recall = params.target_recalls[i]
-            wandb.run.summary[f"{end_name}_{thresh}_precision"] = res_stats["precision"][thresh]
-            wandb.run.summary[f"{end_name}_{thresh}_true_negative"] = res_stats["true negative rate"][thresh]
-            wandb.run.summary[f"{end_name}_{thresh}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
-            wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
-
-    num_examples_to_save = min(params.num_examples_to_save, len(tst_exs['output']))
-    for j, thresh in enumerate(res_stats['threshes']):
-        wandb_dict = {}
-
-        # all_predictions = (torch.sigmoid(tst_exs['output']) > thresh).float().mean()
-        # print(all_predictions)
-
-        # the 0 represents thresh optimized for f1 score instead
-        target_recalls = params.target_recalls + ['F1']
-
-        inds_to_save = np.random.choice(len(tst_exs['output']), num_examples_to_save, replace=False)
-        for ind_to_save in (inds_to_save):
-            
-            batch_name = f"{tst_exs['batch_names'][ind_to_save]} {tst_exs['batch_offsets'][ind_to_save]}"
-            lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
-            table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
-
-            wandb_dict[f'{end_name}_{target_recalls[j]}_{batch_name}'] = table
-        
-        if args['wandb']:
-            wandb.run.summary[f'final_examples'] = wandb_dict
-
-# if max_epochs reached, or early stopping condition reached, save best model
-best_epoch = best_model['epoch']
-m_name = (f'lstut_best_{params.params_id_str}.pt')
-torch.save(best_model, m_name)
+        tlm.add_stats_to_wandb(res_stats, params.target_recalls, end_group.name)
+        tlm.save_examples_to_wandb(
+            res_stats, 
+            tst_exs,
+            v,
+            params.target_recalls,
+            end_group.name,
+            params.num_examples_to_save)

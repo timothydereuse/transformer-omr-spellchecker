@@ -1,11 +1,11 @@
 {
-    "params_name": "LSTUT_FELIX_TRIAL",
+    "params_name": "LSTUT_TRIAL",
     "num_epochs": 2,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "save_img_every": 1,
-    "max_time_minutes": 20,
+    "max_time_minutes": 2,
 
     "seq_length": 64,
     "padding_amt": 16,
@@ -29,11 +29,11 @@
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 0,
+        "tf_layers": 1,
         "tf_heads": 1,
-        "tf_depth": 0,
-        "hidden_dim": 64,
-        "ff_dim": 128,
+        "tf_depth": 1,
+        "hidden_dim": 32,
+        "ff_dim": 32,
         "dropout": 0.1,
         "positional_encoding": false
     },
@@ -48,5 +48,11 @@
         {"batch_size": 10, "seq_length": 32},
         {"lstut_settings.tf_depth": 3},
         {"lstut_settings.tf_depth": 2, "seq_length": 33}
+    ],
+    "test_sets":
+    [
+        {"base": "omr", "with_targets": true},
+        {"base": "onepass", "with_targets": true},
+        {"base": "test", "with_targets": false}
     ]
 }
