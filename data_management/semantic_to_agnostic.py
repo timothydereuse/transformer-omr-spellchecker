@@ -319,21 +319,29 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     return interleaved
 
 
+def musicxml_paths_to_agnostic(mus_xmls, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
+    outputs = []
+    for fpath in mus_xmls:
+        parsed_file = m21.converter.parse(fpath)
+        parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+
+        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
+        outputs.append(agnostic)
+    return outputs
+
 
 if __name__ == '__main__':
     from collections import Counter
 
-    k = 'kernscores'
-    # quartets_root = r'D:\Documents\datasets\just_quartets'
-    # files = os.listdir(os.path.join(quartets_root, k))
-    files = [r"C:\Users\tim\Documents\datasets\just_quartets\felix_errors_onepass\1_op12_4_corrected.musicxml"]
+    files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml"]
     all_tokens = Counter()
+
+    ret = musicxml_paths_to_agnostic(files)
 
     for fpath in files:
         parsed_file = m21.converter.parse(fpath)
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
         # part = parts[0].getElementsByClass(m21.stream.Measure)
-        print(f'processing {k}')
         print(f'ntokens {len(all_tokens)}')
 
         # for p in parts:
