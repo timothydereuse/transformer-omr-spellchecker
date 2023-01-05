@@ -44,6 +44,12 @@
         "threshold": 0.001,
         "verbose": true
     },
+    "test_sets":
+    [
+        {"base": "omr", "with_targets": true},
+        {"base": "onepass", "with_targets": true},
+        {"base": "test", "with_targets": false}
+    ],
     "param_sweep":{
         "toy_datasets_args.seq_freq": [2, 8, 16]
     }

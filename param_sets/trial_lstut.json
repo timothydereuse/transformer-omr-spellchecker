@@ -43,16 +43,16 @@
         "threshold": 0.001,
         "verbose": true
     },
-    "param_sweep":
-    [
-        {"batch_size": 10, "seq_length": 32},
-        {"lstut_settings.tf_depth": 3},
-        {"lstut_settings.tf_depth": 2, "seq_length": 33}
-    ],
     "test_sets":
     [
         {"base": "omr", "with_targets": true},
         {"base": "onepass", "with_targets": true},
         {"base": "test", "with_targets": false}
+    ],
+    "param_sweep":
+    [
+        {"batch_size": 10, "seq_length": 32},
+        {"lstut_settings.tf_depth": 3},
+        {"lstut_settings.tf_depth": 2, "seq_length": 33}
     ]
 }

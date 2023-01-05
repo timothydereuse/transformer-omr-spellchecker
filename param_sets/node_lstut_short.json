@@ -43,6 +43,12 @@
         "threshold": 0.001,
         "verbose": true
     },
+    "test_sets":
+    [
+        {"base": "omr", "with_targets": true},
+        {"base": "onepass", "with_targets": true},
+        {"base": "test", "with_targets": false}
+    ],
     "param_sweep": [
         {"dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
         "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",

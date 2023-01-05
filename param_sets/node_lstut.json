@@ -43,6 +43,12 @@
         "threshold": 0.001,
         "verbose": true
     },
+    "test_sets":
+    [
+        {"base": "omr", "with_targets": true},
+        {"base": "onepass", "with_targets": true},
+        {"base": "test", "with_targets": false}
+    ],
     "param_sweep": [
         {"simple_error_rate": 0.1, "simple_errors": true},
         {"error_gen_smoothing": 10},
