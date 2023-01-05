@@ -244,6 +244,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     else:
         agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]        
 
+    # remove things specified in remove parameter
     if remove:
         agnostic_parts = [
             [x for x in part if not x.agnostic_item in remove]
@@ -251,8 +252,9 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
             in agnostic_parts
         ]
 
-    all_parts_concat = [item for sublist in agnostic_parts for item in sublist]
+    # return all parts concatenated if no interleave needed
     if not interleave:
+        all_parts_concat = [item for sublist in agnostic_parts for item in sublist]
         if just_tokens:
             return [x.agnostic_item for x in all_parts_concat]
         return all_parts_concat
@@ -279,11 +281,11 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
             )
 
     # get locations of linebreaks in each part
-    staff_break_points = [
-        [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
-        for part
-        in agnostic_parts
-    ]
+    # staff_break_points = [
+    #     [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
+    #     for part
+    #     in agnostic_parts
+    # ]
 
     # # get locations of barlines in each part
     # bar_break_points = [
@@ -319,10 +321,9 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     return interleaved
 
 
-def musicxml_paths_to_agnostic(mus_xmls, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
+def m21_streams_to_agnostic(mus_xmls, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
     outputs = []
-    for fpath in mus_xmls:
-        parsed_file = m21.converter.parse(fpath)
+    for parsed_file in mus_xmls:
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
 
         agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
@@ -336,8 +337,6 @@ if __name__ == '__main__':
     files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml"]
     all_tokens = Counter()
 
-    ret = musicxml_paths_to_agnostic(files)
-
     for fpath in files:
         parsed_file = m21.converter.parse(fpath)
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
@@ -349,6 +348,6 @@ if __name__ == '__main__':
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
         agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
-        all_tokens.update([x.agnostic_item for x  in agnostic])
+        all_tokens.update([x.agnostic_item for x in agnostic])
 
             

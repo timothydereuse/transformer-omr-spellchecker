@@ -8,10 +8,12 @@ import training_helper_functions as tr_funcs
 import models.LSTUT_model as lstut
 import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
+import data_management.semantic_to_agnostic as sta
 import data_management.vocabulary as vocab
 import plot_outputs as po
 import numpy as np
 import wandb
+import music21 as m21
 from torch.utils.data import DataLoader
 from collections import namedtuple
 import model_params
@@ -36,12 +38,14 @@ def make_test_dataloaders(params, kwargs_dict):
         all_dset_groups.append(EndGroup(test_dset, dloader_omr, test_set['base'], test_set['with_targets']))
     return all_dset_groups
 
+
 def add_stats_to_wandb(res_stats, target_recalls, end_name):
     for i, thresh in enumerate(target_recalls):
         wandb.run.summary[f"{end_name}_{thresh}_precision"] = res_stats["precision"][thresh]
         wandb.run.summary[f"{end_name}_{thresh}_true_negative"] = res_stats["true negative rate"][thresh]
         wandb.run.summary[f"{end_name}_{thresh}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
         wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
+
 
 def save_examples_to_wandb(res_stats, tst_exs, v, target_recalls, end_name, num_examples_to_save):
     wandb_dict = {}
@@ -61,6 +65,7 @@ def save_examples_to_wandb(res_stats, tst_exs, v, target_recalls, end_name, num_
             wandb_dict[f'{end_name}_{target_recalls[j]}_{batch_name}'] = table
         
     wandb.run.summary[f'final_examples'] = wandb_dict
+
 
 if __name__ == "__main__":
     model_path = "trained_models\lstut_best_LSTUT_TRIAL_0_(2022.12.28.17.22)_1-1-1-11-1-32-32.pt"
@@ -106,10 +111,41 @@ if __name__ == "__main__":
 
     groups =  make_test_dataloaders(params, dset_kwargs)
 
-    for g in groups:
-        res_stats, tst_exs, test_results = tr_funcs.test_end_group(
-            g.dloader,
-            g.with_targets,
-            run_epoch_kwargs,
-            params.target_recalls
-            )
+    # for g in groups:
+    #     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
+    #         g.dloader,
+    #         g.with_targets,
+    #         run_epoch_kwargs,
+    #         params.target_recalls
+    #         )
+
+    test_files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml"]
+    parsed_files = [m21.converter.parse(fpath) for fpath in test_files]
+    agnostic_rec = sta.m21_streams_to_agnostic(parsed_files)[0]
+    model.eval()
+
+    agnostic_tokens = [x.agnostic_item for x in agnostic_rec]
+    vectorized = v.words_to_vec(agnostic_tokens).astype('long')
+    inp = torch.tensor(vectorized)
+
+    # expand input vector to be a multiple of the sequence length
+    # and then reshape into correct form for prediction
+    expand_amt = params.seq_length - (len(inp) % params.seq_length)
+    expand_vec = torch.full((expand_amt,), v.SEQ_PAD)
+    inp = torch.cat([inp, expand_vec])
+    inp = inp.reshape(-1, params.seq_length)
+
+    with torch.no_grad():
+        pred = model(inp)
+
+    # unwrap prediction
+    unwrapped_pred = pred.reshape(-1)[:-expand_amt]
+
+    this_stream = parsed_files[0]
+    parts = list(this_stream.getElementsByClass(m21.stream.Part))
+    measures = [list(x.getElementsByClass(m21.stream.Measure)) for x in parts]
+
+    for m in measures[0]:
+        m[-1].style.color = 'red'
+
+    this_stream.write('musicxml', fp='./test.musicxml')
