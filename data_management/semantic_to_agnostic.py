@@ -6,29 +6,6 @@ from collections import namedtuple
 from itertools import groupby
 
 AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'chord_idx', 'measure_idx', 'event_idx', 'part_idx'])
-DEFAULT_PITCH_STATUS = {x: 0 for x in list('ABCDEFG')}
-def get_reset_pitch_status(current_key_sig):
-    cps = dict(DEFAULT_PITCH_STATUS)
-    for p in current_key_sig.alteredPitches:
-        cps[p.name[0]] = int(p.alter)
-    return cps
-
-
-def resolve_accidentals(p, current_pitch_status):
-
-    # check if this note's pitch alteration matches what is currently in the pitch status
-    this_accid_num = int(p.alter)
-    prev_accid_num = current_pitch_status[p.name[0]]
-
-    if this_accid_num == prev_accid_num:
-        # if it does, no need to do anything.
-        accid_str = None
-    else:
-        # previously, no accidental on this note, so add one:
-        accid_str = p.accidental.name if p.accidental else 'natural'
-        current_pitch_status[p.name[0]] = this_accid_num
-    
-    return accid_str, current_pitch_status
 
 
 def resolve_duration(d):
@@ -46,10 +23,11 @@ def resolve_duration(d):
     return dots, dur_string, is_tuplet
 
 
-def resolve_note(e, is_chord, current_clef, current_pitch_status):
+def resolve_note(e, current_clef):
     res = []
-
-    accid_str, current_pitch_status = resolve_accidentals(e.pitch, current_pitch_status)
+    
+    show_accidental = e.pitch.accidental.displayStatus if e.pitch.accidental else None
+    accid_str = e.pitch.accidental.name if show_accidental else None
 
     # notes contain: duration-position-beamStatus
     dots, dur_name, is_tuplet = resolve_duration(e.duration)
@@ -63,13 +41,25 @@ def resolve_note(e, is_chord, current_clef, current_pitch_status):
     if(accid_str):
         res.extend(['+', f'accid.{accid_str}.pos{p}'])
 
+    # add actual note to result list
     res.extend(['+', f'{dur_name}.pos{p}.{b}'])
+
+    # add articulations below note if the stem direction is up, or above note if the
+    # stem direction is down. this probably isn't perfectly accurate but in order to
+    # make this look "good" i would have to essentially program an entire engraving
+    # system myself, right here, to know where the symbols "should" go
+    for articulation in e.articulations:
+        art_name = f'articulation.{articulation.name}.pos{p}'
+        if e.stemDirection == 'down':
+            res = [art_name, '>'] + res
+        elif e.stemDirection == 'up':
+            res = res + ['>', art_name]
 
     # then add dot
     if dots > 0:
         res.extend(['+', f'duration.dot.pos{p}'])
 
-    return res, is_tuplet, current_pitch_status
+    return res, is_tuplet
 
 
 def resolve_tuplet_record(tuplet_record):
@@ -111,7 +101,7 @@ def m21_part_to_agnostic(part, part_idx):
 
     all_keysigs = part.flat.getElementsByClass(m21.key.KeySignature)
     current_key_sig = all_keysigs[0] if all_keysigs else m21.key.KeySignature(0)
-    current_pitch_status = get_reset_pitch_status(current_key_sig)
+    # current_pitch_status = get_reset_pitch_status(current_key_sig)
 
     all_timesigs = part.flat.getElementsByClass(m21.meter.TimeSignature)
     current_time_sig = all_timesigs[0] if all_keysigs else m21.meter.TimeSignature()
@@ -124,7 +114,7 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case if the current m21 element is a Note
             if type(e) == m21.note.Note:
-                glyphs, tuplet, current_pitch_status = resolve_note(e, False, current_clef, current_pitch_status)
+                glyphs, tuplet = resolve_note(e, current_clef)
 
                 records = [AgnosticRecord(g, 0, measure_idx, event_idx, part_idx) for g in glyphs]
                 agnostic.extend(records)
@@ -155,8 +145,7 @@ def m21_part_to_agnostic(part, part_idx):
                 sorted_notes = sorted(e.notes, key=lambda x: x.pitch.midi, reverse=False)
 
                 for i, x in enumerate(sorted_notes):
-                    gl, tuplet, current_pitch_status = resolve_note(
-                        x, is_chord_list[i], current_clef, current_pitch_status) 
+                    gl, tuplet = resolve_note(x, current_clef) 
                     glyph_lists.extend(gl)
                     chord_index_tracker.extend([i for _ in range(len(glyph_lists))])
                 
@@ -171,14 +160,14 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                # agnostic.append(AgnosticRecord('+', measure_idx, event_idx, part_idx))
-                # agnostic.append(AgnosticRecord(f'dynamics.{e.value}', measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord('+', 0, measure_idx, event_idx, part_idx))
+                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', 0, measure_idx, event_idx, part_idx))
                 pass
 
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
-                    position = p.diatonicNoteNum - current_clef.lowestLine - 12
+                    position = p.diatonicNoteNum - current_clef.lowestLine + 12
 
                     agnostic.append(AgnosticRecord('+', 0, measure_idx, event_idx, part_idx))
                     agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', 0, measure_idx, event_idx, part_idx))
@@ -220,8 +209,6 @@ def m21_part_to_agnostic(part, part_idx):
             agnostic.append(AgnosticRecord('+', measure_idx, 0, event_idx, part_idx))
             agnostic.append(AgnosticRecord(f'barline.regular', 0, measure_idx, event_idx, part_idx))
 
-        # at the end of every measure, reset the pitch status to the key signature
-        current_pitch_status = get_reset_pitch_status(current_key_sig)
 
     # handle tuplet records by putting in tuplet indicators
     insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
