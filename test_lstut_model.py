@@ -22,7 +22,6 @@ import model_params
 # make dloaders for all test datasets identified in parameters file
 def make_test_dataloaders(params, kwargs_dict):
     all_dset_groups = []
-
     EndGroup = namedtuple('TestGroup', 'dset dloader name with_targets')
 
     for test_set in params.test_sets:
@@ -102,10 +101,8 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
             # in MusicXML or Music21, so we ignore them.
             continue
         elif token_type == 'accid' and type(selected_element) == m21.note.Note:
-            print('accid')
             selected_element.pitch.accidental.style.color = color_style
         elif token_type == 'articulation' and type(selected_element) == m21.note.Note:
-            print('articulation')
             for articulation in selected_element.articulations:
                 articulation.style.color = color_style
         elif token_type == 'rest' and type(selected_element) == m21.note.Rest:
@@ -116,6 +113,37 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
             selected_element.style.color = color_style
     
     return this_stream
+
+
+def run_m21_streams_through_model(parsed_files, model, seq_length, vocab):
+    model.eval()
+
+    agnostic_records = sta.m21_streams_to_agnostic(parsed_files)
+    output_agnostic_recs = []
+    output_preds = []
+    for agnostic_rec in agnostic_records:
+
+        agnostic_tokens = [x.agnostic_item for x in agnostic_rec]
+        vectorized = vocab.words_to_vec(agnostic_tokens).astype('long')
+        inp = torch.tensor(vectorized)
+
+        # expand input vector to be a multiple of the sequence length
+        # and then reshape into correct form for prediction
+        expand_amt = seq_length - (len(inp) % seq_length)
+        expand_vec = torch.full((expand_amt,), vocab.SEQ_PAD)
+        inp = torch.cat([inp, expand_vec])
+        inp = inp.reshape(-1, seq_length)
+
+        with torch.no_grad():
+            pred = model(inp)
+
+        # unwrap prediction
+        unwrapped_pred = pred.reshape(-1)[:-expand_amt]
+
+        output_agnostic_recs.append(agnostic_rec)
+        output_preds.append(unwrapped_pred)
+    
+    return output_agnostic_recs, output_preds
 
 
 if __name__ == "__main__":
@@ -172,32 +200,17 @@ if __name__ == "__main__":
 
     test_files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
     parsed_files = [m21.converter.parse(fpath) for fpath in test_files]
-    agnostic_rec = sta.m21_streams_to_agnostic(parsed_files)[0]
-    model.eval()
 
-    agnostic_tokens = [x.agnostic_item for x in agnostic_rec]
-    vectorized = v.words_to_vec(agnostic_tokens).astype('long')
-    inp = torch.tensor(vectorized)
-
-    # expand input vector to be a multiple of the sequence length
-    # and then reshape into correct form for prediction
-    expand_amt = params.seq_length - (len(inp) % params.seq_length)
-    expand_vec = torch.full((expand_amt,), v.SEQ_PAD)
-    inp = torch.cat([inp, expand_vec])
-    inp = inp.reshape(-1, params.seq_length)
-
-    with torch.no_grad():
-        pred = model(inp)
-
-    # unwrap prediction
-    unwrapped_pred = pred.reshape(-1)[:-expand_amt]
-    thresholded_preds = (unwrapped_pred > torch.mean(unwrapped_pred)).numpy()
-
-
+    agnostic_records, predictions = run_m21_streams_through_model(parsed_files, model, params.seq_length, v)
 
     color_style = 'red'
-    this_stream = parsed_files[0]
 
-    colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresholded_preds, color_style)
+    output_streams = []
+    for i in range(len(parsed_files)):
+        agnostic_rec = agnostic_records[i]
+        this_stream = parsed_files[i]
+        thresh_pred = (predictions[i] > torch.mean(predictions[i])).numpy()
+        colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style)
+        output_streams.append(colored_stream)
 
-    this_stream.write('musicxml', fp='./test.musicxml')
+    output_streams[0].write('musicxml', fp='./test.musicxml')
