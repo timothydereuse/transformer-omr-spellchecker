@@ -67,6 +67,57 @@ def save_examples_to_wandb(res_stats, tst_exs, v, target_recalls, end_name, num_
     wandb.run.summary[f'final_examples'] = wandb_dict
 
 
+def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='red'):
+    # given a music21 stream, a list of agnostic tokens, a list of predictions
+    # on those tokens, and a color, assign that color to all objects in the
+    # music21 stream where the prediction on its associated token is true.
+
+    parts = list(this_stream.getElementsByClass(m21.stream.Part))
+    all_measures = [list(x.getElementsByClass(m21.stream.Measure)) for x in parts]
+    num_tokens = len(agnostic_rec)
+
+    # for every note predicted incorrect, find the element of the m21 stream
+    # that corresponds to it
+    for i, record, prediction in zip(range(num_tokens), agnostic_rec, predictions):
+
+        # change nothing if this token is predicted correct
+        if not prediction:
+            continue
+
+        # get the single m21 element referred to by this token
+        selected_element = all_measures[record.part_idx][record.measure_idx][record.event_idx]
+        token_type = record.agnostic_item.split('.')[0]
+
+        # how do we handle chords? if it's a chord, then record.chord_idx will be non-zero:
+        # choose the note in that chord corresponding to the relevant chord idx
+        if type(selected_element) == m21.chord.Chord:
+            selected_element = selected_element.notes[record.chord_idx]
+
+        # now for a bunch of if statements to handle each individual type of token
+        # in its own way, because i don't know what else to do
+        if type(selected_element) == m21.layout.SystemLayout:
+            # if the token of interest refers to a layout element in m21, then that
+            # token is part of a time signature, a courtesy clef, or the restatement
+            # of a key signature. None of these things can be easily marked individually
+            # in MusicXML or Music21, so we ignore them.
+            continue
+        elif token_type == 'accid' and type(selected_element) == m21.note.Note:
+            print('accid')
+            selected_element.pitch.accidental.style.color = color_style
+        elif token_type == 'articulation' and type(selected_element) == m21.note.Note:
+            print('articulation')
+            for articulation in selected_element.articulations:
+                articulation.style.color = color_style
+        elif token_type == 'rest' and type(selected_element) == m21.note.Rest:
+            selected_element.style.color = color_style
+        elif token_type == 'note' and type(selected_element) == m21.note.Note:
+            selected_element.style.color = color_style
+        else: 
+            selected_element.style.color = color_style
+    
+    return this_stream
+
+
 if __name__ == "__main__":
     model_path = "trained_models\lstut_best_LSTUT_TRIAL_0_(2022.12.28.17.22)_1-1-1-11-1-32-32.pt"
 
@@ -119,7 +170,7 @@ if __name__ == "__main__":
     #         params.target_recalls
     #         )
 
-    test_files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml"]
+    test_files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
     parsed_files = [m21.converter.parse(fpath) for fpath in test_files]
     agnostic_rec = sta.m21_streams_to_agnostic(parsed_files)[0]
     model.eval()
@@ -140,12 +191,13 @@ if __name__ == "__main__":
 
     # unwrap prediction
     unwrapped_pred = pred.reshape(-1)[:-expand_amt]
+    thresholded_preds = (unwrapped_pred > torch.mean(unwrapped_pred)).numpy()
 
+
+
+    color_style = 'red'
     this_stream = parsed_files[0]
-    parts = list(this_stream.getElementsByClass(m21.stream.Part))
-    measures = [list(x.getElementsByClass(m21.stream.Measure)) for x in parts]
 
-    for m in measures[0]:
-        m[-1].style.color = 'red'
+    colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresholded_preds, color_style)
 
     this_stream.write('musicxml', fp='./test.musicxml')
