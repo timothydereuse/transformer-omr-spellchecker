@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import plot_outputs as po
 import test_results_metrics as ttm
+from collections import namedtuple
 
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
@@ -19,6 +20,26 @@ def log_gpu_info():
         c = torch.cuda.memory_cached(i) / (2 ** 10)
         a = torch.cuda.memory_allocated(i) / (2 ** 10)
         logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
+
+
+def make_test_dataloaders(params, kwargs_dict):
+    # make dloaders for all test datasets identified in parameters file
+
+    all_dset_groups = []
+    EndGroup = namedtuple('TestGroup', 'dset dloader name with_targets')
+
+    for test_set in params.test_sets:
+        new_kwargs = dict(kwargs_dict)
+
+        if test_set['with_targets']:
+            new_kwargs['dset_fname'] = params.dset_testing_path
+        else:
+            new_kwargs['dset_fname'] = params.dset_path
+
+        test_dset = dl.AgnosticOMRDataset(base=test_set['base'], **new_kwargs)
+        dloader_omr = DataLoader(test_dset, params.batch_size, pin_memory=True)
+        all_dset_groups.append(EndGroup(test_dset, dloader_omr, test_set['base'], test_set['with_targets']))
+    return all_dset_groups
 
 
 def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
