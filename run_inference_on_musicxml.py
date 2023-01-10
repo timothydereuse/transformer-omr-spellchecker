@@ -135,12 +135,13 @@ def run_inference_and_color_streams(errored_streams, model, v, correct_streams=N
 
 
 if __name__ == "__main__":
-    model_path = "trained_models\lstut_best_LSTUT_TRIAL_0_(2022.12.28.17.22)_1-1-1-11-1-32-32.pt"
+    model_path = "trained_models\lstut_best_LSTUT_TRIAL_0_(2023.01.10.17.06)_1-1-1-11-1-32-32.pt"
+    saved_model_info = torch.load(model_path)
 
     params = model_params.Params('./param_sets/trial_lstut.json', False, 0)
     device, num_gpus = tr_funcs.get_cuda_info()
 
-    prep_model = PreparedLSTUTModel(params)
+    prep_model = PreparedLSTUTModel(params, saved_model_info['model_state_dict'])
     groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
     errored_files = [
