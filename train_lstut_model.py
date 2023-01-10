@@ -215,7 +215,7 @@ torch.save(best_model, m_name)
 if args['wandb']:
     wandb.run.summary["total_training_time"] = end_time - start_time
 
-end_groups = tlm.make_test_dataloaders(params, dset_kwargs)
+end_groups = tr_funcs.make_test_dataloaders(params, dset_kwargs)
 
 for end_group in end_groups:
 
