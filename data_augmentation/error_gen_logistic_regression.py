@@ -154,9 +154,6 @@ class ErrorGenerator(object):
         assert len(err_seq) > 0, f"{err_seq}, {orig_seq} ,{err_record} ,{given_err_seq}"
         assert len(orig_seq) > 0, f"{err_seq} ,{orig_seq} ,{err_record} ,{given_err_seq}"
 
-            
-
-
         _, _, r, _ = align.perform_alignment(orig_seq, err_seq, match_weights=[3, -2], gap_penalties=[-2, -2, -1, -1])
 
         # put 'deletion' markers in front of entries in alignment record r that record deletions

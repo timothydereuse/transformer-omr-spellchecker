@@ -10,7 +10,6 @@ def get_training_samples(correct_dset, error_dset, correct_fnames):
     error_notes = {x:[] for x in ['replace_mod', 'insert_mod']}
 
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
-    # features in X are: [ngram of past 5 classes || note vector]
     X = []
     Y = []
     for ind in range(len(correct_dset)):
