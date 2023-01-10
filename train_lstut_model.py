@@ -2,6 +2,7 @@ import time, logging, argparse, copy
 import numpy as np
 import torch, wandb
 import torch.nn as nn
+import wandb_logging
 import agnostic_omr_dataloader as dl
 import test_results_metrics as ttm
 import models.LSTUT_model as lstut
@@ -229,8 +230,8 @@ for end_group in end_groups:
     print(res_string)
 
     if args['wandb']:
-        tlm.add_stats_to_wandb(res_stats, params.target_recalls, end_group.name)
-        tlm.save_examples_to_wandb(
+        wandb_logging.add_stats_to_wandb(res_stats, params.target_recalls, end_group.name)
+        wandb_logging.save_examples_to_wandb(
             res_stats, 
             tst_exs,
             v,
