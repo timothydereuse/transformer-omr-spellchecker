@@ -78,7 +78,7 @@ def run_agnostic_through_model(agnostic_rec, model, seq_length, vocab):
     return unwrapped_pred
 
 
-def run_inference_and_color_streams(errored_streams, model, v, correct_streams=None, colors=None, error_generator=None):
+def run_inference_and_color_streams(errored_streams, model, v, threshold, correct_streams=None, colors=None, error_generator=None):
 
     if not colors:
         true_pos_color, false_pos_color, false_neg_color = ('red', 'blue', 'gray')
@@ -108,7 +108,7 @@ def run_inference_and_color_streams(errored_streams, model, v, correct_streams=N
         predictions = run_agnostic_through_model(agnostic_rec, model, params.seq_length, v)
 
         # threshold predictions of model
-        thresh_pred = (predictions > torch.mean(predictions[i])).numpy().astype('bool')
+        thresh_pred = (predictions > threshold).numpy().astype('bool')
 
         if not ground_truth_mode:
             colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style=true_pos_color)
@@ -138,6 +138,8 @@ if __name__ == "__main__":
     model_path = "trained_models\lstut_best_LSTUT_TRIAL_0_(2023.01.10.17.06)_1-1-1-11-1-32-32.pt"
     saved_model_info = torch.load(model_path)
 
+    threshold = saved_model_info['val_threshes'][1]
+
     params = model_params.Params('./param_sets/trial_lstut.json', False, 0)
     device, num_gpus = tr_funcs.get_cuda_info()
 
@@ -161,11 +163,17 @@ if __name__ == "__main__":
     parsed_correct = [m21.converter.parse(fpath) for fpath in correct_files]
     parsed_errored = [m21.converter.parse(fpath) for fpath in errored_files]
 
-    out2 = run_inference_and_color_streams(parsed_errored, prep_model.model, prep_model.v)
+    out2 = run_inference_and_color_streams(
+        parsed_errored,
+        prep_model.model,
+        prep_model.v,
+        threshold
+        )
     out1 = run_inference_and_color_streams(
         parsed_errored,
         prep_model.model,
         prep_model.v,
+        threshold,
         correct_streams=parsed_correct,
         colors=None,
         error_generator=prep_model.error_generator
