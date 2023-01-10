@@ -149,7 +149,7 @@ def m21_part_to_agnostic(part, part_idx):
                     glyph_lists.extend(gl)
                     chord_index_tracker.extend([i for _ in range(len(glyph_lists))])
                 
-                sustain_list = ['<' if x == '+' else x for x in glyph_lists]
+                sustain_list = ['>' if x == '+' else x for x in glyph_lists]
                 sustain_list[0] = '+'
 
                 tuplet_record[len(agnostic)] = tuplet
@@ -219,7 +219,7 @@ def m21_part_to_agnostic(part, part_idx):
         measure_idx = agnostic[pos].measure_idx
         event_idx = agnostic[pos].event_idx
         tuplet_record = AgnosticRecord(tuplet_str, 0, measure_idx, event_idx, part_idx)
-        over_record = AgnosticRecord('<', 0, measure_idx, event_idx, part_idx)
+        over_record = AgnosticRecord('>', 0, measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
 

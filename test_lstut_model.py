@@ -38,34 +38,6 @@ def make_test_dataloaders(params, kwargs_dict):
     return all_dset_groups
 
 
-def add_stats_to_wandb(res_stats, target_recalls, end_name):
-    for i, thresh in enumerate(target_recalls):
-        wandb.run.summary[f"{end_name}_{thresh}_precision"] = res_stats["precision"][thresh]
-        wandb.run.summary[f"{end_name}_{thresh}_true_negative"] = res_stats["true negative rate"][thresh]
-        wandb.run.summary[f"{end_name}_{thresh}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
-        wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
-
-
-def save_examples_to_wandb(res_stats, tst_exs, v, target_recalls, end_name, num_examples_to_save):
-    wandb_dict = {}
-    num_examples_to_save = min(num_examples_to_save, len(tst_exs['output']))
-
-    for j, thresh in enumerate(res_stats['threshes']):
-        
-        # the 0 represents thresh optimized for f1 score instead
-        target_recalls = target_recalls + ['F1']
-
-        inds_to_save = np.random.choice(len(tst_exs['output']), num_examples_to_save, replace=False)
-        for ind_to_save in (inds_to_save):
-            
-            batch_name = f"{tst_exs['batch_names'][ind_to_save]} {tst_exs['batch_offsets'][ind_to_save]}"
-            lines = po.plot_agnostic_results(tst_exs, v, thresh, return_arrays=True, ind=ind_to_save)
-            table = wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
-            wandb_dict[f'{end_name}_{target_recalls[j]}_{batch_name}'] = table
-        
-    wandb.run.summary[f'final_examples'] = wandb_dict
-
-
 def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='red'):
     # given a music21 stream, a list of agnostic tokens, a list of predictions
     # on those tokens, and a color, assign that color to all objects in the
@@ -100,7 +72,7 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
             # of a key signature. None of these things can be easily marked individually
             # in MusicXML or Music21, so we ignore them.
             continue
-        elif token_type == 'accid' and type(selected_element) == m21.note.Note:
+        elif token_type == 'accid' and type(selected_element) == m21.note.Note and selected_element.pitch.accidental:
             selected_element.pitch.accidental.style.color = color_style
         elif token_type == 'articulation' and type(selected_element) == m21.note.Note:
             for articulation in selected_element.articulations:
@@ -115,16 +87,13 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
     return this_stream
 
 
-def run_m21_streams_through_model(parsed_files, model, seq_length, vocab):
+def run_agnostic_through_model(agnostic_tokens, model, seq_length, vocab):
     model.eval()
 
-    agnostic_records = sta.m21_streams_to_agnostic(parsed_files)
-    output_agnostic_recs = []
     output_preds = []
-    for agnostic_rec in agnostic_records:
+    for agnostic_rec in agnostic_tokens:
 
-        agnostic_tokens = [x.agnostic_item for x in agnostic_rec]
-        vectorized = vocab.words_to_vec(agnostic_tokens).astype('long')
+        vectorized = vocab.words_to_vec(agnostic_rec).astype('long')
         inp = torch.tensor(vectorized)
 
         # expand input vector to be a multiple of the sequence length
@@ -140,10 +109,9 @@ def run_m21_streams_through_model(parsed_files, model, seq_length, vocab):
         # unwrap prediction
         unwrapped_pred = pred.reshape(-1)[:-expand_amt]
 
-        output_agnostic_recs.append(agnostic_rec)
         output_preds.append(unwrapped_pred)
     
-    return output_agnostic_recs, output_preds
+    return output_preds
 
 
 if __name__ == "__main__":
@@ -188,7 +156,7 @@ if __name__ == "__main__":
         'example_generator': error_generator,
     }
 
-    groups =  make_test_dataloaders(params, dset_kwargs)
+    groups = make_test_dataloaders(params, dset_kwargs)
 
     # for g in groups:
     #     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
@@ -198,19 +166,47 @@ if __name__ == "__main__":
     #         params.target_recalls
     #         )
 
-    test_files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
-    parsed_files = [m21.converter.parse(fpath) for fpath in test_files]
+    errored_files = [
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_3_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_2_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_4_omr.musicxml"
+        ]
+    correct_files = [
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_3_aligned.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_4_omr.musicxml"
+    ]
 
-    agnostic_records, predictions = run_m21_streams_through_model(parsed_files, model, params.seq_length, v)
+    # correct_seq = correct_dset[ind]
+    # error_seq = target_dset[ind]
+
+    # err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
+    # arr = np.stack([err, Y])    
+
+    parsed_correct = [m21.converter.parse(fpath) for fpath in correct_files]
+    agnostic_records_correct = sta.m21_streams_to_agnostic(parsed_correct)
+    agnostic_items_correct = [[x.agnostic_item for x in y] for y in agnostic_records_correct]
+    vectorized_correct = [v.words_to_vec(x) for x in agnostic_items_correct]
+
+    parsed_errored = [m21.converter.parse(fpath) for fpath in errored_files]
+    agnostic_records_errored = sta.m21_streams_to_agnostic(parsed_errored)
+    agnostic_items_errored = [[x.agnostic_item for x in y] for y in agnostic_records_errored]
+    vectorized_errored = [v.words_to_vec(x) for x in agnostic_items_errored]
+
+    # err, Y = error_generator.add_errors_to_seq(vectorized_correct, vectorized_errored)
+    
+    predictions = run_agnostic_through_model(agnostic_items_errored, model, params.seq_length, v)
 
     color_style = 'red'
 
     output_streams = []
-    for i in range(len(parsed_files)):
-        agnostic_rec = agnostic_records[i]
-        this_stream = parsed_files[i]
+    for i in range(len(parsed_errored)):
+        agnostic_rec = agnostic_records_errored[i]
+        this_stream = parsed_errored[i]
         thresh_pred = (predictions[i] > torch.mean(predictions[i])).numpy()
         colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style)
         output_streams.append(colored_stream)
 
-    output_streams[0].write('musicxml', fp='./test.musicxml')
+    # output_streams[0].write('musicxml', fp='./test.musicxml')
