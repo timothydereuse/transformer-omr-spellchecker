@@ -12,7 +12,7 @@ class PreparedLSTUTModel():
     # and instantiating datasets. holds vocabulary, error generator, loss,
     # optimizer, scheduler, model itself.
 
-    def __init__(self, params):
+    def __init__(self, params, model_state_dict=None):
         self.params = params
 
         self.v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
@@ -34,7 +34,11 @@ class PreparedLSTUTModel():
         self.model = nn.DataParallel(self.lstut_model, device_ids=list(range(num_gpus)))
         self.model = self.model.float()
         self.model_size = sum(p.numel() for p in self.model.parameters())
-        print(f'created model with n_params={self.model_size}')
+        print(f'created model with n_params={self.model_size}.')
+
+        if model_state_dict:
+            self.model.load_state_dict(model_state_dict)
+            print(f'successfully loaded given model checkpoint.')
 
         self.dset_kwargs = {
             'dset_fname': params.dset_path,
