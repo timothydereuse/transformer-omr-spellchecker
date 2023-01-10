@@ -11,13 +11,12 @@ import training_helper_functions as tr_funcs
 import data_management.semantic_to_agnostic as sta
 import data_management.vocabulary as vocab
 import plot_outputs as po
+from model_setup import PreparedLSTUTModel
 import numpy as np
 import wandb
 import music21 as m21
 from collections import namedtuple
 import model_params
-
-
 
 
 def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='red'):
@@ -125,7 +124,8 @@ def run_inference_and_color_streams(errored_streams, model, v, correct_streams=N
         if not ground_truth_mode:
             colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style=true_pos_color)
         else:
-
+            # process further if we need to compare with ground truth
+            
             vectorized_errored = v.words_to_vec([x.agnostic_item for x in agnostic_records_errored[i]])
             vectorized_correct = v.words_to_vec([x.agnostic_item for x in agnostic_records_correct[i]])
 
@@ -151,51 +151,16 @@ if __name__ == "__main__":
     params = model_params.Params('./param_sets/trial_lstut.json', False, 0)
     device, num_gpus = tr_funcs.get_cuda_info()
 
-    v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
-    error_generator = err_gen.ErrorGenerator(
-        simple=params.simple_errors,
-        smoothing=params.error_gen_smoothing,
-        simple_error_rate=params.simple_error_rate,
-        parallel=params.errors_parallel,
-        models_fpath=params.error_model
-    )
+    prep_model = PreparedLSTUTModel(params)
+    groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
-    lstut_settings = params.lstut_settings
-    lstut_settings['vocab_size'] = v.num_words
-    lstut_settings['seq_length'] = params.seq_length
-    model = lstut.LSTUT(**lstut_settings).to(device)
-    model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
-    model = model.float()
-    criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
-
-    model_size = sum(p.numel() for p in model.parameters())
-    print(f'created model with n_params={model_size}')
-
-    dset_kwargs = {
-        'dset_fname': params.dset_path,
-        'seq_length': params.seq_length,
-        'padding_amt': params.padding_amt,
-        'dataset_proportion': 1, #params.dataset_proportion,
-        'vocabulary': v
-    }
-
-    run_epoch_kwargs = {
-        'model': model,
-        'optimizer': None,
-        'criterion': criterion,
-        'device': device,
-        'example_generator': error_generator,
-    }
-
-    groups = tr_funcs.make_test_dataloaders(params, dset_kwargs)
-
-    # for g in groups:
-    #     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
-    #         g.dloader,
-    #         g.with_targets,
-    #         run_epoch_kwargs,
-    #         params.target_recalls
-    #         )
+    for g in groups:
+        res_stats, tst_exs, test_results = tr_funcs.test_end_group(
+            g.dloader,
+            g.with_targets,
+            prep_model.run_epoch_kwargs,
+            params.target_recalls
+            )
 
     errored_files = [
         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
@@ -214,7 +179,14 @@ if __name__ == "__main__":
     parsed_correct = [m21.converter.parse(fpath) for fpath in correct_files]
     parsed_errored = [m21.converter.parse(fpath) for fpath in errored_files]
 
-    out2 = run_inference_and_color_streams(parsed_errored, model, v)
-    out1 = run_inference_and_color_streams(parsed_errored, model, v, correct_streams=parsed_correct, colors=None, error_generator=error_generator)
+    out2 = run_inference_and_color_streams(parsed_errored, prep_model.model, prep_model.v)
+    out1 = run_inference_and_color_streams(
+        parsed_errored,
+        prep_model.model,
+        prep_model.v,
+        correct_streams=parsed_correct,
+        colors=None,
+        error_generator=prep_model.error_generator
+        )
 
     # output_streams[2].write('musicxml', fp='./test2.musicxml')
