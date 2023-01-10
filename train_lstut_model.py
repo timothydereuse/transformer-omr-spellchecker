@@ -1,15 +1,12 @@
 import time, logging, argparse, copy
 import numpy as np
 import torch, wandb
-import torch.nn as nn
 import wandb_logging
 import agnostic_omr_dataloader as dl
 import test_results_metrics as ttm
-import models.LSTUT_model as lstut
 import test_lstut_model as tlm
-import data_augmentation.error_gen_logistic_regression as err_gen
 import training_helper_functions as tr_funcs
-import data_management.vocabulary as vocab
+from model_setup import PreparedLSTUTModel
 from torch.utils.data import DataLoader
 import plot_outputs as po
 import model_params
@@ -45,47 +42,16 @@ if (not dry_run) and args['wandb']:
     wandb.init(project=args['wandb'].strip("'"), config=params.params_dict, entity="timothydereuse")
     wandb.run.name = run_name
 
-device, num_gpus = tr_funcs.get_cuda_info()
 print('defining datasets...')
+device, num_gpus = tr_funcs.get_cuda_info()
 
-v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
-error_generator = err_gen.ErrorGenerator(
-    simple=params.simple_errors,
-    smoothing=params.error_gen_smoothing,
-    simple_error_rate=params.simple_error_rate,
-    parallel=params.errors_parallel,
-    models_fpath=params.error_model
-)
+prep_model = PreparedLSTUTModel(params)
 
-dset_kwargs = {
-    'dset_fname': params.dset_path,
-    'seq_length': params.seq_length,
-    'padding_amt': params.padding_amt,
-    'dataset_proportion': params.dataset_proportion,
-    'vocabulary': v
-}
-
-dset_tr = dl.AgnosticOMRDataset(base='train', **dset_kwargs)
-dset_vl = dl.AgnosticOMRDataset(base='validate', **dset_kwargs)
+dset_tr = dl.AgnosticOMRDataset(base='train', **prep_model.dset_kwargs)
+dset_vl = dl.AgnosticOMRDataset(base='validate', **prep_model.dset_kwargs)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
-
-lstut_settings = params.lstut_settings
-lstut_settings['vocab_size'] = v.num_words
-lstut_settings['seq_length'] = params.seq_length
-model = lstut.LSTUT(**lstut_settings).to(device)
-model = nn.DataParallel(model, device_ids=list(range(num_gpus)))
-model = model.float()
-model_size = sum(p.numel() for p in model.parameters())
-print(f'created model with n_params={model_size}')
-
-optimizer = torch.optim.Adam(model.parameters(), lr=params.lr)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer, **params.scheduler_settings)
-
-class_ratio = (params.error_gen_smoothing)
-criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(class_ratio))
 
 #########################
 # TRAINING MODEL
@@ -101,28 +67,20 @@ tr_funcs.log_gpu_info()
 if dry_run:
     assert False, "Dry run successful"
 
-run_epoch_kwargs = {
-    'model': model,
-    'optimizer': optimizer,
-    'criterion': criterion,
-    'device': device,
-    'example_generator': error_generator,
-}
-
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
 
     # perform training epoch
-    model.train()
+    prep_model.model.train()
     train_loss, tr_exs = tr_funcs.run_epoch(
         dloader=dloader,
         train=True,
         log_each_batch=False,
-        **run_epoch_kwargs
+        **prep_model.run_epoch_kwargs
     )
 
     # test on validation set
-    model.eval()
+    prep_model.model.eval()
     num_entries = 0
     val_loss = 0.
     with torch.no_grad():
@@ -130,21 +88,19 @@ for epoch in range(params.num_epochs):
             dloader=dloader_val,
             train=False,
             log_each_batch=False,
-            **run_epoch_kwargs
+            **prep_model.run_epoch_kwargs
         )
 
     val_losses.append(val_loss)
     train_losses.append(train_loss)
-
-    scheduler.step(val_loss)
-    # tr_funcs.log_gpu_info()
+    prep_model.scheduler.step(val_loss)
 
     # get thresholds that maximize f1 and match required recall scores
     sig_val_output = torch.sigmoid(val_exs['output'])
     sig_train_output = torch.sigmoid(tr_exs['output'])
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=class_ratio)
-    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh, beta=class_ratio)
-    # val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
+    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=prep_model.class_ratio)
+    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh, beta=prep_model.class_ratio)
+    val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
 
     epoch_end_time = time.time()
     print(
@@ -176,10 +132,11 @@ for epoch in range(params.num_epochs):
     # keep snapshot of best model
     cur_model = {
             'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': scheduler.state_dict(),
+            'model_state_dict': prep_model.model.state_dict(),
+            'optimizer_state_dict': prep_model.optimizer.state_dict(),
+            'scheduler_state_dict': prep_model.scheduler.state_dict(),
             'val_losses': val_losses,
+            'val_threshes': val_threshes
             }
     if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
         best_model = copy.deepcopy(cur_model)
@@ -215,14 +172,14 @@ torch.save(best_model, m_name)
 if args['wandb']:
     wandb.run.summary["total_training_time"] = end_time - start_time
 
-end_groups = tr_funcs.make_test_dataloaders(params, dset_kwargs)
+end_groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
 for end_group in end_groups:
 
     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
         end_group.dloader,
         end_group.with_targets,
-        run_epoch_kwargs,
+        prep_model.run_epoch_kwargs,
         params.target_recalls
         )
 
@@ -234,7 +191,7 @@ for end_group in end_groups:
         wandb_logging.save_examples_to_wandb(
             res_stats, 
             tst_exs,
-            v,
+            prep_model.v,
             params.target_recalls,
             end_group.name,
             params.num_examples_to_save)
