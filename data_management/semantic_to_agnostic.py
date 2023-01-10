@@ -206,19 +206,20 @@ def m21_part_to_agnostic(part, part_idx):
 
         # at the end of every measure, add a bar if there isn't one already
         if not 'barline' in agnostic[-1].agnostic_item:
-            agnostic.append(AgnosticRecord('+', measure_idx, 0, event_idx, part_idx))
+            agnostic.append(AgnosticRecord('+', 0, measure_idx, event_idx, part_idx))
             agnostic.append(AgnosticRecord(f'barline.regular', 0, measure_idx, event_idx, part_idx))
 
 
     # handle tuplet records by putting in tuplet indicators
     insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
+
     # insert starting from the end to not mess up later indices
     for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
         measure_idx = agnostic[pos].measure_idx
         event_idx = agnostic[pos].event_idx
         tuplet_record = AgnosticRecord(tuplet_str, 0, measure_idx, event_idx, part_idx)
-        over_record = AgnosticRecord('<', measure_idx, 0, event_idx, part_idx)
+        over_record = AgnosticRecord('<', 0, measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
 
