@@ -14,28 +14,10 @@ import plot_outputs as po
 import numpy as np
 import wandb
 import music21 as m21
-from torch.utils.data import DataLoader
 from collections import namedtuple
 import model_params
 
 
-# make dloaders for all test datasets identified in parameters file
-def make_test_dataloaders(params, kwargs_dict):
-    all_dset_groups = []
-    EndGroup = namedtuple('TestGroup', 'dset dloader name with_targets')
-
-    for test_set in params.test_sets:
-        new_kwargs = dict(kwargs_dict)
-
-        if test_set['with_targets']:
-            new_kwargs['dset_fname'] = params.dset_testing_path
-        else:
-            new_kwargs['dset_fname'] = params.dset_path
-
-        test_dset = dl.AgnosticOMRDataset(base=test_set['base'], **new_kwargs)
-        dloader_omr = DataLoader(test_dset, params.batch_size, pin_memory=True)
-        all_dset_groups.append(EndGroup(test_dset, dloader_omr, test_set['base'], test_set['with_targets']))
-    return all_dset_groups
 
 
 def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='red'):
@@ -49,7 +31,7 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
 
     # for every note predicted incorrect, find the element of the m21 stream
     # that corresponds to it
-    for i, record, prediction in zip(range(num_tokens), agnostic_rec, predictions):
+    for record, prediction in zip(agnostic_rec, predictions):
 
         # change nothing if this token is predicted correct
         if not prediction:
@@ -87,31 +69,80 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
     return this_stream
 
 
-def run_agnostic_through_model(agnostic_tokens, model, seq_length, vocab):
+def run_agnostic_through_model(agnostic_rec, model, seq_length, vocab):
     model.eval()
 
-    output_preds = []
-    for agnostic_rec in agnostic_tokens:
+    vectorized = vocab.words_to_vec(agnostic_rec).astype('long')
+    inp = torch.tensor(vectorized)
 
-        vectorized = vocab.words_to_vec(agnostic_rec).astype('long')
-        inp = torch.tensor(vectorized)
+    # expand input vector to be a multiple of the sequence length
+    # and then reshape into correct form for prediction
+    expand_amt = seq_length - (len(inp) % seq_length)
+    expand_vec = torch.full((expand_amt,), vocab.SEQ_PAD)
+    inp = torch.cat([inp, expand_vec])
+    inp = inp.reshape(-1, seq_length)
 
-        # expand input vector to be a multiple of the sequence length
-        # and then reshape into correct form for prediction
-        expand_amt = seq_length - (len(inp) % seq_length)
-        expand_vec = torch.full((expand_amt,), vocab.SEQ_PAD)
-        inp = torch.cat([inp, expand_vec])
-        inp = inp.reshape(-1, seq_length)
+    with torch.no_grad():
+        pred = model(inp)
 
-        with torch.no_grad():
-            pred = model(inp)
-
-        # unwrap prediction
-        unwrapped_pred = pred.reshape(-1)[:-expand_amt]
-
-        output_preds.append(unwrapped_pred)
+    # unwrap prediction
+    unwrapped_pred = pred.reshape(-1)[:-expand_amt]
     
-    return output_preds
+    return unwrapped_pred
+
+
+def run_inference_and_color_streams(errored_streams, model, v, correct_streams=None, colors=None, error_generator=None):
+
+    if not colors:
+        true_pos_color, false_pos_color, false_neg_color = ('red', 'blue', 'gray')
+    else:
+        true_pos_color, false_pos_color, false_neg_color = colors
+
+    if not correct_streams:
+        ground_truth_mode = False
+    elif len(correct_streams) != len(errored_streams):
+        raise ValueError("Must have the same number of correct and corresponding errored files")
+    elif not error_generator:
+        raise ValueError("Must supply error_generator object when running in ground truth mode")
+    else:
+        ground_truth_mode = True
+        agnostic_records_correct = sta.m21_streams_to_agnostic(correct_streams)
+
+    agnostic_records_errored = sta.m21_streams_to_agnostic(errored_streams)
+    
+    output_streams = []
+
+    for i in range(len(errored_streams)):
+
+        agnostic_rec = agnostic_records_errored[i]
+
+        this_stream = parsed_errored[i]
+        predictions = run_agnostic_through_model(agnostic_rec, model, params.seq_length, v)
+
+        # threshold predictions of model
+        thresh_pred = (predictions > torch.mean(predictions[i])).numpy().astype('bool')
+
+        if not ground_truth_mode:
+            colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style=true_pos_color)
+        else:
+
+            vectorized_errored = v.words_to_vec([x.agnostic_item for x in agnostic_records_errored[i]])
+            vectorized_correct = v.words_to_vec([x.agnostic_item for x in agnostic_records_correct[i]])
+
+            # get targets (ground truth)
+            _, targets = error_generator.add_errors_to_seq(vectorized_errored, vectorized_correct)
+            targets = targets.astype('bool')
+
+            true_positive = np.logical_and(targets, thresh_pred)
+            false_positive = np.logical_and(targets, np.logical_not(thresh_pred))
+            false_negative = np.logical_and(np.logical_not(targets), thresh_pred)
+
+            colored_stream = assign_color_to_stream(this_stream, agnostic_rec, false_negative, color_style=false_neg_color)
+            colored_stream = assign_color_to_stream(colored_stream, agnostic_rec, false_positive, color_style=false_pos_color)
+            colored_stream = assign_color_to_stream(colored_stream, agnostic_rec, true_positive, color_style=true_pos_color)
+
+        output_streams.append(colored_stream)
+    return output_streams
 
 
 if __name__ == "__main__":
@@ -156,7 +187,7 @@ if __name__ == "__main__":
         'example_generator': error_generator,
     }
 
-    groups = make_test_dataloaders(params, dset_kwargs)
+    groups = tr_funcs.make_test_dataloaders(params, dset_kwargs)
 
     # for g in groups:
     #     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
@@ -167,46 +198,23 @@ if __name__ == "__main__":
     #         )
 
     errored_files = [
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_3_omr.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_2_omr.musicxml",
         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_2_omr.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_3_omr.musicxml",
         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_4_omr.musicxml"
         ]
+
     correct_files = [
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_3_aligned.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_4_omr.musicxml"
-    ]
-
-    # correct_seq = correct_dset[ind]
-    # error_seq = target_dset[ind]
-
-    # err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
-    # arr = np.stack([err, Y])    
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_3_aligned.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_4_aligned.musicxml"
+    ]    
 
     parsed_correct = [m21.converter.parse(fpath) for fpath in correct_files]
-    agnostic_records_correct = sta.m21_streams_to_agnostic(parsed_correct)
-    agnostic_items_correct = [[x.agnostic_item for x in y] for y in agnostic_records_correct]
-    vectorized_correct = [v.words_to_vec(x) for x in agnostic_items_correct]
-
     parsed_errored = [m21.converter.parse(fpath) for fpath in errored_files]
-    agnostic_records_errored = sta.m21_streams_to_agnostic(parsed_errored)
-    agnostic_items_errored = [[x.agnostic_item for x in y] for y in agnostic_records_errored]
-    vectorized_errored = [v.words_to_vec(x) for x in agnostic_items_errored]
 
-    # err, Y = error_generator.add_errors_to_seq(vectorized_correct, vectorized_errored)
-    
-    predictions = run_agnostic_through_model(agnostic_items_errored, model, params.seq_length, v)
+    out2 = run_inference_and_color_streams(parsed_errored, model, v)
+    out1 = run_inference_and_color_streams(parsed_errored, model, v, correct_streams=parsed_correct, colors=None, error_generator=error_generator)
 
-    color_style = 'red'
-
-    output_streams = []
-    for i in range(len(parsed_errored)):
-        agnostic_rec = agnostic_records_errored[i]
-        this_stream = parsed_errored[i]
-        thresh_pred = (predictions[i] > torch.mean(predictions[i])).numpy()
-        colored_stream = assign_color_to_stream(this_stream, agnostic_rec, thresh_pred, color_style)
-        output_streams.append(colored_stream)
-
-    # output_streams[0].write('musicxml', fp='./test.musicxml')
+    # output_streams[2].write('musicxml', fp='./test2.musicxml')
