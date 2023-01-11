@@ -12,7 +12,7 @@ import plot_outputs as po
 import model_params
 
 ################################################
-# SETTING UP DATASETS AND MODEL FOR TRAINING
+# PARSE COMMAND-LINE ARGS
 ################################################
 
 parser = argparse.ArgumentParser(description=
@@ -34,6 +34,10 @@ parser.add_argument('-d', '--dryrun', action='store_true',
                     help='Halts execution immediately before training begins.')
 args = vars(parser.parse_args())
 
+################################################
+# SETTING UP DATASETS AND MODEL FOR TRAINING
+################################################
+
 params = model_params.Params(args['parameters'],  args['logging'], args['mod_number'])
 dry_run = args['dryrun']
 run_name = params.params_id_str + ' ' + params.mod_string
@@ -54,7 +58,7 @@ dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 
 #########################
-# TRAINING MODEL
+# TRAIN MODEL
 #########################
 
 print('beginning training')
