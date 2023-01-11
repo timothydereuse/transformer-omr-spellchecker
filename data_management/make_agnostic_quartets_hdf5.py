@@ -21,6 +21,8 @@ def build_vocab(all_keys, out_fname, quartets_root, interleave=True):
     all_tokens = Counter()
     print('building vocabulary...')
     for k in all_keys:
+
+        print(f'now processing {k}. currently {len[all_tokens]} unique tokens.')
         files = os.listdir(os.path.join(quartets_root, k))
         for fname in files:
             print(f'processing {fname}...')
