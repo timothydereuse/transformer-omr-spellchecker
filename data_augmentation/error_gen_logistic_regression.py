@@ -89,13 +89,19 @@ class ErrorGenerator(object):
         predictions = self.regression.predict_proba(X_one_hot)
 
         smooth_ind = int(np.median(np.argmax(predictions, 1)))
+
         # smooth predictions to reduce overall chance of errors
         predictions[:, smooth_ind] *= self.smoothing
 
-        labels = []
-        for p in predictions:
-            p = p / np.sum(p)
-            labels.append(np.random.choice(len(p), p=p))
+        # re-normalize sum of probs for all sequence elements
+        predictions = (predictions.swapaxes(0, 1) / predictions.sum(1)).swapaxes(0, 1)
+
+        # inverse transform sampling method of getting a weighted sample using the
+        # weights from @predictions, for every index at once. equivalent to looping
+        # over them all and using np.random.choice on each sequence element
+        # individually, but this is ~3 orders of magnitude faster.
+        # see: https://stackoverflow.com/q/47722005
+        labels = (predictions.cumsum(1) > np.random.rand(predictions.shape[0])[:,None]).argmax(1)
         
         # recall that the output of the inverse transform here
         # is a string of 'operation.applicable vocab element'
@@ -235,7 +241,6 @@ if __name__ == "__main__":
         batches.append(batch)
         if i > 2:
             break
-    
 
     print('creating error generator')
     e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='processed_datasets\quartet_omr_error_models_bymeasure.joblib')
