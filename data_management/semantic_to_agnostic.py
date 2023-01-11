@@ -28,6 +28,7 @@ def resolve_note(e, current_clef):
     
     show_accidental = e.pitch.accidental.displayStatus if e.pitch.accidental else None
     accid_str = e.pitch.accidental.name if show_accidental else None
+    is_stem_down = (e.stemDirection == 'down')
 
     # notes contain: duration-position-beamStatus
     dots, dur_name, is_tuplet = resolve_duration(e.duration)
@@ -44,15 +45,20 @@ def resolve_note(e, current_clef):
     # add actual note to result list
     res.extend(['+', f'{dur_name}.pos{p}.{b}'])
 
+    # if there's a tie, put it right after the actual note (for lack of a better convention)
+    if e.tie:
+        res += [f"tie.{e.tie.type}"]
+
     # add articulations below note if the stem direction is up, or above note if the
     # stem direction is down. this probably isn't perfectly accurate but in order to
     # make this look "good" i would have to essentially program an entire engraving
     # system myself, right here, to know where the symbols "should" go
     for articulation in e.articulations:
         art_name = f'articulation.{articulation.name}.pos{p}'
-        if e.stemDirection == 'down':
+        if is_stem_down:
             res = [art_name, '>'] + res
-        elif e.stemDirection == 'up':
+        else:
+            # if there's no stem or anything assume stuff should be below the note
             res = res + ['>', art_name]
 
     # then add dot
