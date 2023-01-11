@@ -2,6 +2,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
 from joblib import dump, load, Parallel, delayed
 import data_augmentation.needleman_wunsch_alignment as align
+from scipy.ndimage import uniform_filter1d
+from scipy.special import logit, expit
 import numpy as np
 import torch
 
@@ -24,6 +26,12 @@ class ErrorGenerator(object):
         self.parallel = parallel
         self.simple_probs = [1/3, 1/3, 1/3]
 
+        self.error_run_length = 10              # higher = longer runs of errors when they appear
+        self.error_run_density = 5              # higher = less errors (must be int)
+        self.error_run_influence = 0.05         # closer to 0 = error run has MORE influence over error pos
+        self.error_run_smooth_iterations = 2    # smooth edges of error runs w moving average how many times?
+        self.error_run_filter_size = 5          # smooth edges of error runs with how big a filter?
+
         if labeled_data is None:
             models = load(models_fpath)
             self.enc = models['one_hot_encoder']
@@ -38,7 +46,7 @@ class ErrorGenerator(object):
             X_one_hot = self.enc.transform(X)
             Y_labels = self.enc_labels.transform(Y)
             self.regression = LogisticRegression(max_iter=100, solver='sag', tol=0.01).fit(X_one_hot, Y_labels)
- 
+
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
 
@@ -88,10 +96,28 @@ class ErrorGenerator(object):
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))
         predictions = self.regression.predict_proba(X_one_hot)
 
+        # find index that should be increased to reduce number of errors
         smooth_ind = int(np.median(np.argmax(predictions, 1)))
 
-        # smooth predictions to reduce overall chance of errors
-        predictions[:, smooth_ind] *= self.smoothing
+        # induces contiguous runs of errors to be more common:
+
+        # make random sequence of 1s and 0s, take cumsum to make irregular staircase
+        oscillator = (np.random.rand(len(seq)) < (1 / self.error_run_length)).cumsum(0)
+
+        # make it == true only when staircase level is remainder of some number, irregular runlengths
+        oscillator = (oscillator % self.error_run_density) == np.random.randint(self.error_run_density)
+        oscillator = 1 - (oscillator.astype(float))
+
+        # filter runlengths so they're smooth bumps
+        for unused in range(self.error_run_smooth_iterations):
+            oscillator = uniform_filter1d(oscillator, size=self.error_run_filter_size, mode='wrap')
+
+        # clip so they can't be 0 or 1 or the math would do some infs
+        oscillator = np.clip(oscillator, self.error_run_influence, 1 - self.error_run_influence)
+
+        # combine predictions made with model with runlength using logits, and also
+        # smooth predictions with self.smoothing to reduce overall chance of errors
+        predictions[:, smooth_ind] = expit(logit(predictions[:, smooth_ind]) + logit(oscillator) - self.smoothing)
 
         # re-normalize sum of probs for all sequence elements
         predictions = (predictions.swapaxes(0, 1) / predictions.sum(1)).swapaxes(0, 1)
@@ -103,8 +129,9 @@ class ErrorGenerator(object):
         # see: https://stackoverflow.com/q/47722005
         labels = (predictions.cumsum(1) > np.random.rand(predictions.shape[0])[:,None]).argmax(1)
         
-        # recall that the output of the inverse transform here
-        # is a string of 'operation.applicable vocab element'
+        # N.B. the output of the inverse transform here
+        # is a string of 'operation.applicable vocab element', so we have to
+        # split those up and cast them to ints. yeah... i know... not ideal...
         instructions = self.enc_labels.inverse_transform(labels)
         err_instructions = np.array([int(x[0]) for x in instructions])
         ind_instructions = np.array([int(x[2:]) for x in instructions])
