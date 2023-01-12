@@ -10,7 +10,15 @@ AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'chord_idx', 'me
 
 def resolve_duration(d):
     dots = d.dots
-    d.dots = 0
+
+    # if there's a durationexception when just trying to change the number
+    # of dots then, honestly, just return something - not sure how to
+    # handle this in any productive way.
+    try:
+        d.dots = 0
+    except m21.duration.DurationException:
+        return dots, str.lower(d.fullName), 0
+
     if not d.tuplets:
         dur_string = str.lower(d.fullName)
         is_tuplet = 0
@@ -34,7 +42,7 @@ def resolve_note(e, current_clef):
     dots, dur_name, is_tuplet = resolve_duration(e.duration)
 
     # get staff position
-    p = e.pitch.diatonicNoteNum - current_clef.lowestLine
+    p = e.pitch.diatonicNoteNum - current_clef.lowestLine 
 
     beams = list(e.beams)
     b = 'noBeam' if len(beams) == 0 else beams[0].type
@@ -103,7 +111,7 @@ def m21_part_to_agnostic(part, part_idx):
     agnostic = []
     tuplet_record = {}
     all_clefs = part.flat.getElementsByClass(m21.clef.Clef)
-    current_clef = all_clefs[0] if all_clefs else m21.clef.TrebleClef
+    current_clef = all_clefs[0] if all_clefs else m21.clef.TrebleClef()
 
     all_keysigs = part.flat.getElementsByClass(m21.key.KeySignature)
     current_key_sig = all_keysigs[0] if all_keysigs else m21.key.KeySignature(0)

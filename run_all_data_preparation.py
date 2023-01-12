@@ -14,7 +14,18 @@ vocab_name = r'./data_management/vocab_big.txt'
 interleave = True
 
 build_vocab(
-    all_keys=['musescore_misc', 'ABC', 'kernscores', 'felix_correct', 'musescore_misc', 'felix_omr', 'felix_onepass'],
+    all_keys=[
+        'musescore_misc',
+        'jsb_choral_krn',
+        'jsb_fakes_mxl',
+        'musescore_misc_pd',
+        'ABC',
+        'kernscores',
+        'felix_correct',
+        'musescore_misc',
+        'felix_omr',
+        'felix_onepass'
+        ],
     out_fname=vocab_name,
     quartets_root=quartets_root
 )
@@ -23,7 +34,7 @@ v = Vocabulary(load_from_file=vocab_name)
 
 # make hdf5 of CORRECT string quartets
 make_hdf5(all_quartets_dset_path,
-    ['musescore_misc', 'ABC', 'kernscores', 'felix_correct'],
+    ['jsb_fakes_mxl', 'jsb_choral_krn', 'musescore_misc', 'musescore_misc_pd', 'ABC', 'kernscores', 'felix_correct'],
     v=v,
     quartets_root=quartets_root,
     train_val_test_split=True,
