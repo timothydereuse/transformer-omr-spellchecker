@@ -7,10 +7,12 @@ from scipy.special import logit, expit
 import numpy as np
 import torch
 
+
 def rolling_window(a, window):
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
 
 class ErrorGenerator(object):
 
@@ -26,11 +28,11 @@ class ErrorGenerator(object):
         self.parallel = parallel
         self.simple_probs = [1/3, 1/3, 1/3]
 
-        self.error_run_length = 10              # higher = longer runs of errors when they appear
-        self.error_run_density = 4              # higher = less error runs (must be int)
-        self.error_run_influence = 0.05         # closer to 0 = error run has MORE influence over error pos
+        self.error_run_length = (5, 20)         # higher = longer runs of errors when they appear
+        self.error_run_density = (2, 7)         # higher = less error runs (must be int > 2)
+        self.error_run_influence = 0.1          # closer to 0 = error run has MORE influence over error pos
         self.error_run_smooth_iterations = 2    # smooth edges of error runs w moving average how many times?
-        self.error_run_filter_size = 5          # smooth edges of error runs with how big a filter?
+        self.error_run_filter_size = (3, 10)    # smooth edges of error runs with how big a filter?
 
         if labeled_data is None:
             models = load(models_fpath)
@@ -91,6 +93,31 @@ class ErrorGenerator(object):
 
         return errored_seq, list(synthetic_error_alignment)
 
+
+    def make_oscillator(self, length):
+
+        error_run_length = np.random.uniform(self.error_run_length[0], self.error_run_length[1]) 
+        error_run_density = np.random.randint(self.error_run_density[0], self.error_run_density[1])         
+        error_run_influence = np.random.exponential(self.error_run_influence)
+        error_run_smooth_iterations = self.error_run_smooth_iterations
+        error_run_filter_size = np.random.randint(self.error_run_filter_size[0], self.error_run_filter_size[1])
+
+        # make random sequence of 1s and 0s, take cumsum to make irregular staircase
+        oscillator = (np.random.rand(length) < (1 / error_run_length)).cumsum(0)
+
+        # make it == true only when staircase level is remainder of some number, irregular runlengths
+        oscillator = (oscillator % error_run_density) == np.random.randint(error_run_density)
+        oscillator = 1 - (oscillator.astype(float))
+
+        # filter runlengths so they're smooth bumps
+        for unused in range(error_run_smooth_iterations):
+            oscillator = uniform_filter1d(oscillator, size=error_run_filter_size, mode='wrap')
+
+        # clip so they can't be 0 or 1 or the math would do some infs
+        oscillator = np.clip(oscillator, error_run_influence, 1 - error_run_influence)
+
+        return oscillator
+
     def get_synthetic_error_sequence(self, seq):
         errored_seq = []
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))
@@ -101,19 +128,7 @@ class ErrorGenerator(object):
 
         # induces contiguous runs of errors to be more common:
 
-        # make random sequence of 1s and 0s, take cumsum to make irregular staircase
-        oscillator = (np.random.rand(len(seq)) < (1 / self.error_run_length)).cumsum(0)
-
-        # make it == true only when staircase level is remainder of some number, irregular runlengths
-        oscillator = (oscillator % self.error_run_density) == np.random.randint(self.error_run_density)
-        oscillator = 1 - (oscillator.astype(float))
-
-        # filter runlengths so they're smooth bumps
-        for unused in range(self.error_run_smooth_iterations):
-            oscillator = uniform_filter1d(oscillator, size=self.error_run_filter_size, mode='wrap')
-
-        # clip so they can't be 0 or 1 or the math would do some infs
-        oscillator = np.clip(oscillator, self.error_run_influence, 1 - self.error_run_influence)
+        oscillator = self.make_oscillator(len(seq))
 
         predictions_remainder = np.delete(predictions, smooth_ind, 1)
         predictions_smooth_ind = predictions[:, smooth_ind]
@@ -254,6 +269,7 @@ class ErrorGenerator(object):
         }
         dump(d, fpath)
 
+
 if __name__ == "__main__":
 
     from agnostic_omr_dataloader import AgnosticOMRDataset
@@ -278,15 +294,20 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(smoothing=2, parallel=1, models_fpath=model_fpath)
+    e = ErrorGenerator(smoothing=3, parallel=1, models_fpath=model_fpath)
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
     print('adding errors to entire batch...')
     for i in range(2):
         print(i)
+        e.simple = True
+        X, Y = e.add_errors_to_batch(batch.numpy())
+        print(X.shape, Y.shape)
         e.simple = False
         X, Y = e.add_errors_to_batch(batch.numpy())
-        # e.simple = True
-        # X, Y = e.add_errors_to_batch(batch.numpy())
         print(X.shape, Y.shape)
+
+    import matplotlib.pyplot as plt
+    plt.imshow(Y.numpy())
+    plt.show()
