@@ -21,7 +21,7 @@ parts = [
     for x in streams
     ]
 
-v = Vocabulary(load_from_file='./data_management/vocab.txt')
+v = Vocabulary(load_from_file='./data_management/vocab_big.txt')
 
 pre = [(parts[1][i], parts[3][i]) for i in range(min(len(parts[1]), len(parts[3])))]
 

@@ -3,8 +3,8 @@ import numpy as np
 import torch, wandb
 import wandb_logging
 import agnostic_omr_dataloader as dl
-import test_results_metrics as ttm
-import test_lstut_model as tlm
+import results_and_metrics as ttm
+import run_tests_lstut_model as tlm
 import training_helper_functions as tr_funcs
 from model_setup import PreparedLSTUTModel
 from torch.utils.data import DataLoader

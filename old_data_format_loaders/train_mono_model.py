@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import mono_folk_song_dataloader as dl
 import factorizations as fcts
-import test_results_metrics as ttm
+import results_and_metrics as ttm
 import transformer_encoder_model as tem
 import make_supervised_examples as mse
 from importlib import reload

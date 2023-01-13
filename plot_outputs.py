@@ -1,7 +1,5 @@
 import numpy as np
 import torch
-# import matplotlib.pyplot as plt
-# from matplotlib import colors
 import model_params as params
 
 

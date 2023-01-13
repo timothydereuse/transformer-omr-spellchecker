@@ -27,7 +27,7 @@ class ErrorGenerator(object):
         self.simple_probs = [1/3, 1/3, 1/3]
 
         self.error_run_length = 10              # higher = longer runs of errors when they appear
-        self.error_run_density = 5              # higher = less errors (must be int)
+        self.error_run_density = 4              # higher = less error runs (must be int)
         self.error_run_influence = 0.05         # closer to 0 = error run has MORE influence over error pos
         self.error_run_smooth_iterations = 2    # smooth edges of error runs w moving average how many times?
         self.error_run_filter_size = 5          # smooth edges of error runs with how big a filter?
@@ -290,7 +290,3 @@ if __name__ == "__main__":
         # e.simple = True
         # X, Y = e.add_errors_to_batch(batch.numpy())
         print(X.shape, Y.shape)
-
-    asdf = Y.numpy()
-    plt.imshow(asdf)
-    plt.show()
