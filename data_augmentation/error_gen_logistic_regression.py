@@ -115,12 +115,19 @@ class ErrorGenerator(object):
         # clip so they can't be 0 or 1 or the math would do some infs
         oscillator = np.clip(oscillator, self.error_run_influence, 1 - self.error_run_influence)
 
+        predictions_remainder = np.delete(predictions, smooth_ind, 1)
+        predictions_smooth_ind = predictions[:, smooth_ind]
+
         # combine predictions made with model with runlength using logits, and also
         # smooth predictions with self.smoothing to reduce overall chance of errors
-        predictions[:, smooth_ind] = expit(logit(predictions[:, smooth_ind]) + logit(oscillator) - self.smoothing)
+        predictions_smooth_ind = expit(logit(predictions_smooth_ind) + logit(oscillator) + self.smoothing)
 
-        # re-normalize sum of probs for all sequence elements
-        predictions = (predictions.swapaxes(0, 1) / predictions.sum(1)).swapaxes(0, 1)
+        # normalize remainder of predictions array
+        target_sum = 1 - predictions_smooth_ind
+        predictions_remainder = predictions_remainder / np.expand_dims(np.sum(predictions_remainder, 1), 1)
+        predictions_remainder = predictions_remainder * np.expand_dims(target_sum, 1)
+
+        predictions = np.insert(predictions_remainder, smooth_ind, predictions_smooth_ind, 1)
 
         # inverse transform sampling method of getting a weighted sample using the
         # weights from @predictions, for every index at once. equivalent to looping
@@ -253,8 +260,9 @@ if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from data_management.vocabulary import Vocabulary
 
-    dset_path = r'./processed_datasets/quartets_felix_omr_agnostic_bymeasure.h5'
-    v = Vocabulary(load_from_file='./data_management/vocab.txt')
+    dset_path = r'./processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
+    model_fpath = r'./processed_datasets/quartet_omr_error_models_big_bymeasure.joblib'
+    v = Vocabulary(load_from_file='./data_management/vocab_big.txt')
 
     seq_len = 256
     proportion = 0.2
@@ -270,7 +278,7 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(smoothing=5, parallel=1, models_fpath='processed_datasets\quartet_omr_error_models_bymeasure.joblib')
+    e = ErrorGenerator(smoothing=2, parallel=1, models_fpath=model_fpath)
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
@@ -279,6 +287,10 @@ if __name__ == "__main__":
         print(i)
         e.simple = False
         X, Y = e.add_errors_to_batch(batch.numpy())
-        e.simple = True
-        X, Y = e.add_errors_to_batch(batch.numpy())
+        # e.simple = True
+        # X, Y = e.add_errors_to_batch(batch.numpy())
         print(X.shape, Y.shape)
+
+    asdf = Y.numpy()
+    plt.imshow(asdf)
+    plt.show()
