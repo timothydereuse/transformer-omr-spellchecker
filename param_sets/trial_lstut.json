@@ -1,11 +1,11 @@
 {
     "params_name": "LSTUT_TRIAL",
-    "num_epochs": 2,
+    "num_epochs": 4,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "save_img_every": 1,
-    "max_time_minutes": 2,
+    "max_time_minutes": 5,
 
     "seq_length": 64,
     "padding_amt": 16,
@@ -15,9 +15,9 @@
     "num_feats": 1,
     "dataset_proportion": 0.01,
 
-    "dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
-    "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",
-    "error_model": "processed_datasets/quartet_omr_error_models_byline.joblib",
+    "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
+    "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab_big.txt",
     "error_gen_smoothing": 2,
     "simple_errors": false,

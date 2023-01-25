@@ -142,8 +142,10 @@ for epoch in range(params.num_epochs):
             'val_losses': val_losses,
             'val_threshes': val_threshes
             }
-    if len(val_losses) == 1 or val_losses[-1] < min(val_losses[:-1]):
+    if epoch == 0 or val_losses[-1] < min(val_losses[:-1]):
         best_model = copy.deepcopy(cur_model)
+        m_name = (f'./trained_models/lstut_best_{params.params_id_str}.pt')
+        torch.save(best_model, m_name)
 
     # early stopping
     time_since_best = epoch - val_losses.index(min(val_losses))
@@ -163,11 +165,11 @@ print(
     f'Total training time: {end_time - start_time} s.'
 )
 
-# save a model checkpoint
+# save a final model checkpoint
 # if max_epochs reached, or early stopping condition reached, save best model
-best_epoch = best_model['epoch']
-m_name = (f'./trained_models/lstut_best_{params.params_id_str}.pt')
-torch.save(best_model, m_name)
+# best_epoch = best_model['epoch']
+# m_name = (f'./trained_models/lstut_best_{params.params_id_str}.pt')
+# torch.save(best_model, m_name)
 
 #########################
 # TESTING TRAINED MODEL 

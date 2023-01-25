@@ -22,7 +22,7 @@
     "error_gen_smoothing": 5,
     "simple_errors": false,
     "errors_parallel": 1,
-    "simple_error_rate": 0.1,
+    "simple_error_rate": 0.03,
     "target_recalls": [0.8, 0.9, 0.95, 0.99],
 
     "lstut_settings": {
@@ -49,7 +49,7 @@
         {"base": "onepass", "with_targets": true},
         {"base": "test", "with_targets": false}
     ],
-    "param_sweep":{
-
-    }
+    "param_sweep":[
+        {"simple_errors": true}
+    ]
 }

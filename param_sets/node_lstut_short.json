@@ -50,14 +50,5 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"dset_path": "processed_datasets/all_string_quartets_agnostic_byline.h5",
-        "dset_testing_path": "processed_datasets/supervised_omr_targets_byline.h5",
-        "error_model": "data_augmentation/quartet_omr_error_models_byline.joblib"},
-        {"dset_path": "processed_datasets/all_string_quartets_agnostic_bypart.h5",
-        "dset_testing_path": "processed_datasets/supervised_omr_targets_bypart.h5",
-        "error_model": "data_augmentation/quartet_omr_error_models_bypart.joblib"},
-        {"dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
-        "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
-        "error_model": "data_augmentation/quartet_omr_error_models_bymeasure.joblib"}
     ]
 }

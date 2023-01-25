@@ -105,8 +105,8 @@ if __name__ == '__main__':
         tf_layers=1,
         tf_depth=2,
         tf_heads=2,
-        hidden_dim=64,
-        ff_dim=64,
+        hidden_dim=67,
+        ff_dim=65,
         positional_encoding=True,
         vocab_size=vocab_size)
 
