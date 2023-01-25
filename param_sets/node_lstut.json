@@ -5,7 +5,7 @@
     "num_examples_to_save": 30,
     "save_model_every": 4,
     "save_img_every": 10,
-    "max_time_minutes": 2700,
+    "max_time_minutes": 700,
 
     "seq_length": 256,
     "padding_amt": 64,
