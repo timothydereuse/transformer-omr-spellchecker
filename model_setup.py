@@ -49,8 +49,11 @@ class PreparedLSTUTModel():
         }
 
         self.class_ratio = (params.error_gen_smoothing)
-        # self.criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(self.class_ratio))
-        self.criterion = mcc.MCC_Loss()
+
+        if not params.use_mcc_loss:
+            self.criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(self.class_ratio))
+        else:
+            self.criterion = mcc.MCC_Loss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=params.lr)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

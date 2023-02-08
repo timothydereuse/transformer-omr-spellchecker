@@ -24,6 +24,7 @@
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
     "target_recalls": [0.8, 0.9, 0.95, 0.99],
+    "use_mcc_loss": true,
 
     "lstut_settings": {
         "num_feats": 1,
@@ -50,12 +51,8 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
+        {"use_mcc_loss": false},
         {"simple_error_rate": 0.1, "simple_errors": true},
-        {"error_gen_smoothing": 10},
-        {"batch_size": 1024, "seq_length": 128},
-        {"batch_size": 256, "seq_length": 512},
-        {"batch_size": 128, "seq_length": 1024},
-        {"batch_size": 2048, "seq_length": 64},
-        {"batch_size": 64, "seq_length": 2048}
+        {"simple_error_rate": 0.2, "simple_errors": true}
     ]
 }
