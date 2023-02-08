@@ -102,19 +102,21 @@ for epoch in range(params.num_epochs):
     # get thresholds that maximize f1 and match required recall scores
     sig_val_output = torch.sigmoid(val_exs['output'])
     sig_train_output = torch.sigmoid(tr_exs['output'])
-    tr_f1, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'], beta=prep_model.class_ratio)
-    val_f1 = ttm.f_measure(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh, beta=prep_model.class_ratio)
+    tr_mcc, tr_thresh = ttm.multilabel_thresholding(sig_train_output, tr_exs['target'])
+    val_mcc = ttm.matthews_correlation(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh)
+    val_norm_recall = ttm.normalized_recall(sig_val_output.cpu(), val_exs['target'].cpu())
     val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
 
     epoch_end_time = time.time()
     print(
         f'epoch {epoch:3d} | '
-        f's/epoch    {(epoch_end_time - epoch_start_time):3.5e} | '
-        f'train_loss {train_loss:1.6e} | '
-        f'val_loss   {val_loss:1.6e} | '
-        f'tr_thresh  {tr_thresh:1.5f} | '
-        f'tr_f1      {tr_f1:1.6f} | '
-        f'val_f1     {val_f1:1.6f} | '
+        f's/epoch         {(epoch_end_time - epoch_start_time):3.5e} | '
+        f'train_loss      {train_loss:1.6e} | '
+        f'val_loss        {val_loss:1.6e} | '
+        f'tr_thresh       {tr_thresh:1.5f} | '
+        f'tr_mcc          {tr_mcc:1.6f} | '
+        f'val_mcc         {val_mcc:1.6f} | '
+        f'val_norm_recall {val_norm_recall:1.6f} | '
     )
 
     if args['wandb']:
@@ -123,8 +125,9 @@ for epoch in range(params.num_epochs):
             'train_loss': train_loss,
             'val_loss': val_loss,
             'tr_thresh': tr_thresh,
-            'tr_f1': tr_f1,
-            'val_f1': val_f1
+            'tr_mcc': tr_mcc,
+            'val_mcc': val_mcc,
+            'val_norm_recall': val_norm_recall
             })
 
     # # save an example
