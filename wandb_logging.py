@@ -8,6 +8,8 @@ def add_stats_to_wandb(res_stats, target_recalls, end_name):
         wandb.run.summary[f"{end_name}_{thresh}_true_negative"] = res_stats["true negative rate"][thresh]
         wandb.run.summary[f"{end_name}_{thresh}_prop_positive_predictions"] = res_stats["prop_positive_predictions"][thresh]
         wandb.run.summary[f"{end_name}_{thresh}_prop_positive_targets"] = res_stats["prop_positive_targets"][thresh]
+    wandb.run.summary[f"{end_name}_average_precision"] = res_stats['average_precision']
+    wandb.run.summary[f"{end_name}_normalized_recall"] = res_stats['normalized_recall']
 
 
 def save_examples_to_wandb(res_stats, tst_exs, v, target_recalls, end_name, num_examples_to_save):

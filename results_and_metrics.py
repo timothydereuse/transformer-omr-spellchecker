@@ -12,6 +12,7 @@ from sklearn.metrics import precision_recall_curve, matthews_corrcoef, average_p
 reload(params)
 reload(po)
 
+
 def test_results(output, target, results_dict, threshold):
     output = output.cpu().detach().numpy()
     target = target.cpu().detach().numpy()
@@ -36,6 +37,7 @@ def test_results(output, target, results_dict, threshold):
 
     return results_dict
 
+
 def precision_recall(inps, targets, threshold=0.5):
     thresh_predictions = (inps > threshold)
     tru_pos = np.logical_and(thresh_predictions, targets).sum()
@@ -46,6 +48,7 @@ def precision_recall(inps, targets, threshold=0.5):
     recall = tru_pos / targ_pos if targ_pos > 0 else 0
 
     return precision, recall
+
 
 def find_thresh_for_given_recall(output, target, num_trials=10000, target_recall=0.5):
     if type(output) == torch.Tensor:
@@ -66,12 +69,14 @@ def find_thresh_for_given_recall(output, target, num_trials=10000, target_recall
 
     return closest_thresh
 
+
 def find_thresh_for_given_recalls(output, target, target_recalls, num_trials=1000):
     return [
         find_thresh_for_given_recall(output, target, num_trials, x)
         for x
         in target_recalls
     ]
+
 
 def f_measure(inps, targets, threshold=0.5, beta=1):
     beta_squared = beta * beta
@@ -89,11 +94,15 @@ def f_measure(inps, targets, threshold=0.5, beta=1):
 
     return F1
 
-def matthews_correlation(outputs, targets, threshold=0.5):
-    thresh_predictions = (outputs > threshold)
 
-    mcc = matthews_corrcoef(thresh_predictions, targets)
-
+def matthews_correlation(output, target, threshold=0.5):
+    if type(output) is torch.Tensor:
+        output = output.cpu().detach().numpy()
+        target = target.cpu().detach().numpy()
+    output = output.reshape(-1)
+    target = target.reshape(-1)
+    thresh_predictions = (output > threshold)
+    mcc = matthews_corrcoef(thresh_predictions, target)
     return mcc
 
 
@@ -120,19 +129,26 @@ def multilabel_thresholding(output, target, num_trials=2000):
     return best_score, best_thresh
 
 
-def normalized_recall(outputs, targets):
-    num_positive = np.sum(targets)
-    n = outputs.shape[0]
+def normalized_recall(output, target):
+    if type(output) is torch.Tensor:
+        output = output.cpu().detach().numpy()
+        target = target.cpu().detach().numpy()
+    output = output.reshape(-1)
+    target = target.reshape(-1)
 
-    order = np.argsort(outputs * -1)
+    num_positive = np.sum(target)
+    n = output.shape[0]
+
+    order = np.argsort(output * -1)
     ranks = np.argsort(order)
-    positive_locs = np.nonzero(targets)
+    positive_locs = np.nonzero(target)
 
     sum_rank = np.sum(ranks[positive_locs])
     sum_i = (num_positive * (num_positive - 1)) // 2
 
     res = 1 - ((sum_rank - sum_i) / (num_positive * (n - num_positive)))
     return res
+
 
 class TestResults(object):
 
@@ -168,9 +184,6 @@ class TestResults(object):
                 target_recall = self.target_recalls[i]
                 r[k][target_recall] = (thresh_res[k])
 
-        r['average_precision'] = self.average_precision()
-        r['normalized_recall'] = normalized_recall(self.outputs, self.targets)
-        
         return r
 
     def sigmoid_outputs(self):
@@ -217,11 +230,6 @@ class TestResults(object):
     def average_precision(self):
         return average_precision_score(self.targets, self.outputs)
 
-    def normalized_recall(self):
-
-
-
-        return res
 
 if __name__ == '__main__':
     num_trials = 100
@@ -231,8 +239,8 @@ if __name__ == '__main__':
     tr = TestResults(threshes=[0.1, 0.5, 0.9], target_recalls=[0.1, 0.5, 0.9])
 
     for x in range(10):
-        targets = torch.tensor(np.random.choice([0, 1], num_trials, p=[0.1, 0.9]))
-        outputs = torch.linspace(0, 1, num_trials) + (0.15 * targets)
+        targets = torch.tensor(np.random.choice([0, 1], num_trials, p=[0.9, 0.1]))
+        outputs = torch.linspace(0, 1, num_trials) + (0.25 * targets)
         # targets = torch.round(outputs)
         tr.update(outputs, targets)
 
@@ -244,3 +252,5 @@ if __name__ == '__main__':
     display = PrecisionRecallDisplay.from_predictions(tr.targets, tr.outputs, name="TestData")
     _ = display.ax_.set_title("2-class Precision-Recall curve")
     # plt.show()
+
+    # 1 - mccloss(torch.tensor(tr.outputs > asdf), torch.tensor(tr.targets))

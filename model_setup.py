@@ -4,7 +4,7 @@ import training_helper_functions as tr_funcs
 import models.LSTUT_model as lstut
 import data_management.vocabulary as vocab
 import data_augmentation.error_gen_logistic_regression as err_gen
-
+import ext_tools.mcc_loss as mcc
 
 class PreparedLSTUTModel():
     # struct-like object that takes in a params object and generates an LSTUT model
@@ -49,7 +49,8 @@ class PreparedLSTUTModel():
         }
 
         self.class_ratio = (params.error_gen_smoothing)
-        self.criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(self.class_ratio))
+        # self.criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(self.class_ratio))
+        self.criterion = mcc.MCC_Loss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=params.lr)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

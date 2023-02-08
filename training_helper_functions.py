@@ -144,16 +144,18 @@ def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_re
     # get actual thresholds for given recalls
     sig_tst_outputs = test_results.sigmoid_outputs()
     tst_threshes = ttm.find_thresh_for_given_recalls(sig_tst_outputs, test_results.targets, target_recalls)
-    f1_score, f1_thresh = ttm.multilabel_thresholding(sig_tst_outputs, test_results.targets, beta=1 )
+    mcc, f1_thresh = ttm.multilabel_thresholding(sig_tst_outputs, test_results.targets)
     tst_threshes.append(f1_thresh)
     test_results.threshes = tst_threshes
     res_stats = test_results.calculate_stats()
 
     for k in res_stats:
         for k2 in res_stats[k]:
-            res_stats[k][k2] = np.round(res_stats[k][k2], 3)
+            res_stats[k][k2] = np.round(res_stats[k][k2], 4)
+    res_stats['average_precision'] = test_results.average_precision()
+    res_stats['normalized_recall'] = ttm.normalized_recall(test_results.outputs, test_results.targets)
     res_stats['threshes'] = tst_threshes
-    res_stats['max_f1'] = f1_score
+    res_stats['max_mcc'] = mcc
 
     return res_stats, tst_exs, test_results
 
@@ -168,7 +170,9 @@ def get_nice_results_string(end_name, res_stats):
         f'{end_name}_true negative:               {res_stats["true negative rate"]} \n'
         f'{end_name}_prop_positive_predictions:   {res_stats["prop_positive_predictions"]} \n'
         f'{end_name}_prop_positive_targets:       {res_stats["prop_positive_targets"]} \n'
-        f'{end_name}_max_f1:                      {res_stats["max_f1"]} \n'
+        f'{end_name}_max_mcc:                     {res_stats["max_mcc"]} \n'
+        f'{end_name}_average_precision:           {res_stats["average_precision"]} \n'
+        f'{end_name}_normalized_recall:           {res_stats["normalized_recall"]} \n'
     )
 
     return result_string
