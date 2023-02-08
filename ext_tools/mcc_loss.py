@@ -47,6 +47,9 @@ class MCC_Loss(nn.Module):
         MCC = (TP.TN - FP.FN) / sqrt((TP+FP) . (TP+FN) . (TN+FP) . (TN+FN))
         where TP, TN, FP, and FN are elements in the confusion matrix.
         """
+
+        inputs = torch.sigmoid(inputs)
+
         tp = torch.sum(torch.mul(inputs, targets))
         tn = torch.sum(torch.mul((1 - inputs), (1 - targets)))
         fp = torch.sum(torch.mul(inputs, (1 - targets)))
@@ -54,10 +57,10 @@ class MCC_Loss(nn.Module):
 
         numerator = torch.mul(tp, tn) - torch.mul(fp, fn)
         denominator = torch.sqrt(
-            torch.add(tp, 1, fp)
-            * torch.add(tp, 1, fn)
-            * torch.add(tn, 1, fp)
-            * torch.add(tn, 1, fn)
+            torch.add(tp, fp)
+            * torch.add(tp, fn)
+            * torch.add(tn, fp)
+            * torch.add(tn, fn)
         )
 
         # Adding 1 to the denominator to avoid divide-by-zero errors.
