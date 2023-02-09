@@ -35,7 +35,7 @@ if __name__ == "__main__":
         'dset_fname': 'processed_datasets/all_string_quartets_agnostic_byline.h5',
         'seq_length': 100, # N.B. this does not matter because of reshape(-1) below
         'padding_amt': 1,
-        'dataset_proportion': 1,
+        'minibatch_div': 1,
         'vocabulary': v,
         'shuffle_files': True
     }

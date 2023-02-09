@@ -194,14 +194,14 @@ if __name__ == '__main__':
         base=None,
         dset_fname="./processed_datasets/quartets_felix_omr_agnostic.h5",
         seq_length=50,
-        dataset_proportion=0.02,
+        minibatch_div=0.02,
         vocabulary=v,
     )
     dset_test = dl.AgnosticOMRDataset(
         base=None,
         dset_fname="./processed_datasets/supervised_omr_targets.h5",
         seq_length=50,
-        dataset_proportion=0.1,
+        minibatch_div=0.1,
         vocabulary=v,
     )
 

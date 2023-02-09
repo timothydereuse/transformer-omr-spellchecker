@@ -44,7 +44,7 @@ class PreparedLSTUTModel():
             'dset_fname': params.dset_path,
             'seq_length': params.seq_length,
             'padding_amt': params.padding_amt,
-            'dataset_proportion': params.dataset_proportion,
+            'minibatch_div': params.minibatch_div,
             'vocabulary': self.v
         }
 

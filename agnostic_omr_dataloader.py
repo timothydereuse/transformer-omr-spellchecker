@@ -26,7 +26,7 @@ def all_hdf5_keys(obj):
 class AgnosticOMRDataset(IterableDataset):
 
     def __init__(self, dset_fname, seq_length, vocabulary, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, all_subsequences=False, dataset_proportion=False):
+                 padding_amt=None, random_offsets=True, all_subsequences=False, minibatch_div=False):
         """
         @dset_fname - the file name of the processed hdf5 dataset
         @seq_length - length to chop sequences into
@@ -37,7 +37,7 @@ class AgnosticOMRDataset(IterableDataset):
         @random_offsets - randomize start position of sequences (optional, default: true)
         @mode - take all overlapping subsequences of all inputs, instead of
             cutting them into non-overlapping segments
-        @dataset_proportion - set to true to dramatically reduce size of dataset
+        @minibatch_div - number of minibatches to divide whole dataset into
         """
         super(AgnosticOMRDataset).__init__()
 
@@ -45,7 +45,7 @@ class AgnosticOMRDataset(IterableDataset):
         self.seq_length = seq_length
         self.random_offsets = random_offsets
         self.shuffle_files = shuffle_files
-        self.dataset_proportion = dataset_proportion
+        self.minibatch_div = minibatch_div
         self.flags = params.notetuple_flags
         self.vocabulary = vocabulary
         self.all_subsequences = all_subsequences
@@ -53,24 +53,32 @@ class AgnosticOMRDataset(IterableDataset):
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
             self.f = self.f[base]
-        self.fnames = all_hdf5_keys(self.f)
-        if dataset_proportion and dataset_proportion < 1.0:
-            self.fnames = self.fnames[:int(np.ceil(len(self.fnames) * dataset_proportion))]
+        self.fnames = all_hdf5_keys(self.f)   
+        self.make_new_minibatches()
 
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
         self.padding_seq = np.zeros(self.padding_amt, dtype=np.float32) + self.vocabulary.SEQ_PAD
         self.target_padding_seq = np.zeros(self.padding_amt, dtype=np.float32)
+
+    def make_new_minibatches(self):
+
+        if self.shuffle_files:
+            np.random.shuffle(self.fnames)
+
+        self.mini_batches = np.array_split(self.fnames, self.minibatch_div)
 
     def __iter__(self):
         '''
         Main iteration function.
         '''
 
-        if self.shuffle_files:
-            np.random.shuffle(self.fnames)
+        if not bool(self.mini_batches):
+            self.make_new_minibatches()
+
+        this_iter_fnames = self.mini_batches.pop(0)
 
         # iterate through all given fnames, breaking them into chunks of seq_length...
-        for fname_ind, fname in enumerate(self.fnames):
+        for fname_ind, fname in enumerate(this_iter_fnames):
             glyphs = self.f[fname]
 
             # determine if this is raw input for data augmentation or data along with targets
@@ -140,11 +148,11 @@ class AgnosticOMRDataset(IterableDataset):
 
 if __name__ == '__main__':
     from data_management.vocabulary import Vocabulary
-    fname = 'processed_datasets/all_string_quartets_agnostic_bymeasure.h5'
+    fname = 'processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
     seq_len = 256
-    proportion = 0.99
-    v = Vocabulary(load_from_file='./data_management/vocab.txt')
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=True, all_subsequences=False)
+    proportion = 15
+    v = Vocabulary(load_from_file='./data_management/vocab_big.txt')
+    dset = AgnosticOMRDataset(fname, seq_len, v, minibatch_div=proportion, shuffle_files=True, all_subsequences=False)
 
     dload = DataLoader(dset, batch_size=500)
     batches = []
@@ -159,8 +167,8 @@ if __name__ == '__main__':
     #     batches.append(x)
     # print(i, len(batches))
 
-    fname = 'processed_datasets/supervised_omr_targets_bymeasure.h5'
-    dset = AgnosticOMRDataset(fname, seq_len, v, dataset_proportion=proportion, shuffle_files=False)
+    fname = 'processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
+    dset = AgnosticOMRDataset(fname, seq_len, v, minibatch_div=proportion, shuffle_files=False)
 
     dload = DataLoader(dset, batch_size=15)
 

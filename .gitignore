@@ -1,6 +1,8 @@
 *.hdf5
 *.png
+*.musicxml
 wandb/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -13,7 +13,7 @@
     "batch_size": 32,
     "clip_gradient_norm": 0.5,
     "num_feats": 1,
-    "dataset_proportion": 0.001,
+    "minibatch_div": 100000000,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",

@@ -13,7 +13,7 @@
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
     "num_feats": 4,
-    "dataset_proportion": 0.25,
+    "minibatch_div": 4,
 
     "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_interleaved.h5",

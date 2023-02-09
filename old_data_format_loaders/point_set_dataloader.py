@@ -33,7 +33,7 @@ class MidiNoteTupleDataset(IterableDataset):
     }
 
     def __init__(self, dset_fname, seq_length, num_feats=4, base=None, shuffle_files=True,
-                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, dataset_proportion=False,
+                 padding_amt=None, random_offsets=True, estimate_stats_batches=30, minibatch_div=False,
                  use_stats_from=None):
         """
         @dset_fname - the file name of the processed hdf5 dataset
@@ -46,7 +46,7 @@ class MidiNoteTupleDataset(IterableDataset):
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
         @estimate_stats_batches - number of batches to use for stat estimation
-        @dataset_proportion - set to true to dramatically reduce size of dataset
+        @minibatch_div - set to true to dramatically reduce size of dataset
         """
         super(MidiNoteTupleDataset).__init__()
 
@@ -55,15 +55,15 @@ class MidiNoteTupleDataset(IterableDataset):
         self.num_feats = num_feats
         self.random_offsets = random_offsets
         self.shuffle_files = shuffle_files
-        self.dataset_proportion = dataset_proportion
+        self.minibatch_div = minibatch_div
         self.flags = params.notetuple_flags
 
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
-        if dataset_proportion:
-            self.fnames = self.fnames[:int(np.ceil(len(self.fnames) * dataset_proportion))]
+        if minibatch_div:
+            self.fnames = self.fnames[:int(np.ceil(len(self.fnames) * minibatch_div))]
 
         self.num_feats = num_feats
         padding_element = np.array(self.flags['pad'])[:self.num_feats]
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     fname = 'all_string_quartets.h5'
     seq_len = 500
     proportion = 0.2
-    dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4, dataset_proportion=1, shuffle_files=False)
+    dset = MidiNoteTupleDataset(fname, seq_len, num_feats=4, minibatch_div=1, shuffle_files=False)
 
     dload = DataLoader(dset, batch_size=15)
     for j in range(10):

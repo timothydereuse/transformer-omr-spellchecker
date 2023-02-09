@@ -29,7 +29,7 @@ if __name__ == '__main__':
     ngram_length = 3
     early_stopping_patience = 5
     max_num_epochs = 1000
-    dataset_proportion = 1.0
+    minibatch_div = 1.0
     model_output_name = 'knn_classifier/embedding_n3_byline'
     dset_fname = './processed_datasets/all_string_quartets_agnostic_byline.h5'
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         'dset_fname': dset_fname,
         'seq_length': ngram_length * 2 + 1,
         'padding_amt': 7,
-        'dataset_proportion': dataset_proportion,
+        'minibatch_div': minibatch_div,
         'vocabulary': v,
         'all_subsequences': True
     }
