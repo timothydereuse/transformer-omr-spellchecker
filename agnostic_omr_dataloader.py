@@ -53,7 +53,11 @@ class AgnosticOMRDataset(IterableDataset):
         self.f = h5py.File(self.dset_fname, 'r')
         if base is not None:
             self.f = self.f[base]
-        self.fnames = all_hdf5_keys(self.f)   
+        self.fnames = all_hdf5_keys(self.f)
+
+        if self.minibatch_div >= len(self.fnames):
+            self.minibatch_div = len(self.fnames) - 1
+
         self.make_new_minibatches()
 
         self.padding_amt = padding_amt if padding_amt else self.seq_length // 5
@@ -158,26 +162,8 @@ if __name__ == '__main__':
     batches = []
     for j in range(10):
         for i, x in enumerate(dload):
-            # print(i, x[0].shape)
+            print(i, x[0].shape)
             batches.append(x)
-
-    # batches = []
-    # for i, x in enumerate(dset.iter_file()):
-    #     print(i, x[0].shape)
-    #     batches.append(x)
-    # print(i, len(batches))
-
-    fname = 'processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
-    dset = AgnosticOMRDataset(fname, seq_len, v, minibatch_div=proportion, shuffle_files=False)
-
-    dload = DataLoader(dset, batch_size=15)
-
-    batches = []
-    for j in range(10):
-        for i, x in enumerate(dload):
-            print(i, len(x[0]), len(x[1]))
-            batches.append(x)
-    print(i, len(batches))
 
 
 
