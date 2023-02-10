@@ -12,7 +12,6 @@
     "lr": 0.0001,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "d_model": 256,
     "minibatch_div": 10,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
