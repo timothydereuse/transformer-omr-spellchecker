@@ -12,7 +12,7 @@
     "lr": 0.0001,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "num_feats": 1,
+    "d_model": 256,
     "minibatch_div": 10,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
@@ -26,7 +26,7 @@
     "target_recalls": [0.8, 0.9, 0.95, 0.99],
 
     "lstut_settings": {
-        "num_feats": 1,
+        "d_model": 256,
         "output_feats": 1,
         "lstm_layers": 2,
         "tf_layers": 0,

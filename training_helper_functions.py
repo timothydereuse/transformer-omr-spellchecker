@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     lstut_settings = {
             "seq_length": dset.seq_length,
-            "num_feats": 1,
+            "d_model": 256,
             "output_feats": 1,
             "lstm_layers": 2,
             "tf_layers": 1,
