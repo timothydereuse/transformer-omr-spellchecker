@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 from fast_transformers.builders import TransformerEncoderBuilder, AttentionBuilder
 from fast_transformers.attention.attention_layer import AttentionLayer
-from fast_transformers.attention.linear_attention import LinearAttention
-from fast_transformers.masking import FullMask, LengthMask
 from fast_transformers.transformers import TransformerEncoder, TransformerEncoderLayer
 from models.positional_encoding import PositionalEncoding
 import time
@@ -47,20 +45,30 @@ class LSTUT(nn.Module):
         self.layer_norm2 = nn.LayerNorm([self.seq_length, self.d_model])
 
     def make_tf_encoder(self):
+
+        layer_kwargs = {                   
+                    'd_model': self.d_model,
+                    'd_ff': self.ff_dim,
+                    'dropout': self.dropout,
+                    'activation': 'gelu'
+                    }
+
+        try:
+            att_builder = AttentionBuilder.from_kwargs(query_dimensions=self.hidden_dim)
+        except ValueError:
+            att_builder = AttentionBuilder()
+            layer_kwargs['n_heads'] = self.tf_heads
+
         encoder = TransformerEncoder(
             [
                 TransformerEncoderLayer(
-                    AttentionLayer(
-                        AttentionBuilder.from_kwargs(query_dimensions=self.hidden_dim).get('linear'),
-                        self.d_model,
-                        self.tf_heads,
+                    AttentionLayer(att_builder.get('linear'),
+                        d_model=self.d_model,
+                        n_heads=self.tf_heads,
                         d_keys=self.hidden_dim,
                         d_values=self.hidden_dim,
                     ),
-                    self.d_model,
-                    self.ff_dim,
-                    self.dropout,
-                    'gelu',
+                    **layer_kwargs
                 )
                 for _ in range(self.tf_layers)
             ], None)
@@ -150,3 +158,33 @@ if __name__ == '__main__':
         print(f"epoch: {i} | loss: {loss.item():2.5f} | time: {elapsed:2.5f}")
 
     model.eval()
+
+    x = AttentionLayer(
+                        AttentionBuilder.from_kwargs(query_dimensions=64).get('linear'),
+                        64,
+                        4,
+                        d_keys=32,
+                        d_values=32,
+                    )
+
+    # def make_tf_encoder(self):
+
+    #     encoder = TransformerEncoder(
+    #         [
+    #             TransformerEncoderLayer(
+    #                 AttentionLayer(
+    #                     AttentionBuilder.from_kwargs({} ).get('linear'),
+    #                     d_model=54,
+    #                     n_heads=4,
+    #                     d_keys=32,
+    #                     d_values=32,
+    #                 ),
+    #                 n_heads=4
+    #                 d_model=54,
+    #                 d_ff=128,
+    #                 dropout=0.5,
+    #                 activation='gelu',
+    #             )
+    #             for _ in range(2)
+    #         ], None)
+    #     return encoder
