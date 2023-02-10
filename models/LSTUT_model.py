@@ -50,8 +50,8 @@ class LSTUT(nn.Module):
             self.initial = nn.Linear(self.num_feats, self.d_model)
 
         if lstm_layers > 0:
-            self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
-            self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+            self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+            self.lstm2 = nn.LSTM(self.hidden_dim, self.hidden_dim // 2, self.lstm_layers, batch_first=True, bidirectional=True)
 
         if tf_layers > 0 and tf_depth > 0:
             self.encoder = encoder_builder.get()
