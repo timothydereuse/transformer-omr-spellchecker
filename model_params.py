@@ -32,6 +32,7 @@ class Params(object):
                 logging.getLogger().addHandler(logging.StreamHandler())
         self.mod_num = mod_num
         self.mod_string = ''
+
         if mod_num > 0 and not hasattr(self, 'param_sweep'):
             raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
                                 'but the Params class was passed mod number {mod_num}.')

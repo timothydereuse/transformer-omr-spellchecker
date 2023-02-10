@@ -5,7 +5,7 @@
     "num_examples_to_save": 30,
     "save_model_every": 4,
     "save_img_every": 10,
-    "max_time_minutes": 700,
+    "max_time_minutes": 960,
 
     "seq_length": 256,
     "padding_amt": 64,
@@ -24,14 +24,14 @@
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
     "target_recalls": [0.8, 0.9, 0.95, 0.99],
-    "use_mcc_loss": true,
+    "use_mcc_loss": false,
 
     "lstut_settings": {
         "num_feats": 1,
         "output_feats": 1,
         "lstm_layers": 1,
         "tf_layers": 1,
-        "tf_heads": 5,
+        "tf_heads": 8,
         "tf_depth": 4,
         "hidden_dim": 128,
         "ff_dim": 128,
@@ -51,8 +51,6 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"use_mcc_loss": false},
-        {"simple_error_rate": 0.1, "simple_errors": true},
-        {"simple_error_rate": 0.2, "simple_errors": true}
+        {"tf_layers": 2, "tf_heads": 6, "lstm_layers": 0, "positional_encoding": true}
     ]
 }
