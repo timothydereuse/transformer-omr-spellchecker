@@ -1,7 +1,7 @@
 {
     "params_name": "lstut_sweep_short",
-    "num_epochs": 12,
-    "early_stopping_patience": 5,
+    "num_epochs": 500,
+    "early_stopping_patience": 20,
     "num_examples_to_save": 2,
     "save_model_every": 4,
     "save_img_every": 1,
@@ -12,7 +12,6 @@
     "lr": 0.0002,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "d_model": 256,
     "minibatch_div": 12,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
