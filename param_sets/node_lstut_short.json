@@ -10,7 +10,7 @@
     "seq_length": 512,
     "padding_amt": 64,
     "lr": 0.0002,
-    "batch_size": 512,
+    "batch_size": 256,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 12,
 
