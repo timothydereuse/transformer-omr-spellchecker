@@ -1,45 +1,45 @@
 {
-    "params_name": "LSTUT_FELIX_DEFAULT",
-    "num_epochs": 50,
-    "early_stopping_patience": 10,
-    "num_examples_to_save": 20,
-    "save_model_every": 4,
-    "save_img_every": 10,
-    "max_time_minutes": 35,
+    "params_name": "LSTUT_GPU_TRIAL",
+    "num_epochs": 4,
+    "early_stopping_patience": 20,
+    "num_examples_to_save": 3,
+    "save_model_every": 100,
+    "save_img_every": 1,
+    "max_time_minutes": 40,
 
     "seq_length": 128,
     "padding_amt": 16,
     "lr": 0.0005,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "num_feats": 4,
-    "minibatch_div": 4,
+    "minibatch_div": 100,
 
-    "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
-    "dset_testing_path": "processed_datasets/supervised_omr_targets_interleaved.h5",
-    "error_model": "processed_datasets/quartet_omr_error_models_interleaved.joblib",
+    "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
+    "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab_big.txt",
-    "error_gen_smoothing": 5,
+    "error_gen_smoothing": 7,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.05,
-    "target_recalls": [0.9, 0.95, 0.975, 0.99],
+    "target_recalls": [0.8, 0.9, 0.99],
+    "use_mcc_loss": false,
 
     "lstut_settings": {
-        "d_model": 256,
         "output_feats": 1,
         "lstm_layers": 1,
+        "d_model": 128,
         "tf_layers": 1,
-        "tf_heads": 3,
-        "tf_depth": 4,
+        "tf_heads": 6,
+        "tf_depth": 1,
         "hidden_dim": 64,
-        "ff_dim": 64,
+        "ff_dim": 256,
         "dropout": 0.1,
         "positional_encoding": false
     },
     "scheduler_settings": {
         "factor": 0.25,
-        "patience": 5,
+        "patience": 6,
         "threshold": 0.001,
         "verbose": true
     },
@@ -49,7 +49,10 @@
         {"base": "onepass", "with_targets": true},
         {"base": "test", "with_targets": false}
     ],
-    "param_sweep":{
-        "toy_datasets_args.seq_freq": [2, 8, 16]
-    }
+    "param_sweep":
+    [
+        {"batch_size": 10, "seq_length": 32},
+        {"lstut_settings.tf_depth": 3},
+        {"lstut_settings.tf_depth": 2, "seq_length": 33}
+    ]
 }
