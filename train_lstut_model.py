@@ -69,7 +69,8 @@ best_model = None
 tr_funcs.log_gpu_info()
 
 if dry_run:
-    assert False, "Dry run successful"
+    import sys
+    sys.exit("Dry run successful. Exiting.")
 
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
