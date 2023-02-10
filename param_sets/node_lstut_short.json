@@ -50,6 +50,10 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
+        {"seq_length": 512, "batch_size": 256},
+        {"seq_length": 1024, "batch_size": 128},
+        {"seq_length": 2048, "batch_size": 64},
+        {"seq_length": 128, "batch_size": 1024},
         {"lstut_settings.tf_layers": 1, "lstut_settings.tf_heads": 8},
         {"lstut_settings.tf_layers": 2, "lstut_settings.tf_heads": 6},
         {"lstut_settings.tf_layers": 3, "lstut_settings.tf_heads": 5},
@@ -58,10 +62,6 @@
         {"lr": 0.002},
         {"lr": 0.00002},
         {"lr": 0.000002},
-        {"seq_length": 512, "batch_size": 256, "lstut_settings.tf_heads": 6},
-        {"seq_length": 1024, "batch_size": 128, "lstut_settings.tf_heads": 6},
-        {"seq_length": 2048, "batch_size": 64, "lstut_settings.tf_heads": 6},
-        {"seq_length": 128, "batch_size": 1024, "lstut_settings.tf_heads": 6},
         {"scheduler_settings.patience": 2},
         {"scheduler_settings.patience": 12},
         {"scheduler_settings.patience": 24},
