@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "D:\\Documents\\MIDI_errors_testing",
+            "cwd": "C:/Users/tim/Documents/transformer-midi-error-correction",
             "env": { "PYTHONPATH": "${workspaceRoot}"}
         }
     ]

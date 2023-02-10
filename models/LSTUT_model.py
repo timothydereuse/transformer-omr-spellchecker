@@ -1,21 +1,22 @@
 import torch
 import torch.nn as nn
-from fast_transformers.builders import TransformerEncoderBuilder
+from fast_transformers.builders import TransformerEncoderBuilder, AttentionBuilder
 from fast_transformers.attention.attention_layer import AttentionLayer
 from fast_transformers.attention.linear_attention import LinearAttention
 from fast_transformers.masking import FullMask, LengthMask
+from fast_transformers.transformers import TransformerEncoder, TransformerEncoderLayer
 from models.positional_encoding import PositionalEncoding
 import time
 
 
 class LSTUT(nn.Module):
 
-    def __init__(self, seq_length, num_feats, output_feats, lstm_layers, tf_layers,
-                 tf_heads, hidden_dim, ff_dim, tf_depth=3, positional_encoding=False, vocab_size=0, dropout=0.15):
+    def __init__(self, vocab_size, seq_length, d_model, lstm_layers, tf_layers, tf_depth,
+                 tf_heads, hidden_dim, ff_dim, output_feats=1, positional_encoding=False, dropout=0.15):
         super(LSTUT, self).__init__()
 
         self.seq_length = seq_length
-        self.num_feats = num_feats
+        self.num_feats = 1
         self.output_feats = output_feats
         self.lstm_layers = lstm_layers
         self.tf_layers = tf_layers
@@ -23,41 +24,47 @@ class LSTUT(nn.Module):
         self.hidden_dim = hidden_dim
         self.ff_dim = ff_dim
         self.tf_depth = tf_depth
-        self.d_model = self.hidden_dim * self.tf_heads
+        self.d_model = d_model
         self.vocab_size = vocab_size
+        self.dropout = dropout
 
         if positional_encoding:
-            self.positional_encoding = PositionalEncoding(self.d_model, max_len=self.seq_length + 1)
+            self.positional_encoding = PositionalEncoding(self.hidden_dim, max_len=self.seq_length + 1)
         else:
             self.positional_encoding = False
 
-        if vocab_size and num_feats > 1:
-            raise ValueError("can't have multiple features and an embedding")
-
-        encoder_builder = TransformerEncoderBuilder.from_kwargs(
-            n_layers=self.tf_layers,
-            n_heads=self.tf_heads,
-            query_dimensions=self.hidden_dim,
-            value_dimensions=self.hidden_dim,
-            feed_forward_dimensions=self.ff_dim,
-            attention_type='linear',
-            dropout=dropout
-        )
-
-        if self.num_feats == 1 and vocab_size > 0:
-            self.initial = nn.Embedding(self.vocab_size, self.d_model, padding_idx=1)
-        else:
-            self.initial = nn.Linear(self.num_feats, self.d_model)
-
-        if lstm_layers > 0:
-            self.lstm1 = nn.LSTM(self.hidden_dim, self.hidden_dim // 2, self.lstm_layers, batch_first=True, bidirectional=True)
-            self.lstm2 = nn.LSTM(self.hidden_dim, self.hidden_dim // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+        self.initial = nn.Embedding(self.vocab_size, self.d_model, padding_idx=1)
 
         if tf_layers > 0 and tf_depth > 0:
-            self.encoder = encoder_builder.get()
+            self.encoder = self.make_tf_encoder()
+
+        if lstm_layers > 0:
+            self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+            self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
         self.layer_norm = nn.LayerNorm([self.seq_length, self.d_model])
         self.layer_norm2 = nn.LayerNorm([self.seq_length, self.d_model])
+
+    def make_tf_encoder(self):
+        encoder = TransformerEncoder(
+            [
+                TransformerEncoderLayer(
+                    AttentionLayer(
+                        AttentionBuilder.from_kwargs(query_dimensions=self.hidden_dim).get('linear'),
+                        self.d_model,
+                        self.tf_heads,
+                        d_keys=self.hidden_dim,
+                        d_values=self.hidden_dim,
+                    ),
+                    self.d_model,
+                    self.ff_dim,
+                    self.dropout,
+                    'gelu',
+                )
+                for _ in range(self.tf_layers)
+            ], None)
+        return encoder
 
     def forward(self, src):
 
@@ -90,24 +97,23 @@ if __name__ == '__main__':
 
     batch_size = 10
     seq_length = 128
-    output_pts = 1
     num_feats = 1
     vocab_size = 100
 
     X = (torch.rand(batch_size, seq_length) * vocab_size).floor().type(torch.long)
-    tgt = (torch.rand(batch_size, seq_length, output_pts) - 0.1).round()
+    tgt = (torch.rand(batch_size, seq_length, 1) - 0.1).round()
 
     model = LSTUT(
         seq_length=seq_length,
-        num_feats=num_feats,
-        output_feats=output_pts,
+        output_feats=num_feats,
+        d_model=124,
         lstm_layers=0,
         tf_layers=1,
         tf_depth=2,
         tf_heads=2,
-        hidden_dim=67,
-        ff_dim=65,
-        positional_encoding=True,
+        hidden_dim=64,
+        ff_dim=128,
+        positional_encoding=False,
         vocab_size=vocab_size)
 
     n_params = sum(p.numel() for p in model.parameters())
@@ -120,9 +126,9 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    sched = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.25, verbose=False)
+    sched = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.5, verbose=False)
 
-    num_epochs = 20
+    num_epochs = 200
 
     model.train()
     epoch_loss = 0
