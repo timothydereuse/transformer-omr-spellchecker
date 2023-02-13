@@ -131,7 +131,9 @@ for epoch in range(params.num_epochs):
             'tr_thresh': tr_thresh,
             'tr_mcc': tr_mcc,
             'val_mcc': val_mcc,
-            'val_norm_recall': val_norm_recall
+            'val_norm_recall': val_norm_recall,
+            'gpu_free': gpu_free,
+            'gpu_load': gpu_load
             })
 
     # # save an example
