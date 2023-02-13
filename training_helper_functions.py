@@ -6,6 +6,7 @@ import results_and_metrics as ttm
 import agnostic_omr_dataloader as dl
 from torch.utils.data import DataLoader
 from collections import namedtuple
+import GPUtil
 
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
@@ -16,12 +17,15 @@ def get_cuda_info():
         device = torch.device("cpu")
     return device, num_gpus
 
+
 def log_gpu_info():
-    for i in range(torch.cuda.device_count()):
-        t = torch.cuda.get_device_properties(i)
-        c = torch.cuda.memory_cached(i) / (2 ** 10)
-        a = torch.cuda.memory_allocated(i) / (2 ** 10)
-        logging.info(f'device: {t}, memory cached: {c:5.2f}, memory allocated: {a:5.2f}')
+    total, used, free, load = (0, 0, 0, 0)
+    for g in GPUtil.getGPUs():
+        total += g.memoryTotal
+        used += g.memoryUsed
+        free += g.memoryFree
+        load += g.load
+    return total, used, free, load
 
 
 def make_test_dataloaders(params, kwargs_dict):

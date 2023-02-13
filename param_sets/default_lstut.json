@@ -1,7 +1,7 @@
 {
     "params_name": "LSTUT_GPU_TRIAL",
-    "num_epochs": 4,
-    "early_stopping_patience": 20,
+    "num_epochs": 500,
+    "early_stopping_patience": 30,
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "save_img_every": 1,

@@ -20,6 +20,7 @@ class Params(object):
             'lstm{d_model}-{lstm_layers}-tf{tf_layers}'
             '{tf_heads}-{tf_depth}-{hidden_dim}-{ff_dim}').format(**self.lstut_settings)
 
+        self.mod_num = mod_num
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
         self.start_training_time = start_training_time
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
@@ -42,6 +43,7 @@ class Params(object):
     def apply_mod(self, mod):
         sk = sorted(list(mod.keys()))
         self.mod_string = ' '.join([f'{k}-{mod[k]}' for k in sk])
+        self.params_dict['mod_string'] = self.mod_string
 
         for k in mod.keys():
             name = k
