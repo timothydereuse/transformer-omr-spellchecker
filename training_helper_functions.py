@@ -25,7 +25,7 @@ def log_gpu_info():
         used += g.memoryUsed
         free += g.memoryFree
         load += g.load
-    return total, used, free, load
+    return (total, used, free, load)
 
 
 def make_test_dataloaders(params, kwargs_dict):

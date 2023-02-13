@@ -53,6 +53,10 @@
         {"seq_length": 1024, "batch_size": 128},
         {"seq_length": 512, "batch_size": 256},
         {"seq_length": 256, "batch_size": 512},
-        {"seq_length": 128, "batch_size": 1024}
+        {"seq_length": 128, "batch_size": 1024},
+        {"lstut_settings.tf_layers": 4, "lstut_settings.tf_depth": 1},
+        {"lstut_settings.lstm_layers": 3},
+        {"lstut_settings.hidden_dim": 128},
+        {"lstut_settings.tf_heads": 12}
     ]
 }

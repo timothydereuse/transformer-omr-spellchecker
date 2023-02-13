@@ -107,7 +107,7 @@ for epoch in range(params.num_epochs):
     val_mcc = ttm.matthews_correlation(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh)
     val_norm_recall = ttm.normalized_recall(sig_val_output.cpu(), val_exs['target'].cpu())
     val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
-    _, _, gpu_free, gpu_load = ttm.log_gpu_info()
+    _, _, gpu_free, gpu_load = tr_funcs.log_gpu_info()
 
     epoch_end_time = time.time()
     print(
