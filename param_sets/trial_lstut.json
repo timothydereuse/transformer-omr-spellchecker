@@ -1,16 +1,16 @@
 {
     "params_name": "LSTUT_TRIAL",
-    "num_epochs": 4,
+    "num_epochs": 500,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "save_img_every": 1,
     "max_time_minutes": 5,
 
-    "seq_length": 33,
+    "seq_length": 64,
     "padding_amt": 16,
-    "lr": 0.0005,
-    "batch_size": 32,
+    "lr": 0.00001,
+    "batch_size": 64,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 100000000,
 
@@ -38,9 +38,8 @@
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "factor": 0.25,
-        "patience": 6,
-        "threshold": 0.001,
+        "max_lr": 0.1,
+        "step_size_up": 8,
         "verbose": true
     },
     "test_sets":

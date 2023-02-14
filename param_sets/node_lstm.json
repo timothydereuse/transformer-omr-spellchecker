@@ -18,7 +18,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab_big.txt",
-    "error_gen_smoothing": 4,
+    "error_gen_smoothing": 2,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
