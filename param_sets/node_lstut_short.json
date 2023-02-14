@@ -33,14 +33,14 @@
         "tf_heads": 8,
         "tf_depth": 4,
         "hidden_dim": 64,
-        "ff_dim": 1048,
+        "ff_dim": 1024,
         "dropout": 0.1,
         "positional_encoding": false
     },
     "scheduler_settings": {
         "max_lr": 0.1,
         "step_size_up": 32,
-        "verbose": true
+        "verbose": false
     },
     "test_sets":
     [
@@ -49,6 +49,12 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
+        {"lr": 0.001},
+        {"lr": 0.0001},
+        {"lr": 0.000001},
+        {"lr": 0.0000001},
+        {"seq_length": 4096, "batch_size": 32},
+        {"seq_length": 2048, "batch_size": 64},
         {"seq_length": 1024, "batch_size": 128},
         {"seq_length": 512, "batch_size": 256},
         {"seq_length": 256, "batch_size": 512},
@@ -57,9 +63,7 @@
         {"lstut_settings.lstm_layers": 3},
         {"lstut_settings.hidden_dim": 128},
         {"lstut_settings.tf_heads": 12},
-        {"lstut_settings.tf_layers": 4, "lstut_settings.tf_depth": 1},
-        {"lstut_settings.lstm_layers": 3},
-        {"lstut_settings.hidden_dim": 128},
-        {"lstut_settings.tf_heads": 12}
+        {"use_mcc_loss": true},
+        {"lstut_settings.ff_dim": 2048}
     ]
 }
