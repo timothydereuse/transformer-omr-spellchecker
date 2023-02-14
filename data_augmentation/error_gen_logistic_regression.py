@@ -118,6 +118,7 @@ class ErrorGenerator(object):
 
         return oscillator
 
+
     def get_synthetic_error_sequence(self, seq):
         errored_seq = []
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))

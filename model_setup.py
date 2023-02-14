@@ -56,8 +56,11 @@ class PreparedLSTUTModel():
             self.criterion = mcc.MCC_Loss()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=params.lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer=self.optimizer, **params.scheduler_settings)
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #             optimizer=self.optimizer, **params.scheduler_settings)
+
+        self.scheduler = torch.optim.lr_scheduler.CyclicLR(mode='triangular2', cycle_momentum=False,
+            base_lr=params.lr, optimizer=self.optimizer, **params.scheduler_settings)
 
         self.run_epoch_kwargs = {
             'model': self.model,

@@ -83,6 +83,7 @@ for epoch in range(params.num_epochs):
         log_each_batch=False,
         **prep_model.run_epoch_kwargs
     )
+    _, gpu_used, gpu_free, _ = tr_funcs.log_gpu_info()
 
     # test on validation set
     prep_model.model.eval()
@@ -98,7 +99,7 @@ for epoch in range(params.num_epochs):
 
     val_losses.append(val_loss)
     train_losses.append(train_loss)
-    prep_model.scheduler.step(val_loss)
+    prep_model.scheduler.step()
 
     # get thresholds that maximize f1 and match required recall scores
     sig_val_output = torch.sigmoid(val_exs['output'])
@@ -107,7 +108,6 @@ for epoch in range(params.num_epochs):
     val_mcc = ttm.matthews_correlation(sig_val_output.cpu(), val_exs['target'].cpu(), tr_thresh)
     val_norm_recall = ttm.normalized_recall(sig_val_output.cpu(), val_exs['target'].cpu())
     val_threshes = ttm.find_thresh_for_given_recalls(sig_val_output.cpu(), val_exs['target'].cpu(), params.target_recalls)
-    _, _, gpu_free, gpu_load = tr_funcs.log_gpu_info()
 
     epoch_end_time = time.time()
     print(
@@ -120,7 +120,7 @@ for epoch in range(params.num_epochs):
         f'val_mcc         {val_mcc:1.6f} | '
         f'val_norm_recall {val_norm_recall:1.6f} | '
         f'gpu_free        {gpu_free:1.6f} | '
-        f'gpu_load        {gpu_load:1.6f} | '
+        f'gpu_used        {gpu_used:1.6f} | '
     )
 
     if args['wandb']:
@@ -133,7 +133,7 @@ for epoch in range(params.num_epochs):
             'val_mcc': val_mcc,
             'val_norm_recall': val_norm_recall,
             'gpu_free': gpu_free,
-            'gpu_load': gpu_load
+            'gpu_used': gpu_used
             })
 
     # # save an example
