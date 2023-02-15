@@ -1,6 +1,6 @@
 {
     "params_name": "LSTUT_TRIAL",
-    "num_epochs": 500,
+    "num_epochs": 6,
     "early_stopping_patience": 20,
     "num_examples_to_save": 3,
     "save_model_every": 100,
@@ -50,7 +50,7 @@
     ],
     "param_sweep":
     [
-        {"batch_size": 10, "seq_length": 32},
+        {"batch_size": 10, "seq_length": 32, "tags": "test_tag, oh_no, ooooo"},
         {"lstut_settings.tf_depth": 3},
         {"lstut_settings.tf_depth": 2, "seq_length": 33}
     ]

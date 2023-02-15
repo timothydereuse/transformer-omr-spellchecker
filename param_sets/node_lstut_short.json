@@ -5,14 +5,14 @@
     "num_examples_to_save": 2,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 90,
+    "max_time_minutes": 180,
 
     "seq_length": 512,
     "padding_amt": 64,
-    "lr": 0.00001,
-    "batch_size": 256,
+    "lr": 0.0001,
+    "batch_size": 384,
     "clip_gradient_norm": 0.5,
-    "minibatch_div": 32,
+    "minibatch_div": 64,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
@@ -23,7 +23,7 @@
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
     "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
-    "use_mcc_loss": false,
+    "use_mcc_loss": true,
 
     "lstut_settings": {
         "d_model": 256,
@@ -49,21 +49,17 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"lr": 0.001},
-        {"lr": 0.0001},
-        {"lr": 0.000001},
-        {"lr": 0.0000001},
-        {"seq_length": 4096, "batch_size": 32},
-        {"seq_length": 2048, "batch_size": 64},
-        {"seq_length": 1024, "batch_size": 128},
-        {"seq_length": 512, "batch_size": 256},
-        {"seq_length": 256, "batch_size": 512},
-        {"seq_length": 128, "batch_size": 1024},
-        {"lstut_settings.tf_layers": 4, "lstut_settings.tf_depth": 1},
-        {"lstut_settings.lstm_layers": 3},
-        {"lstut_settings.hidden_dim": 128},
-        {"lstut_settings.tf_heads": 12},
-        {"use_mcc_loss": true},
-        {"lstut_settings.ff_dim": 2048}
+        {"seq_length": 4096, "batch_size": 48, "tags": "seq_len"},
+        {"seq_length": 2048, "batch_size": 96, "tags": "seq_len"},
+        {"seq_length": 1024, "batch_size": 192, "tags": "seq_len"},
+        {"seq_length": 512, "batch_size": 384, "tags": "seq_len, smoothing"},
+        {"seq_length": 256, "batch_size": 768, "tags": "seq_len"},
+        {"seq_length": 128, "batch_size": 1536, "tags": "seq_len"},
+        {"lstut_settings.lstm_layers": 3, "tags": "other"},
+        {"seq_length": 512, "batch_size": 256, "lstut_settings.tf_layers": 2, "tags": "other"},
+        {"error_gen_smoothing": 0, "tags": "smoothing"},
+        {"error_gen_smoothing": 0.5, "tags": "smoothing"},
+        {"error_gen_smoothing": 2, "tags": "smoothing"},
+        {"error_gen_smoothing": 3, "tags": "smoothing"}
     ]
 }
