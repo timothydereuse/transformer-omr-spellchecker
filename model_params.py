@@ -24,6 +24,7 @@ class Params(object):
         start_training_time = datetime.datetime.now().strftime("(%Y.%m.%d.%H.%M)")
         self.start_training_time = start_training_time
         self.params_id_str = f'{self.params_name}_{mod_num}_{start_training_time}_{self.model_summary}'
+
         self.log_fname = f'./logs/training_{self.params_id_str}.log'
         self.results_fname = f'./logs/test_results_{self.params_id_str}.log'
         if self.log_training:
@@ -31,8 +32,10 @@ class Params(object):
                                 format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
             if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
                 logging.getLogger().addHandler(logging.StreamHandler())
+
         self.mod_num = mod_num
         self.mod_string = ''
+        self.run_tags = []
 
         if mod_num > 0 and not hasattr(self, 'param_sweep'):
             raise ValueError(f'Given parameter file {base_file} has no modifications defined, '
@@ -42,10 +45,16 @@ class Params(object):
 
     def apply_mod(self, mod):
         sk = sorted(list(mod.keys()))
-        self.mod_string = ' '.join([f'{k}-{mod[k]}' for k in sk])
+        self.mod_string = ' '.join([f'{k}-{mod[k]}' for k in sk if not k == 'tags'])
         self.params_dict['mod_string'] = self.mod_string
+        
+        if "tags" in sk:
+            self.run_tags = mod["tags"].split(', ')
 
         for k in mod.keys():
+            if k == "tags":
+                continue
+
             name = k
             val = mod[k]
             if not name:

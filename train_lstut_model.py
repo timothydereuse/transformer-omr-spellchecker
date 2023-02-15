@@ -43,7 +43,7 @@ dry_run = args['dryrun']
 run_name = params.params_id_str + ' ' + params.mod_string
 
 if (not dry_run) and args['wandb']:
-    wandb.init(project=args['wandb'].strip("'"), config=params.params_dict, entity="timothydereuse")
+    wandb.init(project=args['wandb'].strip("'"), config=params.params_dict, entity="timothydereuse", tags=params.run_tags)
     wandb.run.name = run_name
 
 print('defining datasets...')
