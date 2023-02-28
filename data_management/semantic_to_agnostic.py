@@ -139,7 +139,7 @@ def resolve_tuplet_record(tuplet_record):
 
         if all(next_trs):
             # get the middle + 1 index here
-            mid_idx = min(len(next_keys_indices) // 2 + 1, len(next_keys_indices) - 1)
+            mid_idx = min(len(next_keys_indices) // 2, len(next_keys_indices) - 1)
             idx_to_insert = ks[next_keys_indices[mid_idx]]
             to_insert[idx_to_insert] = to_check
             for x in next_keys_indices:
@@ -315,7 +315,6 @@ def m21_part_to_agnostic(part, part_idx):
         # at the end of every measure, add a bar if there isn't one already
         if not 'barline' in agnostic[-1].agnostic_item:
             agnostic.append(AgnosticRecord(f'barline.regular', 0, measure_idx, event_idx, part_idx))
-
 
     # handle tuplet records by putting in tuplet indicators
     insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
