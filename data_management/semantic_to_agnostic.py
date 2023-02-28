@@ -26,8 +26,10 @@ def resolve_duration(d):
         dur_string = str.lower(d.tuplets[0].durationActual.type)
         is_tuplet = d.tuplets[0].tupletActual[0]
     
-    if d.isGrace:
-        dur_string = 'grace.' + dur_string 
+    if d.isGrace and d.slash:
+        dur_string = 'acciaccatura.' + dur_string
+    elif d.isGrace and not d.slash:
+        dur_string = 'appoggiatura.' + dur_string 
     return dots, dur_string, is_tuplet
 
 
@@ -37,6 +39,8 @@ def resolve_note(e, current_clef, separate_sides=False):
     show_accidental = e.pitch.accidental.displayStatus if e.pitch.accidental else None
     accid_str = e.pitch.accidental.name if show_accidental else None
 
+    # collect all the items that will appear to the left of the note, then at the
+    # note's position, then to the right of the note. merge them together at the end
     left_of_note = []
     at_note = []
     right_of_note = []
@@ -67,7 +71,7 @@ def resolve_note(e, current_clef, separate_sides=False):
         right_of_note.extend([f'tie.start.pos{p}'])
 
     if e.tie and e.tie.type in ['end', 'continue']:
-        left_of_note.insert(0, [f'tie.end.pos{p}'])
+        left_of_note.insert(0, f'tie.end.pos{p}')
 
     if not separate_sides:
         res = vert_token(left_of_note) + vert_token(at_note) + vert_token(right_of_note)
@@ -109,11 +113,10 @@ def resolve_articulations(e, current_clef, glyphs=None):
     for articulation in e.articulations:
         art_name = f'articulation.{articulation.name}.pos{artic_pos}'
         if is_stem_down:
-            glyphs = [art_name, '>'] + glyphs
+            glyphs = glyphs + ['>', art_name]
         else:
             # if there's no stem or anything assume stuff should be below the note
-            glyphs = glyphs + ['>', art_name]
-
+            glyphs = [art_name, '>'] + glyphs
     return glyphs
 
 
@@ -188,12 +191,13 @@ def resolve_chord(e, current_clef):
         rights.extend(temp3)
         index_trackers[2].extend([i for _ in range(len(temp3))])
 
+    # have to do this separately using glyphs=None for the index tracker to still work. oof
     artics = resolve_articulations(e, current_clef, glyphs=None)
     if artics and is_stem_down:
-        centers = artics + ['>'] + centers
+        centers = centers + artics
         index_trackers[1] = [i for _ in range(len(artics) + 1)] + index_trackers[1]
-    elif artics:
-        centers = centers + ['>'] + artics
+    elif artics and not is_stem_down:
+        centers = artics + centers
         index_trackers[1] = index_trackers[1] + [0 for _ in range(len(artics) + 1)]
 
     end_list = lefts + centers + rights
@@ -221,23 +225,26 @@ def m21_part_to_agnostic(part, part_idx):
     # notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
     for measure_idx, measure in enumerate(part):
         last_offset = None
+        last_type = None
 
         # expand voices to flatten voices out
         flat_measure = sorted(measure.flat[:], key=sorting_order, reverse=False)
 
         for event_idx, e in enumerate(flat_measure):
-            if e.offset == last_offset and type(e) in [
+            if e.offset == last_offset and last_type in [
                 m21.note.Note,
                 m21.chord.Chord,
                 m21.note.Rest,
                 m21.dynamics.Dynamic]:
                 agnostic.append(AgnosticRecord('>', 0, measure_idx, event_idx, part_idx))
             last_offset = e.offset
+            last_type = type(e)
 
             # case if the current m21 element is a Note
             if type(e) == m21.note.Note:
-                glyphs, tuplet = resolve_note(e, current_clef)
-                glyphs = resolve_articulations(e, current_clef, glyphs)
+                glyphs, tuplet = resolve_note(e, current_clef, separate_sides=True)
+                centers = resolve_articulations(e, current_clef, glyphs[1])
+                glyphs = glyphs[0] + centers + glyphs[2]
 
                 records = [AgnosticRecord(g, 0, measure_idx, event_idx, part_idx) for g in glyphs]
                 agnostic.extend(records)
@@ -427,12 +434,21 @@ if __name__ == '__main__':
     # files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
     #         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
 
+    # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
+    # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
+
     files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
+
     all_tokens = Counter()
 
     for fpath in files:
-        parsed_file = m21.converter.parse(fpath)
-        parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+        try:
+            parsed_file = m21.converter.parse(fpath)
+            parts = list(parsed_file.getElementsByClass(m21.stream.Part))
+        except Exception:
+            print(f'parsing {fpath} failed, skipping file')
+            continue
+
         # part = parts[0].getElementsByClass(m21.stream.Measure)
         print(f'ntokens {len(all_tokens)}')
 
