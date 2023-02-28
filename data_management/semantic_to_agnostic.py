@@ -281,7 +281,7 @@ def m21_part_to_agnostic(part, part_idx):
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
-                    position = p.diatonicNoteNum - current_clef.lowestLine + 12
+                    position = (p.diatonicNoteNum - current_clef.lowestLine) % 12
 
                     agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', 0, measure_idx, event_idx, part_idx))
                 current_key_sig = e 
