@@ -60,9 +60,9 @@ with h5py.File(felix_dset_path, 'r') as f:
     error_fnames = sorted(list(f['felix_omr'].keys()))
     error_onepass_fnames = sorted(list(f['felix_onepass'].keys()))
 
-    correct_dset = [f['felix_correct'][x][:].astype(np.uint8) for x in correct_fnames if not 'op80' in x]
-    error_dset = [f['felix_omr'][x][:].astype(np.uint8) for x in error_fnames]
-    error_onepass_dset = [f['felix_onepass'][x][:].astype(np.uint8) for x in error_onepass_fnames]
+    correct_dset = [f['felix_correct'][x][:].astype(np.uint16) for x in correct_fnames if not 'op80' in x]
+    error_dset = [f['felix_omr'][x][:].astype(np.uint16) for x in error_fnames]
+    error_onepass_dset = [f['felix_onepass'][x][:].astype(np.uint16) for x in error_onepass_fnames]
 
 
 X, Y = get_training_samples(correct_dset, error_dset, correct_fnames)
