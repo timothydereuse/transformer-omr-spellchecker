@@ -55,7 +55,7 @@ class AgnosticOMRDataset(IterableDataset):
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
 
-        if self.minibatch_div >= len(self.fnames):
+        if (not minibatch_div) or self.minibatch_div >= len(self.fnames):
             self.minibatch_div = len(self.fnames) - 1
 
         self.make_new_minibatches()
@@ -164,6 +164,8 @@ if __name__ == '__main__':
         for i, x in enumerate(dload):
             print(i, x[0].shape)
             batches.append(x)
+
+    
 
 
 
