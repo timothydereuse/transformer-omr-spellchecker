@@ -25,7 +25,6 @@ def resolve_duration(d):
     else:
         dur_string = str.lower(d.tuplets[0].durationActual.type)
         is_tuplet = d.tuplets[0].tupletActual[0]
-    
     if d.isGrace and d.slash:
         dur_string = 'acciaccatura.' + dur_string
     elif d.isGrace and not d.slash:
@@ -436,7 +435,7 @@ if __name__ == '__main__':
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
+    files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\3_op44i_3_omr 2 measures TEST.mxl"]
 
     all_tokens = Counter()
 
@@ -459,3 +458,4 @@ if __name__ == '__main__':
         all_tokens.update([x.agnostic_item for x in agnostic])
 
             
+# x for x in f['train'].keys() if 'musescore_misc' in x

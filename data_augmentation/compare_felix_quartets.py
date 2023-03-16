@@ -81,14 +81,23 @@ def make_supervised_examples(pms, supervised_targets_fname, err_gen, correct_dse
                 )
 
 
-# sharp_probs = e.regression.predict_proba(e.enc.transform([[198]]))[0] 
-# [
-#     (
-#         x, 
-#         sharp_probs[x],
-#         e.enc_labels.inverse_transform([x])[0][0],
-#         v.vec_to_words([int(e.enc_labels.inverse_transform([x])[0].split('.')[-1])])
-#     ) 
-#         for x in np.argsort(sharp_probs)
-# ]
+def get_raw_probs(error_generator, v):
+    e = error_generator
+    res = {}
+
+    for word in v.wtv.keys():
+        num = v.wtv[word]
+        sharp_probs = e.regression.predict_proba(e.enc.transform([[num]]))[0] 
+        entry = [
+            (
+                x, 
+                sharp_probs[x],
+                e.enc_labels.inverse_transform([x])[0][0],
+                v.vec_to_words([int(e.enc_labels.inverse_transform([x])[0].split('.')[-1])])
+            ) 
+                for x in np.argsort(sharp_probs)
+        ]
+        res[word] = entry
+    
+    return res
 

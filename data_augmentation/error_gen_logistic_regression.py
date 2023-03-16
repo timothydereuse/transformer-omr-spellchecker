@@ -52,6 +52,7 @@ class ErrorGenerator(object):
         else:
             raise ValueError('cannot supply training data with path to model in constructor')
 
+
     def get_simple_synthetic_error_sequence(self, seq):
         err_prob = self.simple_error_rate
         synthetic_error_alignment = np.random.choice(
@@ -183,9 +184,11 @@ class ErrorGenerator(object):
         # fake_alignment = [x[0] for x in edit_instructions]
         return errored_seq, err_instructions
 
+
     def err_seq_string(self, labels):
         class_to_label = err_to_class = {0: 'O', 1: '~', 2: '+', 3: '-'}
         return ''.join(err_to_class[x] for x in labels)
+
 
     def add_errors_to_seq(self, inp, given_err_seq=None):
         inp = inp.astype('float32')
@@ -215,10 +218,13 @@ class ErrorGenerator(object):
         # put 'deletion' markers in front of entries in alignment record r that record deletions
         res = np.zeros(seq_len)
         i = 0
+
+        # iterate through the record of operations to make the training data targets:
         while i < len(r) and i < Y_out.shape[0]:
             if r[i] == '-':
-                # r[i - 1] = 'D'
+                # if the record is a deletion
                 Y_out[i - 1] = 1
+                Y_out[i] = 1
                 del r[i]
             elif r[i] == '~' or r[i] == '+':
                 Y_out[i] = 1
@@ -229,6 +235,7 @@ class ErrorGenerator(object):
         padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
 
         return padded_seq, Y_out
+
 
     def add_errors_to_batch(self, batch, verbose=0):
         if not (type(batch) == np.ndarray):
@@ -249,6 +256,7 @@ class ErrorGenerator(object):
 
         return torch.from_numpy(X), torch.from_numpy(Y)
 
+
     def use_errors_from_existing_batch(self, batch):
         b, e = batch
         if not (type(b) == np.ndarray):
@@ -261,6 +269,7 @@ class ErrorGenerator(object):
         Y = np.stack([np.array(x[1]) for x in out], 0)
 
         return X, Y
+
 
     def save_models(self, fpath):
         d = {
@@ -276,6 +285,7 @@ if __name__ == "__main__":
     from agnostic_omr_dataloader import AgnosticOMRDataset
     from torch.utils.data import DataLoader
     from data_management.vocabulary import Vocabulary
+    from data_augmentation.compare_felix_quartets import get_raw_probs
 
     dset_path = r'./processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5'
     model_fpath = r'./processed_datasets/quartet_omr_error_models_big_bymeasure.joblib'
@@ -312,3 +322,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.imshow(Y.numpy())
     plt.show()
+
+# f = h5py.File('./processed_datasets/supervised_omr_targets_big_bymeasure.h5')
+# score = f['omr']['felix_omr-3_op44i_3_omr.musicxml-tposed.None'][:][0:150]
+# res = list(zip(v.vec_to_words(score[0, 55:100]), score[1, 55:100]))
+# temp = [print(rf'\textttLBBBB{x[0]}RBBB & {int(x[1])} \\') for x in res]
