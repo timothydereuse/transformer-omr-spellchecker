@@ -18,7 +18,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab_big.txt",
-    "error_gen_smoothing": 1,
+    "error_gen_smoothing": 2,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
@@ -49,17 +49,15 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"seq_length": 4096, "batch_size": 48, "tags": "seq_len"},
-        {"seq_length": 2048, "batch_size": 96, "tags": "seq_len"},
-        {"seq_length": 1024, "batch_size": 192, "tags": "seq_len"},
-        {"seq_length": 512, "batch_size": 384, "tags": "seq_len, smoothing"},
-        {"seq_length": 256, "batch_size": 768, "tags": "seq_len"},
-        {"seq_length": 128, "batch_size": 1536, "tags": "seq_len"},
-        {"lstut_settings.lstm_layers": 3, "tags": "other"},
-        {"seq_length": 512, "batch_size": 256, "lstut_settings.tf_layers": 2, "tags": "other"},
-        {"error_gen_smoothing": 0, "tags": "smoothing"},
-        {"error_gen_smoothing": 0.5, "tags": "smoothing"},
-        {"error_gen_smoothing": 2, "tags": "smoothing"},
-        {"error_gen_smoothing": 3, "tags": "smoothing"}
+        {"minibatch_div": 128, "tags": "minibatch_div"},
+        {"minibatch_div": 64, "tags": "minibatch_div, lr, seqlen"},
+        {"minibatch_div": 32, "tags": "minibatch_div"},
+        {"minibatch_div": 16, "tags": "minibatch_div"},
+        {"minibatch_div": 8, "tags": "minibatch_div"},
+        {"lr": 0.001, "tags": "lr"},
+        {"lr": 0.00001, "tags": "lr"},
+        {"lr": 0.000001, "tags": "lr"},
+        {"seq_length": 2048, "batch_size": 128, "tags": "seqlen"},
+        {"seq_length": 4096, "batch_size": 64, "tags": "seqlen"}
     ]
 }

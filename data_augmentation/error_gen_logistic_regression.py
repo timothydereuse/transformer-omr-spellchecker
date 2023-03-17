@@ -21,7 +21,7 @@ class ErrorGenerator(object):
     insert_idx = 2
     delete_index = 3
 
-    def __init__(self, smoothing=4, simple_error_rate=0.05, parallel=1, simple=False, models_fpath=None, labeled_data=None):
+    def __init__(self, smoothing=2, simple_error_rate=0.05, parallel=1, simple=False, models_fpath=None, labeled_data=None):
         self.smoothing = smoothing
         self.simple_error_rate = simple_error_rate
         self.simple = simple
@@ -129,7 +129,6 @@ class ErrorGenerator(object):
         smooth_ind = int(np.median(np.argmax(predictions, 1)))
 
         # induces contiguous runs of errors to be more common:
-
         oscillator = self.make_oscillator(len(seq))
 
         predictions_remainder = np.delete(predictions, smooth_ind, 1)
@@ -293,9 +292,9 @@ if __name__ == "__main__":
 
     seq_len = 256
     proportion = 0.2
-    dset = AgnosticOMRDataset(dset_path, seq_len, v)
+    dset = AgnosticOMRDataset(dset_path, seq_len, v, minibatch_div=2)
 
-    dload = DataLoader(dset, batch_size=50)
+    dload = DataLoader(dset, batch_size=100)
     batches = []
     for i, x in enumerate(dload):
         batch, metadata = x
@@ -305,12 +304,12 @@ if __name__ == "__main__":
             break
 
     print('creating error generator')
-    e = ErrorGenerator(smoothing=3, parallel=1, models_fpath=model_fpath)
+    e = ErrorGenerator(smoothing=2, parallel=1, models_fpath=model_fpath)
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
     print('adding errors to entire batch...')
-    for i in range(2):
+    for i in range(1):
         print(i)
         e.simple = True
         X, Y = e.add_errors_to_batch(batch.numpy())

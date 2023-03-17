@@ -435,7 +435,7 @@ if __name__ == '__main__':
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\3_op44i_3_omr 2 measures TEST.mxl"]
+    files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
 
     all_tokens = Counter()
 
