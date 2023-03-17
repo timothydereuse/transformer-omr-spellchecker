@@ -10,7 +10,7 @@
     "seq_length": 512,
     "padding_amt": 64,
     "lr": 0.0001,
-    "batch_size": 384,
+    "batch_size": 256,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 64,
 
@@ -29,7 +29,7 @@
         "d_model": 256,
         "output_feats": 1,
         "lstm_layers": 2,
-        "tf_layers": 1,
+        "tf_layers": 2,
         "tf_heads": 8,
         "tf_depth": 4,
         "hidden_dim": 64,
@@ -50,14 +50,14 @@
     ],
     "param_sweep": [
         {"minibatch_div": 128, "tags": "minibatch_div"},
-        {"minibatch_div": 64, "tags": "minibatch_div, lr, seqlen"},
+        {"minibatch_div": 64, "tags": "minibatch_div, lr, other"},
         {"minibatch_div": 32, "tags": "minibatch_div"},
         {"minibatch_div": 16, "tags": "minibatch_div"},
         {"minibatch_div": 8, "tags": "minibatch_div"},
         {"lr": 0.001, "tags": "lr"},
         {"lr": 0.00001, "tags": "lr"},
         {"lr": 0.000001, "tags": "lr"},
-        {"seq_length": 2048, "batch_size": 128, "tags": "seqlen"},
-        {"seq_length": 4096, "batch_size": 64, "tags": "seqlen"}
+        {"lstut_settings.lstm_layers": 1, "tags": "other"},
+        {"lstut_settings.tf_layers": 1, "batch_size": 368, "tags": "other"}
     ]
 }
