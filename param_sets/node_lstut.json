@@ -1,18 +1,18 @@
 {
-    "params_name": "NODE_LSTUT_FINAL3",
-    "num_epochs": 151,
-    "early_stopping_patience": 8,
-    "num_examples_to_save": 30,
+    "params_name": "lstut_long",
+    "num_epochs": 500,
+    "early_stopping_patience": 32,
+    "num_examples_to_save": 2,
     "save_model_every": 4,
-    "save_img_every": 10,
-    "max_time_minutes": 960,
+    "save_img_every": 1,
+    "max_time_minutes": 1500,
 
-    "seq_length": 256,
-    "padding_amt": 64,
+    "seq_length": 512,
+    "padding_amt": 8,
     "lr": 0.0001,
-    "batch_size": 512,
+    "batch_size": 256,
     "clip_gradient_norm": 0.5,
-    "minibatch_div": 10,
+    "minibatch_div": 16,
 
     "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
@@ -22,25 +22,25 @@
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
-    "target_recalls": [0.8, 0.9, 0.95, 0.99],
-    "use_mcc_loss": false,
+    "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
+    "use_mcc_loss": true,
 
     "lstut_settings": {
         "d_model": 256,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 1,
+        "tf_layers": 2,
         "tf_heads": 8,
         "tf_depth": 4,
-        "hidden_dim": 128,
-        "ff_dim": 128,
+        "hidden_dim": 64,
+        "ff_dim": 1024,
         "dropout": 0.1,
         "positional_encoding": false
     },
     "scheduler_settings": {
         "max_lr": 0.1,
-        "step_size_up": 8,
-        "verbose": true
+        "step_size_up": 32,
+        "verbose": false
     },
     "test_sets":
     [
@@ -49,6 +49,7 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"tf_layers": 2, "tf_heads": 6, "lstm_layers": 0, "positional_encoding": true}
+        {"use_mcc_loss": true},
+        {"use_mcc_loss": false}
     ]
 }
