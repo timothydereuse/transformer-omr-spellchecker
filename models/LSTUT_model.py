@@ -53,9 +53,10 @@ class LSTUT(nn.Module):
                     'activation': 'gelu'
                     }
 
-        # this is necessary to get the package to work in 0.2.2 and 0.4.0, which is necessary
-        # because compute canada doesn't play nice with 0.4.0 and my own laptop doesn't play
-        # nice with 0.4.0 for some reason. i hate this :(
+        # this is necessary to get the package to work in fast-transformers versions
+        # 0.2.2 and 0.4.0, which is necessary because compute canada doesn't 
+        # play nice with 0.4.0 and my own laptop doesn't play nice with 0.2.2
+        # for some reason. i hate this :(
         try:
             att_builder = AttentionBuilder.from_kwargs(query_dimensions=self.hidden_dim)
         except ValueError:
