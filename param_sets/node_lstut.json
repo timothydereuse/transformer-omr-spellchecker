@@ -1,5 +1,5 @@
 {
-    "params_name": "lstut_long",
+    "params_name": "lstut_big",
     "num_epochs": 500,
     "early_stopping_patience": 32,
     "num_examples_to_save": 2,
@@ -8,9 +8,9 @@
     "max_time_minutes": 1500,
 
     "seq_length": 512,
-    "padding_amt": 8,
-    "lr": 0.0001,
-    "batch_size": 256,
+    "padding_amt": 32,
+    "lr": 0.0005,
+    "batch_size": 128,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 16,
 
@@ -23,18 +23,18 @@
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
     "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
-    "use_mcc_loss": true,
+    "use_mcc_loss": false,
 
     "lstut_settings": {
         "d_model": 256,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 2,
-        "tf_heads": 8,
+        "tf_layers": 3,
+        "tf_heads": 12,
         "tf_depth": 4,
         "hidden_dim": 64,
-        "ff_dim": 1024,
-        "dropout": 0.1,
+        "ff_dim": 2048,
+        "dropout": 0.2,
         "positional_encoding": false
     },
     "scheduler_settings": {
@@ -49,7 +49,7 @@
         {"base": "test", "with_targets": false}
     ],
     "param_sweep": [
-        {"use_mcc_loss": true},
-        {"use_mcc_loss": false}
+        {"lstut_settings.tf_depth": 4},
+        {"lstut_settings.tf_depth": 1}
     ]
 }
