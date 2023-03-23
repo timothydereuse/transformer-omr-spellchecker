@@ -50,6 +50,6 @@
     ],
     "param_sweep": [
         {"lstut_settings.tf_depth": 4},
-        {"lstut_settings.tf_depth": 2, "tf_layers": 3}
+        {"lstut_settings.tf_depth": 2, "lstut_settings.tf_layers": 3}
     ]
 }
