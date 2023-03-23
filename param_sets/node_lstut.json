@@ -1,11 +1,11 @@
 {
-    "params_name": "lstut_mark1",
+    "params_name": "lstut_mark2",
     "num_epochs": 500,
-    "early_stopping_patience": 32,
+    "early_stopping_patience": 50,
     "num_examples_to_save": 5,
     "save_model_every": 4,
     "save_img_every": 1,
-    "max_time_minutes": 1440,
+    "max_time_minutes": 600,
 
     "seq_length": 512,
     "padding_amt": 32,
@@ -18,7 +18,7 @@
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
     "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
     "saved_vocabulary": "data_management/vocab_big.txt",
-    "error_gen_smoothing": 2,
+    "error_gen_smoothing": 1,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.1,
@@ -50,6 +50,6 @@
     ],
     "param_sweep": [
         {"lstut_settings.tf_depth": 4},
-        {"lstut_settings.tf_depth": 1}
+        {"lstut_settings.tf_depth": 2, "tf_layers": 3}
     ]
 }
