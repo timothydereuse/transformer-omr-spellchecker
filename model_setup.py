@@ -48,7 +48,7 @@ class PreparedLSTUTModel():
             'vocabulary': self.v
         }
 
-        self.class_ratio = max(1, params.error_gen_smoothing + 1)
+        self.class_ratio = (2 / self.simple_error_rate) if params.simple_errors else max(1, params.error_gen_smoothing + 1)
 
         if not params.use_mcc_loss:
             self.criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(self.class_ratio))
