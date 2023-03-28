@@ -7,6 +7,25 @@ from itertools import groupby
 
 AgnosticRecord = namedtuple('AgnosticRecord', ['agnostic_item', 'chord_idx', 'measure_idx', 'event_idx', 'part_idx'])
 
+class SequenceBuilder():
+
+    def __init__(self) -> None:
+        self.records = []
+        self.part_idx = 0
+        self.measure_idx = 0
+        self.event_idx = 0
+        self.chord_idx = 0
+
+    def add_record(self, token, chord_idx=None, measure_idx=None, event_idx=None, part_idx=None) -> None:
+        new_rec = AgnosticRecord(
+            token,
+            chord_idx if chord_idx else self.chord_idx,
+            measure_idx if measure_idx else self.measure_idx,
+            event_idx if event_idx else self.event_idx,
+            part_idx if part_idx else self.part_idx,
+        )
+        self.records.append(new_rec)
+
 
 def resolve_duration(d):
     dots = d.dots
@@ -207,6 +226,9 @@ def resolve_chord(e, current_clef):
 
 def m21_part_to_agnostic(part, part_idx):
 
+    sb = SequenceBuilder()
+    sb.part_idx = part_idx
+
     part = part.getElementsByClass(m21.stream.Measure)
         
     agnostic = []
@@ -223,6 +245,7 @@ def m21_part_to_agnostic(part, part_idx):
     # types of things we want to deal with:
     # notes, chords, rests, barlines, dynamics, time signature, key signature, clef, SystemLayout
     for measure_idx, measure in enumerate(part):
+        sb.measure_idx = measure_idx
         last_offset = None
         last_type = None
 
@@ -230,12 +253,15 @@ def m21_part_to_agnostic(part, part_idx):
         flat_measure = sorted(measure.flat[:], key=sorting_order, reverse=False)
 
         for event_idx, e in enumerate(flat_measure):
+            sb.event_idx = event_idx
+
             if e.offset == last_offset and last_type in [
                 m21.note.Note,
                 m21.chord.Chord,
                 m21.note.Rest,
-                m21.dynamics.Dynamic]:
-                agnostic.append(AgnosticRecord('>', 0, measure_idx, event_idx, part_idx))
+                m21.dynamics.Dynamic
+                ]:
+                sb.add_record('>')
             last_offset = e.offset
             last_type = type(e)
 
@@ -245,8 +271,8 @@ def m21_part_to_agnostic(part, part_idx):
                 centers = resolve_articulations(e, current_clef, glyphs[1])
                 glyphs = glyphs[0] + centers + glyphs[2]
 
-                records = [AgnosticRecord(g, 0, measure_idx, event_idx, part_idx) for g in glyphs]
-                agnostic.extend(records)
+                for g in glyphs:
+                    sb.add_record(g)
 
                 tuplet_record[len(agnostic)] = tuplet
 
@@ -254,45 +280,41 @@ def m21_part_to_agnostic(part, part_idx):
             elif type(e) == m21.note.Rest:
 
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
-                agnostic.append(AgnosticRecord(f'rest.{dur_name}', 0, measure_idx, event_idx, part_idx))
+                sb.add_record(f'rest.{dur_name}')
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
                 if dots > 0:
-                    agnostic.append(AgnosticRecord('+', measure_idx, 0, event_idx, part_idx))
-                    agnostic.append(AgnosticRecord('duration.dot.pos5', 0, measure_idx, event_idx, part_idx))
+                    sb.add_record('duration.dot.pos5')
 
             # case if the current m21 element is a Chord
             # (must be split into notes and individually processed)
             elif type(e) == m21.chord.Chord:
                 glyph_list, end_tracker, is_tuplet = resolve_chord(e, current_clef)
-                records = [
-                    AgnosticRecord(g, end_tracker[i], measure_idx, event_idx, part_idx)
-                    for i, g in enumerate(glyph_list)]
-                agnostic.extend(records)
+
+                for i, g in enumerate(glyph_list):
+                    sb.add_record(g, chord_idx=end_tracker[i])
                 tuplet_record[len(agnostic)] = is_tuplet
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                agnostic.append(AgnosticRecord(f'dynamics.{e.value}', 0, measure_idx, event_idx, part_idx))
-                pass
+                sb.add_record(f'dynamics.{e.value}')
 
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
                     position = (p.diatonicNoteNum - current_clef.lowestLine) % 12
-
-                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.pos{position}', 0, measure_idx, event_idx, part_idx))
+                    sb.add_record(f'accid.{p.accidental.name}.pos{position}')
                 current_key_sig = e 
             
             # case if the current m21 element is a Time Signature
             elif type(e) == m21.meter.TimeSignature:
                 current_time_sig = e
-                agnostic.append(AgnosticRecord(f'timeSig.{e.ratioString}', 0, measure_idx, event_idx, part_idx))
+                sb.add_record(f'timeSig.{e.ratioString}')
 
             # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
-                agnostic.append(AgnosticRecord(f'clef.{e.name}', 0, measure_idx, event_idx, part_idx))
+                sb.add_record(f'clef.{e.name}')
                 current_clef = current_clef if (e.lowestLine is None) else e
 
             # case where the current m21 element is a systemLayout
@@ -300,23 +322,24 @@ def m21_part_to_agnostic(part, part_idx):
             elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
                 glyphs = [f'lineBreak', f'clef.{current_clef.name}']
-                records = [AgnosticRecord(g, 0, measure_idx, event_idx, part_idx) for g in glyphs]
-                agnostic.extend(records)
-                
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    agnostic.append(AgnosticRecord(f'accid.{p.accidental.name}.{position}', 0, measure_idx, event_idx, part_idx))
+                    glyphs.append(f'accid.{p.accidental.name}.{position}')
+                for g in glyphs:
+                    sb.add_record(g)
 
             # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
-                agnostic.append(AgnosticRecord(f'barline.{e.type}', 0, measure_idx, event_idx, part_idx))
+                sb.add_record(f'barline.{e.type}')
 
         # at the end of every measure, add a bar if there isn't one already
-        if not 'barline' in agnostic[-1].agnostic_item:
-            agnostic.append(AgnosticRecord(f'barline.regular', 0, measure_idx, event_idx, part_idx))
+        if not 'barline' in sb.records[-1].agnostic_item:
+            sb.add_record(f'barline.regular')
 
     # handle tuplet records by putting in tuplet indicators
     insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
+
+    agnostic = sb.records
 
     # insert starting from the end to not mess up later indices
     for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
@@ -432,10 +455,10 @@ if __name__ == '__main__':
     # files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
     #         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
 
-    # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
-    # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
+    xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
+    files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
+    # files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
 
     all_tokens = Counter()
 
