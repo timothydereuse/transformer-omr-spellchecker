@@ -4,7 +4,7 @@ import os
 import numpy as np
 from collections import namedtuple
 from itertools import groupby
-from data_management.seq_builder import SequenceBuilder, AgnosticRecord, sorting_order
+from data_management.seq_builder import SequenceBuilder, MusicSeqRecord, sorting_order
 
 
 def m21_parts_to_notetuple(parts):

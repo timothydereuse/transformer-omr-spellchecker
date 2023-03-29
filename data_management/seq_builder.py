@@ -1,7 +1,7 @@
 from collections import namedtuple
 import music21 as m21
 
-AgnosticRecord = namedtuple('AgnosticRecord', ['music_element', 'chord_idx', 'measure_idx', 'event_idx', 'part_idx'])
+MusicSeqRecord = namedtuple('MusicSeqRecord', ['music_element', 'chord_idx', 'measure_idx', 'event_idx', 'part_idx'])
 
 class SequenceBuilder():
 
@@ -13,7 +13,7 @@ class SequenceBuilder():
         self.chord_idx = 0
 
     def add_record(self, token, chord_idx=None, measure_idx=None, event_idx=None, part_idx=None) -> None:
-        new_rec = AgnosticRecord(
+        new_rec = MusicSeqRecord(
             token,
             chord_idx if chord_idx else self.chord_idx,
             measure_idx if measure_idx else self.measure_idx,

@@ -4,7 +4,7 @@ import os
 import math
 from collections import namedtuple
 from itertools import groupby
-from data_management.seq_builder import SequenceBuilder, AgnosticRecord, sorting_order
+from data_management.seq_builder import SequenceBuilder, MusicSeqRecord, sorting_order
 
 def resolve_duration(d):
     dots = d.dots
@@ -311,8 +311,8 @@ def m21_part_to_agnostic(part, part_idx):
         tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
         measure_idx = agnostic[pos].measure_idx
         event_idx = agnostic[pos].event_idx
-        tuplet_record = AgnosticRecord(tuplet_str, 0, measure_idx, event_idx, part_idx)
-        over_record = AgnosticRecord('>', 0, measure_idx, event_idx, part_idx)
+        tuplet_record = MusicSeqRecord(tuplet_str, 0, measure_idx, event_idx, part_idx)
+        over_record = MusicSeqRecord('>', 0, measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
 
@@ -360,7 +360,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
                 pass
         l = interleaved[-1]
         interleaved.append(
-            AgnosticRecord('barline.return-to-top', 0, l.measure_idx, l.event_idx, l.part_idx)
+            MusicSeqRecord('barline.return-to-top', 0, l.measure_idx, l.event_idx, l.part_idx)
             )
 
     # get locations of linebreaks in each part
@@ -395,7 +395,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     #         interleaved += agnostic_parts[j][start:end]
     #     l = interleaved[-1]
     #     interleaved.append(
-    #         AgnosticRecord('barline.return-to-top', l.measure_idx, l.event_idx, l.part_idx)
+    #         MusicSeqRecord('barline.return-to-top', l.measure_idx, l.event_idx, l.part_idx)
     #         )
 
     if just_tokens:
