@@ -298,7 +298,7 @@ def m21_part_to_agnostic(part, part_idx):
                 sb.add_record(f'barline.{e.type}')
 
         # at the end of every measure, add a bar if there isn't one already
-        if not 'barline' in sb.records[-1].agnostic_item:
+        if not 'barline' in sb.records[-1].music_element:
             sb.add_record(f'barline.regular')
 
     # handle tuplet records by putting in tuplet indicators
@@ -330,7 +330,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     # remove things specified in remove parameter
     if remove:
         agnostic_parts = [
-            [x for x in part if not x.agnostic_item in remove]
+            [x for x in part if not x.music_element in remove]
             for part
             in agnostic_parts
         ]
@@ -339,7 +339,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     if not interleave:
         all_parts_concat = [item for sublist in agnostic_parts for item in sublist]
         if just_tokens:
-            return [x.agnostic_item for x in all_parts_concat]
+            return [x.music_element for x in all_parts_concat]
         return all_parts_concat
 
     last_measure = 1 + max([p[-1].measure_idx for p in agnostic_parts])
@@ -365,14 +365,14 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
 
     # get locations of linebreaks in each part
     # staff_break_points = [
-    #     [0] + [i for i, j in enumerate(part) if j.agnostic_item == 'lineBreak']
+    #     [0] + [i for i, j in enumerate(part) if j.music_element == 'lineBreak']
     #     for part
     #     in agnostic_parts
     # ]
 
     # # get locations of barlines in each part
     # bar_break_points = [
-    #     [0] + [i for i, j in enumerate(part) if 'barline' in j.agnostic_item]
+    #     [0] + [i for i, j in enumerate(part) if 'barline' in j.music_element]
     #     for part
     #     in agnostic_parts
     # ]
@@ -399,7 +399,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     #         )
 
     if just_tokens:
-        interleaved = [x.agnostic_item for x in interleaved]
+        interleaved = [x.music_element for x in interleaved]
 
     return interleaved
 
@@ -443,4 +443,4 @@ if __name__ == '__main__':
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
         agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
-        all_tokens.update([x.agnostic_item for x in agnostic])
+        all_tokens.update([x.music_element for x in agnostic])

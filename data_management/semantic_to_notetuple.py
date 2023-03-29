@@ -45,27 +45,27 @@ def m21_parts_to_notetuple(parts):
             if type(e) == m21.note.Note:
                 duration = e.duration.quarterLength
                 name = e.pitch.name
-                sb.add_record((name, delta, duration))
+                sb.add_record((name, delta, duration, sb.part_idx))
             elif type(e) == m21.note.Rest:
                 duration = e.duration.quarterLength
                 name = e.name
-                sb.add_record((name, delta, duration))
+                sb.add_record((name, delta, duration, sb.part_idx))
             elif type(e) == m21.bar.Barline:
                 name = e.type
-                sb.add_record((name, delta, 0))
+                sb.add_record((name, delta, 0, sb.part_idx))
             elif type(e) == m21.dynamics.Dynamic:
                 name = e.value
-                sb.add_record((name, delta, 0))
+                sb.add_record((name, delta, 0, sb.part_idx))
             elif type(e) == m21.chord.Chord:
                 for chord_idx, note in enumerate(e.notes):
                     duration = e.duration.quarterLength
                     name = note.name
                     note_delta = delta if chord_idx == len(e.notes) + 1 else 0
-                    sb.add_record((name, note_delta, duration), chord_idx=chord_idx)          
+                    sb.add_record((name, note_delta, duration, sb.part_idx), chord_idx=chord_idx)          
             else:
                 duration = 0
                 name = e.name
-                sb.add_record((name, delta, duration))     
+                sb.add_record((name, delta, duration, sb.part_idx))     
 
     return sb.records
 
@@ -100,4 +100,4 @@ if __name__ == '__main__':
         #     all_tokens.update(agnostic)
         agnostic = m21_parts_to_notetuple(parts)
         assert False
-        # all_tokens.update([x.agnostic_item for x in agnostic])
+        # all_tokens.update([x.music_element for x in agnostic])

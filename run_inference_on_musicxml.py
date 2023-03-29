@@ -26,7 +26,7 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style='
 
         # get the single m21 element referred to by this token
         selected_element = all_measures[record.part_idx][record.measure_idx][record.event_idx]
-        token_type = record.agnostic_item.split('.')[0]
+        token_type = record.music_element.split('.')[0]
 
         # how do we handle chords? if it's a chord, then record.chord_idx will be non-zero:
         # choose the note in that chord corresponding to the relevant chord idx
@@ -115,8 +115,8 @@ def run_inference_and_color_streams(errored_streams, model, v, threshold, correc
         else:
             # process further if we need to compare with ground truth
             
-            vectorized_errored = v.words_to_vec([x.agnostic_item for x in agnostic_records_errored[i]])
-            vectorized_correct = v.words_to_vec([x.agnostic_item for x in agnostic_records_correct[i]])
+            vectorized_errored = v.words_to_vec([x.music_element for x in agnostic_records_errored[i]])
+            vectorized_correct = v.words_to_vec([x.music_element for x in agnostic_records_correct[i]])
 
             # get targets (ground truth)
             _, targets = error_generator.add_errors_to_seq(vectorized_errored, vectorized_correct)
