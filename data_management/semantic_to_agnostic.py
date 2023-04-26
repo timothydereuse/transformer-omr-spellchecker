@@ -6,6 +6,7 @@ from collections import namedtuple
 from itertools import groupby
 from data_management.seq_builder import SequenceBuilder, MusicSeqRecord, sorting_order
 
+
 def resolve_duration(d):
     dots = d.dots
 
@@ -54,8 +55,14 @@ def resolve_note(e, current_clef, separate_sides=False):
     if(accid_str):
         left_of_note.extend([f'accid.{accid_str}.pos{p}'])
 
+    # get stem direction, avoiding "undefined"
+    stem = e.stemDirection
+    if not (stem in ['up', 'down']):
+        # staff position 6 is the middle line. at that or above, stem goes down
+        stem = 'down' if p >= 6 else 'up'
+
     # add actual note to result list
-    at_note.extend([f'{dur_name}.{b}.{e.stemDirection}.pos{p}'])
+    at_note.extend([f'{dur_name}.{b}.{stem}.pos{p}'])
 
     # then add dot
     if dots > 0:
@@ -417,13 +424,13 @@ def m21_streams_to_agnostic(mus_xmls, remove=None, transpose=None, interleave=Tr
 if __name__ == '__main__':
     from collections import Counter
 
-    # files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
-    #         r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
+    files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
+            r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
 
-    xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
-    files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
+    # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
+    # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    # files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.mxl"]
+    # files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.musicxml"]
 
     all_tokens = Counter()
 
@@ -444,3 +451,6 @@ if __name__ == '__main__':
         #     all_tokens.update(agnostic)
         agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
         all_tokens.update([x.music_element for x in agnostic])
+
+        # els = [x.music_element for x in agnostic]
+        # asdf = [print(f'\\cellcolorLBLBLBWhiteRBRBRB  \\textttLBLBLB{x}RBRBRB \\\\') for x in els]

@@ -38,7 +38,7 @@ def build_vocab(all_keys, out_fname, quartets_root, interleave=True):
     v = vocab.Vocabulary(all_tokens)
     v.save_vocabulary(out_fname)
 
-# then parse them again to actually save them. yeah, yeah, this is not great
+# then parse them again to actually save them.
 def make_hdf5(dset_path, keys, v, quartets_root, train_val_test_split=True, split_by_keys=False, transpose=False, interleave=True):
     with h5py.File(dset_path, 'a') as f:
         f.attrs['beat_multiplier'] = beat_multiplier

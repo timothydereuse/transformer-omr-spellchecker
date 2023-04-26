@@ -7,12 +7,13 @@ class Vocabulary(object):
     SEQ_SOS = 2
     SEQ_EOS = 3
 
-    wtv = {}
-    vtw = {}
-
-    num_words = 0
-
     def __init__(self, c=None, load_from_file=None):
+
+        self.wtv = {}
+        self.vtw = {}
+
+        self.num_words = 0
+
         if load_from_file:
             self.load_vocabulary(load_from_file)
         elif c:
@@ -25,7 +26,7 @@ class Vocabulary(object):
             self.wtv['SEQ_EOS'] = self.SEQ_EOS
             self.vtw[self.SEQ_EOS] = 'SEQ_EOS'
             self.num_words = 4
-            self.update(c)
+            self.update(c, min_freq=1)
     
     def update(self, c, min_freq=5):
         for w in sorted(c.keys(), key=lambda x: c[x], reverse=True):
@@ -67,7 +68,12 @@ class Vocabulary(object):
         return res
 
     def vec_to_words(self, vecs):
-        res = [self.vtw[x] for x in vecs]
+        res = []
+        for vec in vecs:
+            try:
+                res.append(self.vtw[vec])
+            except KeyError:
+                res.append(self.vtw[self.SEQ_UNK])
         return res
 
 
