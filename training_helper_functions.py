@@ -8,10 +8,11 @@ from torch.utils.data import DataLoader
 from collections import namedtuple
 import GPUtil
 
+
 def get_cuda_info():
     num_gpus = torch.cuda.device_count()
     if torch.cuda.is_available():
-        logging.info(f'found {num_gpus} gpus')
+        logging.info(f"found {num_gpus} gpus")
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
@@ -32,26 +33,39 @@ def make_test_dataloaders(params, kwargs_dict):
     # make dloaders for all test datasets identified in parameters file
 
     all_dset_groups = []
-    EndGroup = namedtuple('TestGroup', 'dset dloader name with_targets')
+    EndGroup = namedtuple("TestGroup", "dset dloader name with_targets")
 
     for test_set in params.test_sets:
         new_kwargs = dict(kwargs_dict)
 
-        if test_set['with_targets']:
-            new_kwargs['dset_fname'] = params.dset_testing_path
+        if test_set["with_targets"]:
+            new_kwargs["dset_fname"] = params.dset_testing_path
         else:
-            new_kwargs['dset_fname'] = params.dset_path
+            new_kwargs["dset_fname"] = params.dset_path
 
-        test_dset = dl.AgnosticOMRDataset(base=test_set['base'], **new_kwargs)
+        test_dset = dl.AgnosticOMRDataset(base=test_set["base"], **new_kwargs)
         dloader_omr = DataLoader(test_dset, params.batch_size, pin_memory=True)
-        all_dset_groups.append(EndGroup(test_dset, dloader_omr, test_set['base'], test_set['with_targets']))
+        all_dset_groups.append(
+            EndGroup(test_dset, dloader_omr, test_set["base"], test_set["with_targets"])
+        )
     return all_dset_groups
 
 
-def run_epoch(model, dloader, optimizer, criterion, example_generator, device='cpu',
-              train=True, log_each_batch=False, clip_grad_norm=0.5, test_results=None,
-              autoregressive=False, batch_includes_training_data=False):
-    '''
+def run_epoch(
+    model,
+    dloader,
+    optimizer,
+    criterion,
+    example_generator,
+    device="cpu",
+    train=True,
+    log_each_batch=False,
+    clip_grad_norm=0.5,
+    test_results=None,
+    autoregressive=False,
+    batch_includes_training_data=False,
+):
+    """
     Performs a training or validation epoch.
     @model: the model to use.
     @dloader: the dataloader to fetch data from.
@@ -69,9 +83,9 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         tuple of (input, target), so use the targets instead of creating synthetic
         errored data for training.
 
-    '''
+    """
     num_seqs_used = 0
-    total_loss = 0.
+    total_loss = 0.0
 
     for i, dloader_output in enumerate(dloader):
         batch = dloader_output[0]
@@ -96,7 +110,7 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
             output = model(inp).squeeze(-1)
 
         loss = criterion(output, target)
-        
+
         if test_results:
             test_results.update(output, target)
 
@@ -110,18 +124,18 @@ def run_epoch(model, dloader, optimizer, criterion, example_generator, device='c
         num_seqs_used += target.numel()
 
         if log_each_batch:
-            log_loss = (batch_loss / target.numel())
-            print(f'    batch {i}, loss {log_loss:2.7e}')
-        
+            log_loss = batch_loss / target.numel()
+            print(f"    batch {i}, loss {log_loss:2.7e}")
+
         if i == 0:
             example_dict = {
-            'orig': batch if not batch_includes_training_data else inp,
-            'input': inp,
-            'target': target,
-            'output': output, 
-            'batch_names': batch_metadata[2],
-            'batch_offsets': batch_metadata[1],
-            'batch_file_inds': batch_metadata[0]
+                "orig": batch if not batch_includes_training_data else inp,
+                "input": inp,
+                "target": target,
+                "output": output,
+                "batch_names": batch_metadata[2],
+                "batch_offsets": batch_metadata[1],
+                "batch_file_inds": batch_metadata[0],
             }
 
     mean_loss = total_loss / max(1, num_seqs_used)
@@ -142,12 +156,14 @@ def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_re
             log_each_batch=False,
             test_results=test_results,
             batch_includes_training_data=end_train_data_mode,
-            **run_epoch_kwargs
+            **run_epoch_kwargs,
         )
-        
+
     # get actual thresholds for given recalls
     sig_tst_outputs = test_results.sigmoid_outputs()
-    tst_threshes = ttm.find_thresh_for_given_recalls(sig_tst_outputs, test_results.targets, target_recalls)
+    tst_threshes = ttm.find_thresh_for_given_recalls(
+        sig_tst_outputs, test_results.targets, target_recalls
+    )
     mcc, f1_thresh = ttm.multilabel_thresholding(sig_tst_outputs, test_results.targets)
     tst_threshes.append(f1_thresh)
     test_results.threshes = tst_threshes
@@ -156,18 +172,21 @@ def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_re
     for k in res_stats:
         for k2 in res_stats[k]:
             res_stats[k][k2] = np.round(res_stats[k][k2], 4)
-    res_stats['average_precision'] = test_results.average_precision()
-    res_stats['normalized_recall'] = ttm.normalized_recall(test_results.outputs, test_results.targets)
-    res_stats['threshes'] = tst_threshes
-    res_stats['max_mcc'] = mcc
+    res_stats["average_precision"] = test_results.average_precision()
+    res_stats["normalized_recall"] = ttm.normalized_recall(
+        test_results.outputs, test_results.targets
+    )
+    res_stats["threshes"] = tst_threshes
+    res_stats["max_mcc"] = mcc
 
     return res_stats, tst_exs, test_results
 
 
 def get_nice_results_string(end_name, res_stats):
 
-    result_string = (''
-        f'{end_name} STATS:\n'
+    result_string = (
+        ""
+        f"{end_name} STATS:\n"
         f'{end_name} threshes:                    {res_stats["threshes"]}\n'
         f'{end_name}_precision:                   {res_stats["precision"]} | \n'
         f'{end_name}_recall:                      {res_stats["recall"]} | \n'
@@ -181,7 +200,8 @@ def get_nice_results_string(end_name, res_stats):
 
     return result_string
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     from data_augmentation import error_gen_logistic_regression as err_gen
     import agnostic_omr_dataloader as dl
@@ -189,11 +209,13 @@ if __name__ == '__main__':
     from models.LSTUT_model import LSTUT
     import data_management.vocabulary as vocab
 
-    if not any([type(x) is logging.StreamHandler for x in logging.getLogger().handlers]):
+    if not any(
+        [type(x) is logging.StreamHandler for x in logging.getLogger().handlers]
+    ):
         logging.getLogger().addHandler(logging.StreamHandler())
 
-    print('making vocabulary and dataset')
-    v = vocab.Vocabulary(load_from_file='./data_management/vocab.txt')
+    print("making vocabulary and dataset")
+    v = vocab.Vocabulary(load_from_file="./data_management/vocab.txt")
     dset = dl.AgnosticOMRDataset(
         base=None,
         dset_fname="./processed_datasets/quartets_felix_omr_agnostic.h5",
@@ -209,15 +231,15 @@ if __name__ == '__main__':
         vocabulary=v,
     )
 
-    print('making error generator')
+    print("making error generator")
     error_generator = err_gen.ErrorGenerator(
         smoothing=1,
         simple=False,
         simple_error_rate=0.05,
-        models_fpath=('./data_augmentation/quartet_omr_error_models.joblib')
+        models_fpath=("./data_augmentation/quartet_omr_error_models.joblib"),
     )
 
-    print('testing dataloader')
+    print("testing dataloader")
     dload = DataLoader(dset, batch_size=3)
     dload_test = DataLoader(dset_test, batch_size=3)
     for i, batch in enumerate(dload):
@@ -228,27 +250,30 @@ if __name__ == '__main__':
             break
 
     lstut_settings = {
-            "seq_length": dset.seq_length,
-            "d_model": 256,
-            "output_feats": 1,
-            "lstm_layers": 2,
-            "tf_layers": 1,
-            "tf_heads": 1,
-            "tf_depth": 2,
-            "hidden_dim": 32,
-            "ff_dim": 32,
-            "dropout": 0.1,
-            "vocab_size": v.num_words
-        }
+        "seq_length": dset.seq_length,
+        "d_model": 256,
+        "output_feats": 1,
+        "lstm_layers": 2,
+        "tf_layers": 1,
+        "tf_heads": 1,
+        "tf_depth": 2,
+        "hidden_dim": 32,
+        "ff_dim": 32,
+        "dropout": 0.1,
+        "vocab_size": v.num_words,
+    }
 
-    print('defining model')
+    print("defining model")
     model = LSTUT(**lstut_settings)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
+    criterion = torch.nn.BCEWithLogitsLoss(reduction="mean")
 
-    print('running epoch')
-    loss, exs = run_epoch(model, dload, optimizer, criterion, error_generator, log_each_batch=True)
+    print("running epoch")
+    loss, exs = run_epoch(
+        model, dload, optimizer, criterion, error_generator, log_each_batch=True
+    )
 
-    print('running test epoch')
-    loss, exs = run_epoch(model, dload_test, optimizer, criterion, error_generator, log_each_batch=True)
-
+    print("running test epoch")
+    loss, exs = run_epoch(
+        model, dload_test, optimizer, criterion, error_generator, log_each_batch=True
+    )

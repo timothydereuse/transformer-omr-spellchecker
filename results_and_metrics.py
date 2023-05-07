@@ -7,7 +7,11 @@ from torch.utils.data import DataLoader
 import model_params as params
 from importlib import reload
 import data_management.vocabulary as vocab
-from sklearn.metrics import precision_recall_curve, matthews_corrcoef, average_precision_score
+from sklearn.metrics import (
+    precision_recall_curve,
+    matthews_corrcoef,
+    average_precision_score,
+)
 
 reload(params)
 reload(po)
@@ -17,29 +21,29 @@ def test_results(output, target, results_dict, threshold):
     output = output.cpu().detach().numpy()
     target = target.cpu().detach().numpy()
 
-    predictions = (output > threshold)
+    predictions = output > threshold
 
-    for i, cat in enumerate(['replace', 'insert', 'delete']):
-        cat_preds = predictions[:, :, i].reshape(-1).astype('bool')
-        cat_target = target[:, :, i].reshape(-1).astype('bool')
+    for i, cat in enumerate(["replace", "insert", "delete"]):
+        cat_preds = predictions[:, :, i].reshape(-1).astype("bool")
+        cat_target = target[:, :, i].reshape(-1).astype("bool")
 
         t_pos = (cat_preds & cat_target).sum()
-        results_dict[cat]['t_pos'].append(t_pos)
+        results_dict[cat]["t_pos"].append(t_pos)
 
         t_neg = (~cat_preds & ~cat_target).sum()
-        results_dict[cat]['t_neg'].append(t_neg)
+        results_dict[cat]["t_neg"].append(t_neg)
 
         f_pos = (cat_preds & ~cat_target).sum()
-        results_dict[cat]['f_pos'].append(f_pos)
+        results_dict[cat]["f_pos"].append(f_pos)
 
         f_neg = (~cat_preds & cat_target).sum()
-        results_dict[cat]['f_neg'].append(f_neg)
+        results_dict[cat]["f_neg"].append(f_neg)
 
     return results_dict
 
 
 def precision_recall(inps, targets, threshold=0.5):
-    thresh_predictions = (inps > threshold)
+    thresh_predictions = inps > threshold
     tru_pos = np.logical_and(thresh_predictions, targets).sum()
     pred_pos = thresh_predictions.sum()
     targ_pos = targets.sum()
@@ -73,14 +77,13 @@ def find_thresh_for_given_recall(output, target, num_trials=10000, target_recall
 def find_thresh_for_given_recalls(output, target, target_recalls, num_trials=1000):
     return [
         find_thresh_for_given_recall(output, target, num_trials, x)
-        for x
-        in target_recalls
+        for x in target_recalls
     ]
 
 
 def f_measure(inps, targets, threshold=0.5, beta=1):
     beta_squared = beta * beta
-    thresh_predictions = (inps > threshold)
+    thresh_predictions = inps > threshold
     tru_pos = np.logical_and(thresh_predictions, targets).sum()
     pred_pos = thresh_predictions.sum()
     targ_pos = targets.sum()
@@ -88,7 +91,11 @@ def f_measure(inps, targets, threshold=0.5, beta=1):
     if pred_pos > 0 and targ_pos > 0 and tru_pos > 0:
         precision = tru_pos / pred_pos
         recall = tru_pos / targ_pos
-        F1 = (1 + beta_squared) * (precision * recall) / ((precision * beta_squared) + recall)
+        F1 = (
+            (1 + beta_squared)
+            * (precision * recall)
+            / ((precision * beta_squared) + recall)
+        )
     else:
         F1 = 0
 
@@ -101,7 +108,7 @@ def matthews_correlation(output, target, threshold=0.5):
         target = target.cpu().detach().numpy()
     output = output.reshape(-1)
     target = target.reshape(-1)
-    thresh_predictions = (output > threshold)
+    thresh_predictions = output > threshold
     mcc = matthews_corrcoef(thresh_predictions, target)
     return mcc
 
@@ -151,13 +158,12 @@ def normalized_recall(output, target):
 
 
 class TestResults(object):
-
     def __init__(self, threshes, target_recalls):
         self.threshes = threshes
         self.target_recalls = target_recalls + [0]
         self.outputs = np.array([])
         self.targets = np.array([])
-        self.results_dict = {'t_pos': [], 't_neg': [], 'f_pos': [], 'f_neg': []}
+        self.results_dict = {"t_pos": [], "t_neg": [], "f_pos": [], "f_neg": []}
 
     def update(self, output, target):
 
@@ -169,20 +175,20 @@ class TestResults(object):
 
     def calculate_stats(self):
         categories = [
-            'precision',
-            'recall',
-            'true negative rate',
-            'prop_positive_predictions',
-            'prop_positive_targets',
-            'mcc'
-            ]
+            "precision",
+            "recall",
+            "true negative rate",
+            "prop_positive_predictions",
+            "prop_positive_targets",
+            "mcc",
+        ]
 
-        r = {x:{} for x in categories}
+        r = {x: {} for x in categories}
         for i, t in enumerate(self.threshes):
             thresh_res = self.calculate_stats_for_thresh(t)
             for k in thresh_res.keys():
                 target_recall = self.target_recalls[i]
-                r[k][target_recall] = (thresh_res[k])
+                r[k][target_recall] = thresh_res[k]
 
         return r
 
@@ -191,11 +197,11 @@ class TestResults(object):
         return sigmoid(self.outputs)
 
     def calculate_stats_for_thresh(self, thresh):
-        
-        predictions = (self.sigmoid_outputs() > thresh)
 
-        cat_preds = predictions.reshape(-1).astype('bool')
-        cat_target = self.targets.reshape(-1).astype('bool')
+        predictions = self.sigmoid_outputs() > thresh
+
+        cat_preds = predictions.reshape(-1).astype("bool")
+        cat_target = self.targets.reshape(-1).astype("bool")
 
         t_pos = (cat_preds & cat_target).sum()
 
@@ -209,17 +215,19 @@ class TestResults(object):
         prop_positive_targets = np.sum(cat_target) / len(cat_target)
 
         r = {}
-        r['precision'] = t_pos / (t_pos + f_pos) if (t_pos + f_pos) > 0 else 0
-        r['recall'] = t_pos / (t_pos + f_neg) if (t_pos + f_neg) > 0 else 0
-        r['true negative rate'] = t_neg / (t_neg + f_pos) if (t_neg + f_pos) > 0 else 0
-        r['prop_positive_predictions'] = prop_positive_predictions
-        r['prop_positive_targets'] = prop_positive_targets
-        r['mcc'] = matthews_correlation(cat_preds, cat_target, thresh)
+        r["precision"] = t_pos / (t_pos + f_pos) if (t_pos + f_pos) > 0 else 0
+        r["recall"] = t_pos / (t_pos + f_neg) if (t_pos + f_neg) > 0 else 0
+        r["true negative rate"] = t_neg / (t_neg + f_pos) if (t_neg + f_pos) > 0 else 0
+        r["prop_positive_predictions"] = prop_positive_predictions
+        r["prop_positive_targets"] = prop_positive_targets
+        r["mcc"] = matthews_correlation(cat_preds, cat_target, thresh)
         return r
 
     def make_pr_curve(self):
         # necessary to downsample PR graphs because wandb only does graphs of 10000 pts
-        precision, recall, thresholds = precision_recall_curve(self.targets, self.outputs)
+        precision, recall, thresholds = precision_recall_curve(
+            self.targets, self.outputs
+        )
         # downsample_amt = (len(precision) // 10001) + 1
         # precision = precision[::downsample_amt]
         # recall = recall[::downsample_amt]
@@ -231,7 +239,7 @@ class TestResults(object):
         return average_precision_score(self.targets, self.outputs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     num_trials = 100
     from sklearn.metrics import PrecisionRecallDisplay
     import matplotlib.pyplot as plt
@@ -244,12 +252,16 @@ if __name__ == '__main__':
         # targets = torch.round(outputs)
         tr.update(outputs, targets)
 
-    asdf = find_thresh_for_given_recall(torch.Tensor(tr.outputs), torch.Tensor(tr.targets), target_recall=0.33)
+    asdf = find_thresh_for_given_recall(
+        torch.Tensor(tr.outputs), torch.Tensor(tr.targets), target_recall=0.33
+    )
 
     res = tr.calculate_stats()
     p, r, t = tr.make_pr_curve()
 
-    display = PrecisionRecallDisplay.from_predictions(tr.targets, tr.outputs, name="TestData")
+    display = PrecisionRecallDisplay.from_predictions(
+        tr.targets, tr.outputs, name="TestData"
+    )
     _ = display.ax_.set_title("2-class Precision-Recall curve")
     # plt.show()
 
