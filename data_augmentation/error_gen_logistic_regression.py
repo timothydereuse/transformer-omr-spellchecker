@@ -311,9 +311,9 @@ if __name__ == "__main__":
     print('adding errors to entire batch...')
     for i in range(1):
         print(i)
-        e.simple = True
-        X, Y = e.add_errors_to_batch(batch.numpy())
-        print(X.shape, Y.shape)
+        # e.simple = True
+        # X, Y = e.add_errors_to_batch(batch.numpy())
+        # print(X.shape, Y.shape)
         e.simple = False
         X, Y = e.add_errors_to_batch(batch.numpy())
         print(X.shape, Y.shape)

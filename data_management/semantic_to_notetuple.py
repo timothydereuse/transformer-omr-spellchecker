@@ -7,17 +7,21 @@ from itertools import groupby
 from data_management.seq_builder import SequenceBuilder, MusicSeqRecord, sorting_order
 
 
-Notetuple = namedtuple('Notetuple', ['name', 'delta', 'duration', 'part_idx', 'start_time', 'end_time'])
-MIDILike = namedtuple('MIDILike', ['name', 'part_idx', 'delta', 'time', 'on_off_instant'])
+Notetuple = namedtuple(
+    "Notetuple", ["name", "delta", "duration", "part_idx", "start_time", "end_time"]
+)
+MIDILike = namedtuple(
+    "MIDILike", ["name", "part_idx", "delta", "time", "on_off_instant"]
+)
 
 
-def m21_parts_to_notetuple(parts, sort_by_part=False):
+def m21_parts_to_notetuple(parts, interleaved=True):
 
-    if sort_by_part:
+    if not interleaved:
         result = []
         for i, p in enumerate(parts):
-            processed = m21_parts_to_notetuple([p], sort_by_part=False)
-            tup = Notetuple('next_part', 0, 0, i, 0, 0)
+            processed = m21_parts_to_notetuple([p], interleaved=True)
+            tup = Notetuple("next_part", 0, 0, i, 0, 0)
             rec = MusicSeqRecord(tup, 0, 0, 0, i)
             result.extend([rec] + processed)
         return result
@@ -25,7 +29,9 @@ def m21_parts_to_notetuple(parts, sort_by_part=False):
     sb = SequenceBuilder()
 
     # zip together simultaneous measures
-    part_measures = zip(*[part.getElementsByClass(m21.stream.Measure)[:] for part in parts])
+    part_measures = zip(
+        *[part.getElementsByClass(m21.stream.Measure)[:] for part in parts]
+    )
 
     measure_cumulative_dur = 0
     for measure_idx, measure_group in enumerate(part_measures):
@@ -43,13 +49,17 @@ def m21_parts_to_notetuple(parts, sort_by_part=False):
             m21.layout.PageLayout,
             m21.expressions.TextExpression,
             m21.tempo.MetronomeMark,
-            m21.harmony.ChordSymbol
-            ]
+            m21.harmony.ChordSymbol,
+        ]
 
-        all_elements = [x for x in all_elements if not (type(x[0]) in disallowed_element_types)]
+        all_elements = [
+            x for x in all_elements if not (type(x[0]) in disallowed_element_types)
+        ]
 
         this_measure_dur = measure_group[0].duration.quarterLength
-        sorted_measure = sorted(all_elements, key=lambda x: sorting_order(x[0]), reverse=False)
+        sorted_measure = sorted(
+            all_elements, key=lambda x: sorting_order(x[0]), reverse=False
+        )
 
         measure_offsets = [x[0].offset for x in sorted_measure]
         deltas = np.diff(measure_offsets + [this_measure_dur])
@@ -67,30 +77,32 @@ def m21_parts_to_notetuple(parts, sort_by_part=False):
                 end_time = measure_cumulative_dur + duration + measure_offsets[i]
                 start_time = measure_cumulative_dur + measure_offsets[i]
                 for chord_idx, note in enumerate(e.notes):
-                    name = f'{note.pitch.nameWithOctave}'
+                    name = f"{note.pitch.nameWithOctave}"
                     note_delta = delta if chord_idx == len(e.notes) + 1 else 0
-                    rec = Notetuple(name, note_delta, duration, sb.part_idx, end_time, start_time)
+                    rec = Notetuple(
+                        name, note_delta, duration, sb.part_idx, start_time, end_time
+                    )
                     sb.add_record(rec)
                 continue
 
             if type(e) == m21.note.Note:
                 duration = e.duration.quarterLength
-                name = f'{e.pitch.nameWithOctave}'
+                name = f"{e.pitch.nameWithOctave}"
             elif type(e) == m21.note.Rest:
                 duration = e.duration.quarterLength
                 name = e.name
             elif type(e) in [m21.bar.Barline, m21.bar.Repeat]:
-                name = f'bar_{e.type}'
+                name = f"bar_{e.type}"
                 duration = 0
             elif type(e) == m21.dynamics.Dynamic:
                 name = e.value
                 duration = 0
             elif type(e) == m21.key.KeySignature:
                 duration = 0
-                name = f'keysig_{e.sharps}fifths'
+                name = f"keysig_{e.sharps}fifths"
             elif type(e) == m21.meter.TimeSignature:
                 duration = 0
-                name = f'timesig_{e.ratioString}'
+                name = f"timesig_{e.ratioString}"
             else:
                 duration = 0
                 name = e.name
@@ -98,7 +110,7 @@ def m21_parts_to_notetuple(parts, sort_by_part=False):
             end_time = measure_cumulative_dur + duration + measure_offsets[i]
             start_time = measure_cumulative_dur + measure_offsets[i]
 
-            rec = Notetuple(name, delta, duration, sb.part_idx, end_time, start_time)
+            rec = Notetuple(name, delta, duration, sb.part_idx, start_time, end_time)
             sb.add_record(rec)
 
         measure_cumulative_dur += this_measure_dur
@@ -112,17 +124,20 @@ def notetuple_to_MIDILike(records):
     for r in records:
         e = r.music_element
         if e.duration == 0:
-            intermed.append([r, e.start_time, 'instant'])
+            intermed.append([r, e.start_time, "instant"])
         else:
-            intermed.append([r, e.start_time, 'on'])
-            intermed.append([r, e.end_time, 'off'])
+            intermed.append([r, e.start_time, "on"])
+            intermed.append([r, e.end_time, "off"])
 
-    sorted_recs = sorted(intermed, key=lambda x: (
-        x[1],
-        x[2],
-        x[0].music_element.part_idx,
-        x[0].music_element.name,
-        ))
+    sorted_recs = sorted(
+        intermed,
+        key=lambda x: (
+            x[1],
+            x[2],
+            x[0].music_element.part_idx,
+            x[0].music_element.name,
+        ),
+    )
 
     deltas = np.diff([x[1] for x in sorted_recs])
     deltas = np.concatenate([deltas, [0]])
@@ -138,7 +153,7 @@ def notetuple_to_MIDILike(records):
     return new_records
 
 
-def MIDILike_to_EventLike(records, include_parts=True):
+def MIDILike_to_EventLike(records, include_parts=False):
     event_records = []
     current_state_on = True
     current_part = -1
@@ -148,22 +163,22 @@ def MIDILike_to_EventLike(records, include_parts=True):
         e = r.music_element
 
         if (include_parts == False) and not (current_part == e.part_idx):
-            new_els.append(f'part {e.part_idx}')
+            new_els.append(f"part {e.part_idx}")
             current_part = e.part_idx
 
         if e.delta > 0:
-            new_els.append(f'delta_{e.delta}')
+            new_els.append(f"delta_{e.delta}")
 
-        if (e.on_off_instant == 'off') and current_state_on:
+        if (e.on_off_instant == "off") and current_state_on:
             # switch state to off
-            new_els.append('notes_off')
+            new_els.append("notes_off")
             current_state_on = False
-        elif (e.on_off_instant != 'off') and (not current_state_on):
+        elif (e.on_off_instant == "on") and (not current_state_on):
             # switch state to on
-            new_els.append('notes_on')
+            new_els.append("notes_on")
             current_state_on = True
 
-        main_name = f'{e.name}_{e.part_idx}' if include_parts else e.name
+        main_name = f"{e.name}_{e.part_idx}" if include_parts else e.name
         new_els.append(main_name)
 
         new_recs = [
@@ -177,33 +192,31 @@ def MIDILike_to_EventLike(records, include_parts=True):
 
 def notetuple_string(records):
     els = [x.music_element for x in records]
-    return [
-        f'{x.name}-{x.duration}-{x.delta}'
-        for x in els
-    ]
+    return [f"({x.name}, {x.delta}, {x.duration})" for x in els]
+
 
 def midilike_string(records):
     els = [x.music_element for x in records]
-    return [
-        f'({x.name}-{x.delta}-{x.on_off_instant})'
-        for x in els
-    ]
+    return [f"({x.name}, {x.delta}, {x.on_off_instant})" for x in els]
+
 
 def eventlike_string(records):
     els = [x.music_element for x in records]
     return els
 
-def m21_parts_to_eventlike(parts):
-    x1 = m21_parts_to_notetuple(parts, sort_by_part=True)
+
+def m21_parts_to_eventlike(parts, interleaved):
+    x1 = m21_parts_to_notetuple(parts, interleaved=interleaved)
     x2 = notetuple_to_MIDILike(x1)
     return MIDILike_to_EventLike(x2, include_parts=False)
 
-def m21_parts_to_MIDILike(parts):
-    x1 = m21_parts_to_notetuple(parts, sort_by_part=True)
-    return notetuple_to_MIDILike(x1)
-    
 
-if __name__ == '__main__':
+def m21_parts_to_MIDILike(parts, interleaved):
+    x1 = m21_parts_to_notetuple(parts, interleaved=interleaved)
+    return notetuple_to_MIDILike(x1)
+
+
+if __name__ == "__main__":
     from collections import Counter
 
     # files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
@@ -212,7 +225,7 @@ if __name__ == '__main__':
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    files = [r"C:\Users\tim\Documents\datasets\solo_piano\J S Bach - Air on the G String  Piano solo arr.  from BWV 1068_snippet.mxl"]
+    files = [r"C:\Users\tim\Documents\datasets\solo_piano\gstring_snippet2.mxl"]
 
     all_tokens = Counter()
 
@@ -221,17 +234,17 @@ if __name__ == '__main__':
             parsed_file = m21.converter.parse(fpath)
             parts = list(parsed_file.getElementsByClass(m21.stream.Part))
         except Exception:
-            print(f'parsing {fpath} failed, skipping file')
+            print(f"parsing {fpath} failed, skipping file")
             continue
 
         # part = parts[0].getElementsByClass(m21.stream.Measure)
-        print(f'ntokens {len(all_tokens)}')
+        print(f"ntokens {len(all_tokens)}")
 
         # for p in parts:
         #     agnostic = m21_part_to_agnostic(p)
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
-        records = m21_parts_to_notetuple(parts, sort_by_part=True)
+        records = m21_parts_to_notetuple(parts, interleaved=False)
         midilike_records = notetuple_to_MIDILike(records)
         eventlike_records = MIDILike_to_EventLike(midilike_records, include_parts=False)
         # all_tokens.update([(

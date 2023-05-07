@@ -9,20 +9,20 @@ cleansed_ids_path = r"D:\Documents\datasets\lakh_midi_dataset\cleansed_ids.txt"
 json_key = r"D:\Documents\datasets\lakh_midi_dataset\md5_to_paths.json"
 dset_path = r"./lmd_cleansed.hdf5"
 
-with h5py.File(dset_path, 'a') as f:
-    f.attrs['beat_multiplier'] = params.beat_multiplier
-    train_grp = f.create_group('train')
-    test_grp = f.create_group('test')
-    validate_grp = f.create_group('validate')
+with h5py.File(dset_path, "a") as f:
+    f.attrs["beat_multiplier"] = params.beat_multiplier
+    train_grp = f.create_group("train")
+    test_grp = f.create_group("test")
+    validate_grp = f.create_group("validate")
 
 beat_multiplier = 24
 with open(cleansed_ids_path) as f:
     rows = f.readlines()
-md5s = [x.split(' ')[0] for x in rows]
+md5s = [x.split(" ")[0] for x in rows]
 md5s = list(set(md5s))
 np.random.shuffle(md5s)
 
-MIDINote = namedtuple('midi_note', 'program, start, end, pitch, velocity')
+MIDINote = namedtuple("midi_note", "program, start, end, pitch, velocity")
 
 split_test = np.round(params.test_proportion * len(md5s))
 split_validate = np.round(params.validate_proportion * len(md5s)) + split_test
@@ -30,9 +30,9 @@ split_validate = np.round(params.validate_proportion * len(md5s)) + split_test
 for i, md5 in enumerate(md5s):
 
     if not i % 250:
-        print(f'{i} of {len(md5s)}...')
+        print(f"{i} of {len(md5s)}...")
 
-    fname = rf'{lmd_root}/{md5[0]}/{md5}.mid'
+    fname = rf"{lmd_root}/{md5[0]}/{md5}.mid"
     mid = pm.PrettyMIDI(fname)
 
     notes = []
@@ -41,8 +41,7 @@ for i, md5 in enumerate(md5s):
             continue
         notes += [
             MIDINote(inst.program, n.start, n.end, n.pitch, n.velocity)
-            for n
-            in inst.notes
+            for n in inst.notes
         ]
 
     notes = sorted(notes, key=lambda x: (x.start, x.pitch))
@@ -57,7 +56,7 @@ for i, md5 in enumerate(md5s):
     start_beats = np.round(starts * beat_multiplier)
     end_beats = np.round(ends * beat_multiplier)
 
-    arr = np.zeros([len(notes), 6], dtype='uint16')
+    arr = np.zeros([len(notes), 6], dtype="uint16")
     for i in range(len(notes)):
         # onset, duration, time to next onset, pitch, velocity, program
         n = notes[i]
@@ -71,16 +70,12 @@ for i, md5 in enumerate(md5s):
     onset_diffs = arr[1:, 0] - arr[:-1, 0]
     arr[:-1, 2] = onset_diffs
 
-    with h5py.File(dset_path, 'a') as f:
+    with h5py.File(dset_path, "a") as f:
         if i <= split_test:
-            selected_subgrp = f['test']
+            selected_subgrp = f["test"]
         elif i <= split_validate:
-            selected_subgrp = f['validate']
+            selected_subgrp = f["validate"]
         else:
-            selected_subgrp = f['train']
+            selected_subgrp = f["train"]
 
-        dset = selected_subgrp.create_dataset(
-            name=md5,
-            data=arr,
-            compression='gzip'
-        )
+        dset = selected_subgrp.create_dataset(name=md5, data=arr, compression="gzip")

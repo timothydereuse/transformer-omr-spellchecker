@@ -25,15 +25,15 @@ def resolve_duration(d):
         dur_string = str.lower(d.tuplets[0].durationActual.type)
         is_tuplet = d.tuplets[0].tupletActual[0]
     if d.isGrace and d.slash:
-        dur_string = 'acciaccatura.' + dur_string
+        dur_string = "acciaccatura." + dur_string
     elif d.isGrace and not d.slash:
-        dur_string = 'appoggiatura.' + dur_string 
+        dur_string = "appoggiatura." + dur_string
     return dots, dur_string, is_tuplet
 
 
 def resolve_note(e, current_clef, separate_sides=False):
     res = []
-    
+
     show_accidental = e.pitch.accidental.displayStatus if e.pitch.accidental else None
     accid_str = e.pitch.accidental.name if show_accidental else None
 
@@ -47,45 +47,45 @@ def resolve_note(e, current_clef, separate_sides=False):
     dots, dur_name, is_tuplet = resolve_duration(e.duration)
 
     # get staff position
-    p = e.pitch.diatonicNoteNum - current_clef.lowestLine 
+    p = e.pitch.diatonicNoteNum - current_clef.lowestLine
 
     beams = list(e.beams)
-    b = 'noBeam' if len(beams) == 0 else beams[0].type
+    b = "noBeam" if len(beams) == 0 else beams[0].type
 
-    if(accid_str):
-        left_of_note.extend([f'accid.{accid_str}.pos{p}'])
+    if accid_str:
+        left_of_note.extend([f"accid.{accid_str}.pos{p}"])
 
     # get stem direction, avoiding "undefined"
     stem = e.stemDirection
-    if not (stem in ['up', 'down']):
+    if not (stem in ["up", "down"]):
         # staff position 6 is the middle line. at that or above, stem goes down
-        stem = 'down' if p >= 6 else 'up'
+        stem = "down" if p >= 6 else "up"
 
     # add actual note to result list
-    at_note.extend([f'{dur_name}.{b}.{stem}.pos{p}'])
+    at_note.extend([f"{dur_name}.{b}.{stem}.pos{p}"])
 
     # then add dot
     if dots > 0:
         # duration dots are moved to only be on spaces
         dot_pos = p if (p % 2 == 0) else p + 1
-        right_of_note.extend([f'duration.dot.pos{dot_pos}'])
+        right_of_note.extend([f"duration.dot.pos{dot_pos}"])
 
     # if there's a tie, put it right after or before the note
-    if e.tie and e.tie.type in ['start', 'continue']:
-        right_of_note.extend([f'tie.start.pos{p}'])
+    if e.tie and e.tie.type in ["start", "continue"]:
+        right_of_note.extend([f"tie.start.pos{p}"])
 
-    if e.tie and e.tie.type in ['end', 'continue']:
-        left_of_note.insert(0, f'tie.end.pos{p}')
+    if e.tie and e.tie.type in ["end", "continue"]:
+        left_of_note.insert(0, f"tie.end.pos{p}")
 
     if not separate_sides:
         res = vert_token(left_of_note) + vert_token(at_note) + vert_token(right_of_note)
     else:
         res = (vert_token(left_of_note), vert_token(at_note), vert_token(right_of_note))
-    
+
     return res, is_tuplet
 
 
-def vert_token(glyphs, marker='>'):
+def vert_token(glyphs, marker=">"):
     # adds a given marker between every alternate element in the given list of glyphs,
     # excluding the last one and excluding already present markers
     removed_g = [g for g in glyphs if not g == marker]
@@ -97,12 +97,12 @@ def vert_token(glyphs, marker='>'):
 def resolve_articulations(e, current_clef, glyphs=None):
 
     if type(e) == m21.chord.Chord:
-        is_stem_down = (e.notes[0].stemDirection == 'down')
+        is_stem_down = e.notes[0].stemDirection == "down"
         positions = [n.pitch.diatonicNoteNum - current_clef.lowestLine for n in e.notes]
         p = max(positions) if is_stem_down else min(positions)
         artic_pos = p if (p % 2 == 0) else p + 1
-    else: 
-        is_stem_down = (e.stemDirection == 'down')
+    else:
+        is_stem_down = e.stemDirection == "down"
         p = e.pitch.diatonicNoteNum - current_clef.lowestLine
         artic_pos = p if (p % 2 == 0) else p - 1
 
@@ -115,19 +115,19 @@ def resolve_articulations(e, current_clef, glyphs=None):
         glyphs = []
 
     for articulation in e.articulations:
-        art_name = f'articulation.{articulation.name}.pos{artic_pos}'
+        art_name = f"articulation.{articulation.name}.pos{artic_pos}"
         if is_stem_down:
-            glyphs = glyphs + ['>', art_name]
+            glyphs = glyphs + [">", art_name]
         else:
             # if there's no stem or anything assume stuff should be below the note
-            glyphs = [art_name, '>'] + glyphs
+            glyphs = [art_name, ">"] + glyphs
     return glyphs
 
 
 def resolve_tuplet_record(tuplet_record):
     # replaces runs of the same tuplet value in tuplet record (3 triplets, 5 quintuplets, 7 septuplets, etc)
     # with just a central one
-    tr = {k:tuplet_record[k] for k in tuplet_record.keys() if tuplet_record[k] > 0}
+    tr = {k: tuplet_record[k] for k in tuplet_record.keys() if tuplet_record[k] > 0}
     ks = list(tr.keys())
     to_insert = {}
 
@@ -153,13 +153,13 @@ def resolve_tuplet_record(tuplet_record):
 
 
 def resolve_chord(e, current_clef):
-    is_stem_down = e.notes[0].stemDirection == 'down'
+    is_stem_down = e.notes[0].stemDirection == "down"
     glyph_lists = []
 
     num_notes = len(e.notes)
     # keeps track of which note in the chord is being accessed
     index_trackers = [[], [], []]
-    
+
     # sort notes in chord from lowest to highest
     sorted_notes = sorted(e.notes, key=lambda x: x.pitch.midi, reverse=False)
 
@@ -169,15 +169,15 @@ def resolve_chord(e, current_clef):
 
     for i, x in enumerate(sorted_notes):
         sides, tuplet = resolve_note(x, current_clef, separate_sides=True)
-        temp1 = (['>'] if len(lefts) > 0 and sides[0] else []) + sides[0]
+        temp1 = ([">"] if len(lefts) > 0 and sides[0] else []) + sides[0]
         lefts.extend(temp1)
         index_trackers[0].extend([i for _ in range(len(temp1))])
 
-        temp2 = (['>'] if len(centers) > 0 and sides[1] else []) + sides[1]
+        temp2 = ([">"] if len(centers) > 0 and sides[1] else []) + sides[1]
         centers.extend(temp2)
         index_trackers[1].extend([i for _ in range(len(temp2))])
 
-        temp3 = (['>'] if len(rights) > 0 and sides[2] else []) + sides[2]
+        temp3 = ([">"] if len(rights) > 0 and sides[2] else []) + sides[2]
         rights.extend(temp3)
         index_trackers[2].extend([i for _ in range(len(temp3))])
 
@@ -202,7 +202,7 @@ def m21_part_to_agnostic(part, part_idx):
     sb.part_idx = part_idx
 
     part = part.getElementsByClass(m21.stream.Measure)
-        
+
     agnostic = []
     tuplet_record = {}
     all_clefs = part.flat.getElementsByClass(m21.clef.Clef)
@@ -231,9 +231,9 @@ def m21_part_to_agnostic(part, part_idx):
                 m21.note.Note,
                 m21.chord.Chord,
                 m21.note.Rest,
-                m21.dynamics.Dynamic
-                ]:
-                sb.add_record('>')
+                m21.dynamics.Dynamic,
+            ]:
+                sb.add_record(">")
             last_offset = e.offset
             last_type = type(e)
 
@@ -252,12 +252,12 @@ def m21_part_to_agnostic(part, part_idx):
             elif type(e) == m21.note.Rest:
 
                 dots, dur_name, is_tuplet = resolve_duration(e.duration)
-                sb.add_record(f'rest.{dur_name}')
+                sb.add_record(f"rest.{dur_name}")
                 tuplet_record[len(agnostic)] = is_tuplet
 
                 # add dot at position 5 for all rests that have a dot, which is fairly standard
                 if dots > 0:
-                    sb.add_record('duration.dot.pos5')
+                    sb.add_record("duration.dot.pos5")
 
             # case if the current m21 element is a Chord
             # (must be split into notes and individually processed)
@@ -270,43 +270,43 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case if the current m21 element is a Dynamic marking
             elif type(e) == m21.dynamics.Dynamic:
-                sb.add_record(f'dynamics.{e.value}')
+                sb.add_record(f"dynamics.{e.value}")
 
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
                     position = (p.diatonicNoteNum - current_clef.lowestLine) % 12
-                    sb.add_record(f'accid.{p.accidental.name}.pos{position}')
-                current_key_sig = e 
-            
+                    sb.add_record(f"accid.{p.accidental.name}.pos{position}")
+                current_key_sig = e
+
             # case if the current m21 element is a Time Signature
             elif type(e) == m21.meter.TimeSignature:
                 current_time_sig = e
-                sb.add_record(f'timeSig.{e.ratioString}')
+                sb.add_record(f"timeSig.{e.ratioString}")
 
             # case if the current m21 element is a Clef
             elif issubclass(type(e), m21.clef.Clef):
-                sb.add_record(f'clef.{e.name}')
+                sb.add_record(f"clef.{e.name}")
                 current_clef = current_clef if (e.lowestLine is None) else e
 
             # case where the current m21 element is a systemLayout
             # (must check to be sure it actually makes a new system)
             elif type(e) == m21.layout.SystemLayout and e.isNew:
                 # restate clef and key signature
-                glyphs = [f'lineBreak', f'clef.{current_clef.name}']
+                glyphs = [f"lineBreak", f"clef.{current_clef.name}"]
                 for p in current_key_sig.alteredPitches:
                     position = p.diatonicNoteNum - current_clef.lowestLine - 12
-                    glyphs.append(f'accid.{p.accidental.name}.{position}')
+                    glyphs.append(f"accid.{p.accidental.name}.{position}")
                 for g in glyphs:
                     sb.add_record(g)
 
             # case where the current m21 element is a barline
             elif type(e) == m21.bar.Barline:
-                sb.add_record(f'barline.{e.type}')
+                sb.add_record(f"barline.{e.type}")
 
         # at the end of every measure, add a bar if there isn't one already
-        if not 'barline' in sb.records[-1].music_element:
-            sb.add_record(f'barline.regular')
+        if not "barline" in sb.records[-1].music_element:
+            sb.add_record(f"barline.regular")
 
     # handle tuplet records by putting in tuplet indicators
     insert_tuplet_marks = resolve_tuplet_record(tuplet_record)
@@ -315,31 +315,39 @@ def m21_part_to_agnostic(part, part_idx):
 
     # insert starting from the end to not mess up later indices
     for pos in sorted(list(insert_tuplet_marks.keys()), reverse=True):
-        tuplet_str = f'tuplet.{insert_tuplet_marks[pos]}'
+        tuplet_str = f"tuplet.{insert_tuplet_marks[pos]}"
         measure_idx = agnostic[pos].measure_idx
         event_idx = agnostic[pos].event_idx
         tuplet_record = MusicSeqRecord(tuplet_str, 0, measure_idx, event_idx, part_idx)
-        over_record = MusicSeqRecord('>', 0, measure_idx, event_idx, part_idx)
+        over_record = MusicSeqRecord(">", 0, measure_idx, event_idx, part_idx)
         agnostic.insert(pos, tuplet_record)
         agnostic.insert(pos, over_record)
 
     return agnostic
 
 
-def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
+def m21_parts_to_interleaved_agnostic(
+    parts,
+    remove=None,
+    transpose=None,
+    interleave=True,
+    fallback_num_bars_per_line=8,
+    just_tokens=False,
+):
 
     # get agnostic representation of each part
     if transpose:
-        agnostic_parts = [m21_part_to_agnostic(p.transpose(transpose), i) for i, p in enumerate(parts)]
+        agnostic_parts = [
+            m21_part_to_agnostic(p.transpose(transpose), i) for i, p in enumerate(parts)
+        ]
     else:
-        agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]        
+        agnostic_parts = [m21_part_to_agnostic(p, i) for i, p in enumerate(parts)]
 
     # remove things specified in remove parameter
     if remove:
         agnostic_parts = [
             [x for x in part if not x.music_element in remove]
-            for part
-            in agnostic_parts
+            for part in agnostic_parts
         ]
 
     # return all parts concatenated if no interleave needed
@@ -354,7 +362,7 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     # gets all parts grouped by measure index. nested comprehension to make sure it's a list
     # before groupby's weird ways mess up the iterators
     agnostic_parts_grouped = [
-        [list(group) for key, group in groupby(p, key=lambda t: t.measure_idx)] 
+        [list(group) for key, group in groupby(p, key=lambda t: t.measure_idx)]
         for p in agnostic_parts
     ]
 
@@ -367,8 +375,10 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
                 pass
         l = interleaved[-1]
         interleaved.append(
-            MusicSeqRecord('barline.return-to-top', 0, l.measure_idx, l.event_idx, l.part_idx)
+            MusicSeqRecord(
+                "barline.return-to-top", 0, l.measure_idx, l.event_idx, l.part_idx
             )
+        )
 
     # get locations of linebreaks in each part
     # staff_break_points = [
@@ -411,21 +421,30 @@ def m21_parts_to_interleaved_agnostic(parts, remove=None, transpose=None, interl
     return interleaved
 
 
-def m21_streams_to_agnostic(mus_xmls, remove=None, transpose=None, interleave=True, fallback_num_bars_per_line=8, just_tokens=False):
+def m21_streams_to_agnostic(
+    mus_xmls,
+    remove=None,
+    transpose=None,
+    interleave=True,
+    fallback_num_bars_per_line=8,
+    just_tokens=False,
+):
     outputs = []
     for parsed_file in mus_xmls:
         parts = list(parsed_file.getElementsByClass(m21.stream.Part))
 
-        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
+        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=["+"])
         outputs.append(agnostic)
     return outputs
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from collections import Counter
 
-    files = [r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
-            r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml"]
+    files = [
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
+        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml",
+    ]
 
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
@@ -439,17 +458,17 @@ if __name__ == '__main__':
             parsed_file = m21.converter.parse(fpath)
             parts = list(parsed_file.getElementsByClass(m21.stream.Part))
         except Exception:
-            print(f'parsing {fpath} failed, skipping file')
+            print(f"parsing {fpath} failed, skipping file")
             continue
 
         # part = parts[0].getElementsByClass(m21.stream.Measure)
-        print(f'ntokens {len(all_tokens)}')
+        print(f"ntokens {len(all_tokens)}")
 
         # for p in parts:
         #     agnostic = m21_part_to_agnostic(p)
         #     print(len(agnostic), len(set(agnostic)))
         #     all_tokens.update(agnostic)
-        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=['+'])
+        agnostic = m21_parts_to_interleaved_agnostic(parts, remove=["+"])
         all_tokens.update([x.music_element for x in agnostic])
 
         # els = [x.music_element for x in agnostic]
