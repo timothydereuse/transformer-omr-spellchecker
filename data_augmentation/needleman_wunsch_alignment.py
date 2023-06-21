@@ -99,7 +99,7 @@ def perform_alignment(
     ocr: list[int],
     match_weights: Optional[tuple[int, int]] = None,
     gap_penalties: Union[tuple[int, int], tuple[int, int, int, int], None] = None,
-    bands: Union[float, bool] = False,
+    bands: Optional[float] = None,
     verbose: bool = False,
 ) -> tuple[list[Union[int, str]], list[Union[int, str]], list[str], list[tuple], int]:
     """
@@ -142,9 +142,6 @@ def perform_alignment(
     # handle bands argument: if false, it's 1 - use all bands
     if not bands:
         bands_amt = 1
-    elif type(bands) is bool:
-        prop = 1 - (min(len(transcript), len(ocr)) / max(len(transcript), len(ocr)))
-        bands_amt = prop * 3 + 0.01  # for safety, in case prop is 0
     elif type(bands) is float:
         bands_amt = bands
     else:
