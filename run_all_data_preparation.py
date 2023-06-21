@@ -7,6 +7,7 @@ from data_management.make_agnostic_quartets_hdf5 import make_hdf5, build_vocab
 from data_management.vocabulary import Vocabulary
 import h5py
 import numpy as np
+import os
 
 quartets_root = r"C:\Users\tim\Documents\datasets\just_quartets"
 paired_quartets_root = (
@@ -60,11 +61,20 @@ make_hdf5(
     interleave=interleave,
 )
 
+# ensure that omr vs correct filenames are identical
+correct_quart_path = os.path.join(paired_quartets_root, "correct_quartets")
+omr_quart_path = os.path.join(paired_quartets_root, "omr_quartets")
+cor = set(["".join(x.split(".")[:-1]) for x in os.listdir(correct_quart_path)])
+err = set(["".join(x.split(".")[:-1]) for x in os.listdir(omr_quart_path)])
+assert not (cor.difference(err)), "filenames not synced up cor -> err"
+assert not (err.difference(cor)), "filenames not synced up err -> cor"
+print("filenames checked - correct")
+
 # make intermediate hdf5 of CORRECT / ERROR PAIRED string quartets to later do sequence alignment on
 # (this hdf5 is not actually used in the training process)
 make_hdf5(
     paired_dset_path,
-    ["paired_correct", "paired_omr", "paired_onepass"],
+    ["correct_quartets", "omr_quartets", "onepass_quartets"],
     v=v,
     quartets_root=paired_quartets_root,
     train_val_test_split=False,
@@ -74,26 +84,51 @@ make_hdf5(
 )
 
 with h5py.File(paired_dset_path, "r") as f:
-    correct_fnames = sorted(list(f["paired_correct"].keys()))
-    error_fnames = sorted(list(f["paired_omr"].keys()))
-    error_onepass_fnames = sorted(list(f["paired_onepass"].keys()))
+    correct_fnames = sorted(list(f["correct_quartets"].keys()))
+    error_fnames = sorted(list(f["omr_quartets"].keys()))
 
-    correct_dset = [f["paired_correct"][x][:].astype(np.uint16) for x in correct_fnames]
-    error_dset = [f["paired_omr"][x][:].astype(np.uint16) for x in error_fnames]
+    # this is awful. but i want to go to bed
+    error_onepass_fnames = sorted(list(f["onepass_quartets"].keys()))
+    correct_onepass_fnames = [
+        "correct_" + x.split("onepass_")[1] for x in error_onepass_fnames
+    ]
+
+    correct_dset = [
+        f["correct_quartets"][x][:].astype(np.uint16) for x in correct_fnames
+    ]
+    error_dset = [f["omr_quartets"][x][:].astype(np.uint16) for x in error_fnames]
+
     error_onepass_dset = [
-        f["paired_onepass"][x][:].astype(np.uint16) for x in error_onepass_fnames
+        f["onepass_quartets"][x][:].astype(np.uint16) for x in error_onepass_fnames
+    ]
+    correct_onepass_dset = [
+        f["correct_quartets"][x][:].astype(np.uint16) for x in correct_onepass_fnames
     ]
 
 
-X, Y = get_training_samples(correct_dset, error_dset, correct_fnames)
+X, Y = get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.1)
+print("training samples successfully acquired")
 X = np.array(X).reshape(-1, 1)
-err_gen = ErrorGenerator(labeled_data=[X, Y])
+Y = np.array(Y)
+
+np.save("X.npy", X)
+np.save("Y.npy", Y)
+
+# X = np.load("X.npy")
+# Y = np.load("Y.npy")
+
+num_samples = Y.shape[0]
+new_num_samples = min(250000, num_samples)
+downsample = np.random.choice(num_samples, new_num_samples, replace=False)
+
+err_gen = ErrorGenerator(labeled_data=[X[downsample], Y[downsample]])
 err_gen.save_models(error_generator_fname)
 
+err_gen = ErrorGenerator(models_fpath=error_generator_fname)
 # now, make .h5 file of test sequences
 pms = [
-    (error_dset, error_fnames, "omr"),
-    (error_onepass_dset, error_onepass_fnames, "onepass"),
+    (correct_onepass_dset, error_onepass_dset, error_onepass_fnames, "onepass"),
+    (error_onepass_dset, error_dset, error_fnames, "omr"),
 ]
 
-make_supervised_examples(pms, supervised_targets_fname, err_gen, correct_dset)
+make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.15)

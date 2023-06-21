@@ -62,9 +62,9 @@ def get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.25):
     return X, Y
 
 
-def make_supervised_examples(pms, supervised_targets_fname, err_gen, correct_dset):
+def make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.5):
     for t in pms:
-        target_dset, target_dset_fnames, category = t
+        correct_dset, target_dset, target_dset_fnames, category = t
 
         with h5py.File(supervised_targets_fname, "a") as f:
             f.create_group(category)
@@ -75,7 +75,7 @@ def make_supervised_examples(pms, supervised_targets_fname, err_gen, correct_dse
             correct_seq = correct_dset[ind]
             error_seq = target_dset[ind]
 
-            err, Y = err_gen.add_errors_to_seq(correct_seq, error_seq)
+            err, Y = err_gen.add_errors_to_seq(correct_seq, given_err_seq=error_seq)
             arr = np.stack([err, Y])
 
             with h5py.File(supervised_targets_fname, "a") as f:

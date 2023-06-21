@@ -442,14 +442,14 @@ if __name__ == "__main__":
     from collections import Counter
 
     files = [
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml",
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\omr_quartets\String_Quartet_in_C_minor_D.703__Franz_Schubert_-_Quartettsatz.musicxml",
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\String_Quartet_in_C_minor_D.703__Franz_Schubert_-_Quartettsatz.mxl",
     ]
 
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    # files = [r"C:\Users\tim\Documents\tex\dissertation\score examples\agnostic encoding example 1.musicxml"]
+    # files = [r"C:\Users\tim\Desktop\Untitled.mxl"]
 
     all_tokens = Counter()
 

@@ -34,6 +34,9 @@ class ErrorGenerator(object):
         self.simple_error_rate = simple_error_rate
         self.simple = simple
         self.parallel = parallel
+        self.bands = 0.5
+        self.match_weights = [1, -1]
+        self.gap_penalties = [-2, -2, -1, -1]
         self.simple_probs = [1 / 3, 1 / 3, 1 / 3]
 
         self.error_run_length = (
@@ -230,7 +233,7 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: "O", 1: "~", 2: "+", 3: "-"}
         return "".join(err_to_class[x] for x in labels)
 
-    def add_errors_to_seq(self, inp, given_err_seq=None):
+    def add_errors_to_seq(self, inp, given_err_seq=None, bands=None):
         inp = inp.astype("float32")
 
         seq_len = inp.shape[0]
@@ -255,8 +258,14 @@ class ErrorGenerator(object):
             len(orig_seq) > 0
         ), f"{err_seq} ,{orig_seq} ,{err_record} ,{given_err_seq}"
 
+        bands_amt = bands if bands else self.bands
+
         _, _, r, _, _ = align.perform_alignment(
-            orig_seq, err_seq, match_weights=[3, -2], gap_penalties=[-2, -2, -1, -1]
+            orig_seq,
+            err_seq,
+            match_weights=self.match_weights,
+            gap_penalties=self.gap_penalties,
+            bands=bands_amt,
         )
 
         # put 'deletion' markers in front of entries in alignment record r that record deletions
