@@ -6,25 +6,28 @@
     "save_model_every": 4,
     "save_img_every": 1,
     "max_time_minutes": 600,
-
     "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
     "batch_size": 192,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 16,
-
-    "dset_path": "processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5",
+    "dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
-    "error_model": "processed_datasets/quartet_omr_error_models_big_bymeasure.joblib",
-    "saved_vocabulary": "data_management/vocab_big.txt",
+    "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
+    "saved_vocabulary": "./processed_datasets/vocab_big.txt",
     "error_gen_smoothing": 1,
     "simple_errors": false,
     "errors_parallel": 1,
     "simple_error_rate": 0.2,
-    "target_recalls": [0.8, 0.9, 0.95, 0.975, 0.99],
+    "target_recalls": [
+        0.8,
+        0.9,
+        0.95,
+        0.975,
+        0.99
+    ],
     "use_mcc_loss": false,
-
     "lstut_settings": {
         "d_model": 256,
         "output_feats": 1,
@@ -42,14 +45,28 @@
         "step_size_up": 32,
         "verbose": false
     },
-    "test_sets":
-    [
-        {"base": "omr", "with_targets": true},
-        {"base": "onepass", "with_targets": true},
-        {"base": "test", "with_targets": false}
+    "test_sets": [
+        {
+            "base": "omr",
+            "with_targets": true
+        },
+        {
+            "base": "onepass",
+            "with_targets": true
+        },
+        {
+            "base": "test",
+            "with_targets": false
+        }
     ],
     "param_sweep": [
-        {"simple_errors": true, "simple_error_rate": 0.1},
-        {"simple_errors": true, "simple_error_rate": 0.27}
+        {
+            "simple_errors": true,
+            "simple_error_rate": 0.1
+        },
+        {
+            "simple_errors": true,
+            "simple_error_rate": 0.27
+        }
     ]
 }
