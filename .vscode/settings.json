@@ -1,4 +1,8 @@
 {
     "python.pythonPath": "venv\\Scripts\\python.exe",
-    "workbench.colorTheme": "Dark+ (color blind)"
+    "workbench.colorTheme": "Dark+ (color blind)",
+    "editor.formatOnSave": true,
+    "black-formatter.interpreter": [
+        "python"
+    ]
 }
