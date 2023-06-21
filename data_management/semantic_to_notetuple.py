@@ -28,9 +28,11 @@ def m21_parts_to_notetuple(parts, interleaved=True):
 
     sb = SequenceBuilder()
 
+    stripped_parts = [s.stripTies() for s in parts]
+
     # zip together simultaneous measures
     part_measures = zip(
-        *[part.getElementsByClass(m21.stream.Measure)[:] for part in parts]
+        *[part.getElementsByClass(m21.stream.Measure)[:] for part in stripped_parts]
     )
 
     measure_cumulative_dur = 0
@@ -123,6 +125,8 @@ def notetuple_to_MIDILike(records):
     intermed = []
     for r in records:
         e = r.music_element
+        if e.name == "rest":
+            continue
         if e.duration == 0:
             intermed.append([r, e.start_time, "instant"])
         else:
