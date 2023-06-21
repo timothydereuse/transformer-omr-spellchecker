@@ -4,7 +4,7 @@ from functools import partial
 from numba import njit
 from numba.typed import List as numbaList
 
-default_match_weights = [3, -2]
+default_match_weights = [2, -1]
 default_gap_penalties = [-2, -2, -1, -1]
 
 
@@ -23,22 +23,22 @@ def create_matrix(
     len_a = len(seq_a)
     len_b = len(seq_b)
 
-    mat = np.zeros((len_a, len_b))
-    y_mat = np.zeros((len_a, len_b))
-    x_mat = np.zeros((len_a, len_b))
-    mat_ptr = np.zeros((len_a, len_b))
-    y_mat_ptr = np.zeros((len_a, len_b))
-    x_mat_ptr = np.zeros((len_a, len_b))
+    mat = np.zeros((len_a, len_b), dtype=np.int32)
+    y_mat = np.zeros((len_a, len_b), dtype=np.int32)
+    x_mat = np.zeros((len_a, len_b), dtype=np.int32)
+    mat_ptr = np.zeros((len_a, len_b), dtype=np.int8)
+    y_mat_ptr = np.zeros((len_a, len_b), dtype=np.int8)
+    x_mat_ptr = np.zeros((len_a, len_b), dtype=np.int8)
 
     # establish boundary conditions
     for i in range(len_a):
         mat[i][0] = gap_extend_x * i
-        x_mat[i][0] = -1e100
+        x_mat[i][0] = -np.inf
         y_mat[i][0] = gap_extend_x * i
     for j in range(len_b):
         mat[0][j] = gap_extend_y * j
         x_mat[0][j] = gap_extend_y * j
-        y_mat[0][j] = -1e100
+        y_mat[0][j] = -np.inf
 
     biggest_seq_length = max(len_a, len_b)
 
@@ -47,10 +47,10 @@ def create_matrix(
         proportion = float(i) / len_a
 
         center = int(np.round(proportion * len_b))
-        extend_length = int(np.round(biggest_seq_length * bands))
+        extend_length = int(np.ceil(biggest_seq_length * bands * 0.5))
 
         left_b = max(1, center - extend_length)
-        right_b = min(len_b, extend_length)
+        right_b = min(len_b, center + extend_length)
 
         for j in range(left_b, right_b):
 
@@ -99,9 +99,9 @@ def perform_alignment(
     ocr: list[int],
     match_weights: Optional[tuple[int, int]] = None,
     gap_penalties: Union[tuple[int, int], tuple[int, int, int, int], None] = None,
-    bands: float = 1.0,
+    bands: Union[float, bool] = False,
     verbose: bool = False,
-) -> tuple[list[Union[int, str]], list[Union[int, str]], list[str], int]:
+) -> tuple[list[Union[int, str]], list[Union[int, str]], list[str], list[tuple], int]:
     """
     @match_function must be a function that takes in two strings and returns a single integer:
         a positive integer for a "match," a negative integer for a "mismatch."
@@ -139,6 +139,23 @@ def perform_alignment(
     transcript = transcript + [transcript[-1]]
     ocr = ocr + [ocr[-1]]
 
+    # handle bands argument: if false, it's 1 - use all bands
+    if not bands:
+        bands_amt = 1
+    elif type(bands) is bool:
+        prop = 1 - (min(len(transcript), len(ocr)) / max(len(transcript), len(ocr)))
+        bands_amt = prop * 3 + 0.01  # for safety, in case prop is 0
+    elif type(bands) is float:
+        bands_amt = bands
+    else:
+        raise ValueError(f"incorrect value for bands: {bands}.")
+
+    if verbose:
+        print(
+            f"building matrix with seq. a of length {len(transcript)}, seq. b of length {len(ocr)} \n"
+            f"match weights: {match_weights}, gap penalties: {gap_penalties}, bands amt: {bands_amt}"
+        )
+
     # changing everything to numba's typed list, since python untyped lists will be deprecated
     transcript_numba = numbaList(transcript)
     ocr_numba = numbaList(ocr)
@@ -162,7 +179,7 @@ def perform_alignment(
     ypt = len(ocr) - 1
     mpt = mat_ptr[xpt][ypt]
 
-    # start it off. we are forcibly aligning the final characters. this is not ideal.
+    # start it off. we are forcibly aligning the final characters.
     tra_align += [transcript[xpt]]
     ocr_align += [ocr[ypt]]
     align_record += ["O"] if np.all(transcript[xpt] == ocr[ypt]) else ["~"]
@@ -170,7 +187,7 @@ def perform_alignment(
     # start at bottom-right corner and work way up to top-left
     while xpt > 0 and ypt > 0:
 
-        pt_record += str(int(mpt))
+        pt_record.append((xpt, ypt, mpt))
 
         # case if the current cell is reachable from the diagonal
         if mpt == 0:
@@ -191,7 +208,6 @@ def perform_alignment(
         elif mpt == 1:
             tra_align.append(transcript[xpt - 1])
             ocr_align.append("_")
-            # added_text = str(transcript[xpt - 1]) + ' _'
 
             align_record.append("-")
             mpt = x_mat_ptr[xpt][ypt]
@@ -213,7 +229,6 @@ def perform_alignment(
     # we want to have ended on the very top-left cell (xpt == 0, ypt == 0). if this is not so
     # we need to add the remaining terms from the incomplete sequence.
 
-    # print(xpt, ypt)
     while ypt > 0:
         tra_align.append("_")
         ocr_align.append(ocr[ypt - 1])
@@ -237,20 +252,20 @@ def perform_alignment(
             line = "{} {} {}"
             print(line.format(tra_align[n], ocr_align[n], align_record[n]))
 
-    return tra_align, ocr_align, align_record, total_score
+    return tra_align, ocr_align, align_record, pt_record, total_score
 
 
 if __name__ == "__main__":
 
     seq1 = "The Needleman–Wunsch algorithm is an algorithm used in bioinformatics to align protein or nucleotides sequences. It was an early application of dynamic programming to compare biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
     seq2 = "The Needleman–Wunsch algorithm is an algorithm used to align protein or nucleotide sequences. It was one of the first applications of dynamic programming to the comparison of biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
-    match_weights = [3, -2]
-    gap_penalties = [-1, -1, -1, -1]
+    match_weights = [4, -2]
+    gap_penalties = [-4, -4, -1, -1]
 
     seq1 = list([ord(x) for x in seq1])
     seq2 = list([ord(x) for x in seq2])
 
-    a, b, align_record, score = perform_alignment(
+    a, b, align_record, pt, score = perform_alignment(
         seq1, seq2, match_weights, gap_penalties, bands=0.7, verbose=True
     )
 
@@ -265,3 +280,41 @@ if __name__ == "__main__":
 
     print(sa)
     print(sb)
+
+    # changing everything to numba's typed list, since python untyped lists will be deprecated
+
+    # i = 3
+    # print(correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
+    # a, b, align_record, pt, score = perform_alignment(
+    #     list(correct_dset[i]),
+    #     list(error_dset[i]),
+    #     match_weights,
+    #     gap_penalties,
+    #     bands=0.2,
+    #     verbose=False,
+    # )
+    # print("".join(align_record))
+
+    # transcript_numba = numbaList(list(correct_dset[i]))
+    # ocr_numba = numbaList((error_dset[i]))
+    # match_weights = numbaList(match_weights)
+    # gap_penalties = numbaList(gap_penalties)
+    # mat_ptr, x_mat_ptr, y_mat_ptr, mat = create_matrix(
+    #     transcript_numba, ocr_numba, match_weights, gap_penalties, bands=0.05
+    # )
+
+    # pt = np.concatenate([np.array(pt), [pt[-1]]])
+    # lines = []
+    # for j, r in enumerate(align_record):
+    #     entry_a = "_" if a[j] == "_" else v.vtw[a[j]]
+    #     entry_b = "_" if b[j] == "_" else v.vtw[b[j]]
+    #     line = f"{entry_a:<35} {entry_b:<35} {r} {pt[j][0]} {pt[j][1]} {pt[j][2]}\n"
+    #     lines.append(line)
+
+    # with open(f"test_bands_1_piece{i}.txt", "w") as f:
+    #     f.writelines(lines)
+
+    # plt.plot(pt[:, 0], pt[:, 1])
+    # plt.plot(np.arange(0, np.max(pt)))
+    # plt.show()
+    # added_text = str(transcript[xpt - 1]) + ' _'

@@ -6,8 +6,8 @@ from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
 
 
-def get_training_samples(correct_dset, error_dset, correct_fnames):
-    error_notes = {x: [] for x in ["replace_mod", "insert_mod"]}
+def get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.25):
+    # error_notes = {x: [] for x in ["replace_mod", "insert_mod"]}
 
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
     X = []
@@ -17,16 +17,16 @@ def get_training_samples(correct_dset, error_dset, correct_fnames):
         print(f"aligning {correct_fnames[ind]}...")
         correct_seq = [x for x in correct_dset[ind]]
         error_seq = [x for x in error_dset[ind]]
-        correct_align, error_align, r, score = align.perform_alignment(
+        correct_align, error_align, r, pt, score = align.perform_alignment(
             correct_seq,
             error_seq,
-            match_weights=[3, -2],
+            match_weights=[1, -1],
             gap_penalties=[-2, -2, -1, -1],
+            bands=bands,
         )
 
-        print("".join(r))
-
-        errors = []
+        print("aligned successfully.")
+        print("".join(r[0:100]))
 
         err_to_class = {"O": 0, "~": 1, "+": 2, "-": 3}
         most_recent_correct_note = 0
@@ -42,10 +42,10 @@ def get_training_samples(correct_dset, error_dset, correct_fnames):
             if r[i] == "O":
                 label = f"{c}.0"
             elif r[i] == "~":
-                error_notes["replace_mod"].append(error_note)
+                # error_notes["replace_mod"].append(error_note)
                 label = f"{c}.{error_note}"
             elif r[i] == "+":
-                error_notes["insert_mod"].append(error_note)
+                # error_notes["insert_mod"].append(error_note)
                 label = f"{c}.{error_note}"
             elif r[i] == "-":
                 label = f"{c}.0"
@@ -57,6 +57,8 @@ def get_training_samples(correct_dset, error_dset, correct_fnames):
 
             X.append(sample)
             Y.append(label)
+
+        print(len(X), len(Y))
     return X, Y
 
 
