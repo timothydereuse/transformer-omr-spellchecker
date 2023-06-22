@@ -11,8 +11,8 @@ def get_training_samples(
     correct_dset: np.array,
     error_dset: np.array,
     correct_fnames: list[str],
-    bands: float = 0.25,
-):
+    bands: float = 0.10,
+) -> tuple[list, list]:
     # error_notes = {x: [] for x in ["replace_mod", "insert_mod"]}
 
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
@@ -50,9 +50,11 @@ def get_training_samples(
             elif r[i] == "~":
                 # error_notes["replace_mod"].append(error_note)
                 label = f"{c}.{error_note}"
+                assert error_note != "_"
             elif r[i] == "+":
                 # error_notes["insert_mod"].append(error_note)
                 label = f"{c}.{error_note}"
+                assert error_note != "_"
             elif r[i] == "-":
                 label = f"{c}.0"
 

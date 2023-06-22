@@ -229,13 +229,13 @@ def perform_alignment(
     while ypt > 0:
         tra_align.append("_")
         ocr_align.append(ocr[ypt - 1])
-        align_record.append("-")
+        align_record.append("+")
         ypt -= 1
 
     while xpt > 0:
         ocr_align.append("_")
         tra_align.append(transcript[xpt - 1])
-        align_record.append("+")
+        align_record.append("-")
         xpt -= 1
 
     # reverse all records, since we obtained them by traversing the matrices from the bottom-right
@@ -268,7 +268,6 @@ if __name__ == "__main__":
 
     sa = ""
     sb = ""
-
     for n in range(len(a)):
         # spacing = str(max(len(a[n]), len(b[n])))
         spacing = "1"
@@ -280,17 +279,35 @@ if __name__ == "__main__":
 
     # changing everything to numba's typed list, since python untyped lists will be deprecated
 
-    # i = 3
-    # print(correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
-    # a, b, align_record, pt, score = perform_alignment(
-    #     list(correct_dset[i]),
-    #     list(error_dset[i]),
-    #     match_weights,
-    #     gap_penalties,
-    #     bands=0.2,
-    #     verbose=False,
-    # )
-    # print("".join(align_record))
+    i = 25
+    for i in range(4, 24):
+        print(i, correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
+        a, b, align_record, pt, score = perform_alignment(
+            list(correct_dset[i]),
+            list(error_dset[i]),
+            match_weights,
+            gap_penalties,
+            bands=0.05,
+            verbose=False,
+        )
+        # print("".join(align_record))
+        print(1 - (align_record.count("O") / len(align_record)))
+
+        for position in range(len(align_record)):
+            r = align_record[position]
+            ar = a[position]
+            br = b[position]
+
+            if r == "+":
+                # assert br == "_", (position, r, ar, br)
+                if type(br) is str:
+                    print(position, r, ar, br)
+            if r == "-":
+                # assert ar == "_", (position, r, ar, br)
+                if type(ar) is str:
+                    print(position, r, ar, br)
+
+    list(zip(align_record, a, b))
 
     # transcript_numba = numbaList(list(correct_dset[i]))
     # ocr_numba = numbaList((error_dset[i]))
