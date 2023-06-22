@@ -5,10 +5,12 @@ import data_augmentation.needleman_wunsch_alignment as align
 from scipy.ndimage import uniform_filter1d
 from scipy.special import logit, expit
 import numpy as np
+import numpy.typing as npt
 import torch
+from typing import Optional
 
 
-def rolling_window(a, window):
+def rolling_window(a: npt.NDArray, window: int):
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
@@ -23,12 +25,12 @@ class ErrorGenerator(object):
 
     def __init__(
         self,
-        smoothing=2,
-        simple_error_rate=0.05,
-        parallel=1,
-        simple=False,
-        models_fpath=None,
-        labeled_data=None,
+        smoothing: int = 2,
+        simple_error_rate: float = 0.05,
+        parallel: int = 1,
+        simple: bool = False,
+        models_fpath: Optional[str] = None,
+        labeled_data: Optional[tuple[list, list]] = None,
     ):
         self.smoothing = smoothing
         self.simple_error_rate = simple_error_rate
@@ -124,7 +126,7 @@ class ErrorGenerator(object):
 
         return errored_seq, list(synthetic_error_alignment)
 
-    def make_oscillator(self, length):
+    def make_oscillator(self, length: int):
 
         error_run_length = np.random.uniform(
             self.error_run_length[0], self.error_run_length[1]
@@ -158,7 +160,7 @@ class ErrorGenerator(object):
 
         return oscillator
 
-    def get_synthetic_error_sequence(self, seq):
+    def get_synthetic_error_sequence(self, seq: npt.NDArray[np.int]):
         errored_seq = []
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))
         predictions = self.regression.predict_proba(X_one_hot)
@@ -233,7 +235,12 @@ class ErrorGenerator(object):
         class_to_label = err_to_class = {0: "O", 1: "~", 2: "+", 3: "-"}
         return "".join(err_to_class[x] for x in labels)
 
-    def add_errors_to_seq(self, inp, given_err_seq=None, bands=None):
+    def add_errors_to_seq(
+        self,
+        inp: npt.NDArray[np.int],
+        given_err_seq: Optional[npt.NDArray[np.int]] = None,
+        bands: Optional[float] = None,
+    ) -> tuple[npt.NDArray[np.int], npt.NDArray[np.int]]:
         inp = inp.astype("float32")
 
         seq_len = inp.shape[0]
@@ -275,21 +282,24 @@ class ErrorGenerator(object):
         # iterate through the record of operations to make the training data targets:
         while i < len(r) and i < Y_out.shape[0]:
             if r[i] == "-":
-                # if the record is a deletion
+                # if the record is a deletion, mark the place before it was deleted
                 Y_out[i - 1] = 1
-                Y_out[i] = 1
                 del r[i]
             elif r[i] == "~" or r[i] == "+":
+                # if the record is an insertion or replacement, mark the place itself
                 Y_out[i] = 1
                 i += 1
             else:
+                # advance to the next sequence place
                 i += 1
 
         padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
 
         return padded_seq, Y_out
 
-    def add_errors_to_batch(self, batch, verbose=0):
+    def add_errors_to_batch(
+        self, batch: npt.NDArray[np.int], verbose: Optional[bool] = False
+    ):
         if not (type(batch) == np.ndarray):
             batch = batch.numpy()
         b = batch.astype("float32")
@@ -321,7 +331,7 @@ class ErrorGenerator(object):
 
         return X, Y
 
-    def save_models(self, fpath):
+    def save_models(self, fpath: str):
         d = {
             "one_hot_encoder": self.enc,
             "labels_encoder": self.enc_labels,
