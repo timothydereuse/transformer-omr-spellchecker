@@ -14,7 +14,7 @@
     "d_model": 256,
     "minibatch_div": 10,
     "dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
-    "dset_testing_path": "processed_datasets/supervised_omr_targets_big_bymeasure.h5",
+    "dset_testing_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
     "error_gen_smoothing": 2,
