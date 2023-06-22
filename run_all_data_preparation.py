@@ -86,24 +86,23 @@ make_hdf5(
 with h5py.File(paired_dset_path, "r") as f:
     correct_fnames = sorted(list(f["correct_quartets"].keys()))
     error_fnames = sorted(list(f["omr_quartets"].keys()))
-
     # this is awful. but i want to go to bed
     error_onepass_fnames = sorted(list(f["onepass_quartets"].keys()))
     correct_onepass_fnames = [
         "correct_" + x.split("onepass_")[1] for x in error_onepass_fnames
     ]
 
-    correct_dset = [
-        f["correct_quartets"][x][:].astype(np.uint16) for x in correct_fnames
-    ]
-    error_dset = [f["omr_quartets"][x][:].astype(np.uint16) for x in error_fnames]
+    res = []
+    for pair in [
+        (correct_fnames, "correct_quartets"),
+        (error_fnames, "omr_quartets"),
+        (correct_onepass_fnames, "correct_quartets"),
+        (error_onepass_fnames, "onepass_quartets"),
+    ]:
+        fnames, k = pair
+        res.append([f[k][x][:].astype(np.uint16) for x in fnames])
 
-    error_onepass_dset = [
-        f["onepass_quartets"][x][:].astype(np.uint16) for x in error_onepass_fnames
-    ]
-    correct_onepass_dset = [
-        f["correct_quartets"][x][:].astype(np.uint16) for x in correct_onepass_fnames
-    ]
+    correct_dset, error_dset, error_onepass_dset, correct_onepass_dset = res
 
 
 X, Y = get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.1)
@@ -128,7 +127,7 @@ err_gen = ErrorGenerator(models_fpath=error_generator_fname)
 # now, make .h5 file of test sequences
 pms = [
     (correct_onepass_dset, error_onepass_dset, error_onepass_fnames, "onepass"),
-    (error_onepass_dset, error_dset, error_fnames, "omr"),
+    (correct_dset, error_dset, error_fnames, "omr"),
 ]
 
 make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.15)
