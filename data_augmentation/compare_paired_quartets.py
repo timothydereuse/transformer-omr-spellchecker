@@ -4,9 +4,15 @@ import data_augmentation.needleman_wunsch_alignment as align
 from numba import njit
 from collections import Counter
 import data_augmentation.error_gen_logistic_regression as elgr
+from data_management.vocabulary import Vocabulary
 
 
-def get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.25):
+def get_training_samples(
+    correct_dset: np.array,
+    error_dset: np.array,
+    correct_fnames: list[str],
+    bands: float = 0.25,
+):
     # error_notes = {x: [] for x in ["replace_mod", "insert_mod"]}
 
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
@@ -62,7 +68,9 @@ def get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.25):
     return X, Y
 
 
-def make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.5):
+def make_supervised_examples(
+    pms: tuple, supervised_targets_fname: str, err_gen: elgr.ErrorGenerator, bands=0.5
+):
     for t in pms:
         correct_dset, target_dset, target_dset_fnames, category = t
 
@@ -84,7 +92,7 @@ def make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.5):
                 dset = g.create_dataset(name=name, data=arr, compression="gzip")
 
 
-def get_raw_probs(error_generator, v):
+def get_raw_probs(error_generator: elgr.ErrorGenerator, v: Vocabulary):
     e = error_generator
     res = {}
 
