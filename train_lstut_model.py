@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(
     description="Training and testing script for the transformer-omr-spellchecker project. "
     "Must reference a .json parameters file (in the /param_sets folder. "
     "Requires pre-processed .h5 files containing symbolic music files in agnostic format; "
-    "some of these .h5 files are included with the transformer-omr-spellchecker repository on GitHub. "
+    "Some of these .h5 files are included with the transformer-omr-spellchecker repository on GitHub. "
     "Use the script run_all_data_preparation to make these files from scratch, or from another dataset."
 )
 parser.add_argument(
@@ -83,6 +83,11 @@ dset_vl = dl.AgnosticOMRDataset(base="validate", **prep_model.dset_kwargs)
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 
+if dry_run:
+    import sys
+
+    sys.exit("Dry run successful. Exiting.")
+
 #########################
 # TRAIN MODEL
 #########################
@@ -93,11 +98,6 @@ val_losses = []
 train_losses = []
 best_model = None
 tr_funcs.log_gpu_info()
-
-if dry_run:
-    import sys
-
-    sys.exit("Dry run successful. Exiting.")
 
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
@@ -142,15 +142,15 @@ for epoch in range(params.num_epochs):
     epoch_end_time = time.time()
     print(
         f"epoch {epoch:3d} | "
-        f"s/epoch         {(epoch_end_time - epoch_start_time):3.5e} | "
-        f"train_loss      {train_loss:1.6e} | "
-        f"val_loss        {val_loss:1.6e} | "
-        f"tr_thresh       {tr_thresh:1.5f} | "
-        f"tr_mcc          {tr_mcc:1.6f} | "
-        f"val_mcc         {val_mcc:1.6f} | "
-        f"val_norm_recall {val_norm_recall:1.6f} | "
-        f"gpu_free        {gpu_free:1.6f} | "
-        f"gpu_used        {gpu_used:1.6f} | "
+        f"sys/sec_per_epoch         {(epoch_end_time - epoch_start_time):3.5e} | "
+        f"tr/loss      {train_loss:1.6e} | "
+        f"val/loss        {val_loss:1.6e} | "
+        f"tr/thresh       {tr_thresh:1.5f} | "
+        f"tr/mcc          {tr_mcc:1.6f} | "
+        f"val/mcc         {val_mcc:1.6f} | "
+        f"val/norm_recall {val_norm_recall:1.6f} | "
+        f"sys/gpu_free        {gpu_free:1.6f} | "
+        f"sys/gpu_used        {gpu_used:1.6f} | "
     )
 
     if args["wandb"]:
@@ -247,3 +247,5 @@ for end_group in end_groups:
             end_group.name,
             params.num_examples_to_save,
         )
+
+wandb.finish()

@@ -66,7 +66,7 @@ def run_epoch(
     batch_includes_training_data=False,
 ):
     """
-    Performs a training or validation epoch.
+    Performs a training or validation or testing epoch.
     @model: the model to use.
     @dloader: the dataloader to fetch data from.
     @optimizer: the optimizer to use, if training. May set to None for inference.
@@ -80,7 +80,7 @@ def run_epoch(
     @autoregressive: if true, feeds the target into the model along with the input, for
         autoregressive teacher forcing.
     @batch_includes_training_data: if true, assumes that the dataloader will return a
-        tuple of (input, target), so use the targets instead of creating synthetic
+        tuple of (input, target), and use the targets instead of creating synthetic
         errored data for training.
 
     """
