@@ -160,7 +160,7 @@ class ErrorGenerator(object):
 
         return oscillator
 
-    def get_synthetic_error_sequence(self, seq: npt.NDArray[np.int]):
+    def get_synthetic_error_sequence(self, seq: npt.NDArray):
         errored_seq = []
         X_one_hot = self.enc.transform(np.array(seq).reshape(-1, 1))
         predictions = self.regression.predict_proba(X_one_hot)
@@ -237,10 +237,10 @@ class ErrorGenerator(object):
 
     def add_errors_to_seq(
         self,
-        inp: npt.NDArray[np.int],
-        given_err_seq: Optional[npt.NDArray[np.int]] = None,
+        inp: npt.NDArray,
+        given_err_seq: Optional[npt.NDArray] = None,
         bands: Optional[float] = None,
-    ) -> tuple[npt.NDArray[np.int], npt.NDArray[np.int]]:
+    ) -> tuple[npt.NDArray, npt.NDArray]:
         inp = inp.astype("float32")
 
         seq_len = inp.shape[0]
@@ -297,9 +297,7 @@ class ErrorGenerator(object):
 
         return padded_seq, Y_out
 
-    def add_errors_to_batch(
-        self, batch: npt.NDArray[np.int], verbose: Optional[bool] = False
-    ):
+    def add_errors_to_batch(self, batch: npt.NDArray, verbose: Optional[bool] = False):
         if not (type(batch) == np.ndarray):
             batch = batch.numpy()
         b = batch.astype("float32")
