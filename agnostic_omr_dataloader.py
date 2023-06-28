@@ -45,8 +45,6 @@ class AgnosticOMRDataset(IterableDataset):
         @padding_amt - amount of padding to add to beginning and end of each song (optional,
             default: @seq_length // 2)
         @random_offsets - randomize start position of sequences (optional, default: true)
-        @mode - take all overlapping subsequences of all inputs, instead of
-            cutting them into non-overlapping segments
         @minibatch_div - number of minibatches to divide whole dataset into
         """
         super(AgnosticOMRDataset).__init__()
@@ -65,8 +63,10 @@ class AgnosticOMRDataset(IterableDataset):
             self.f = self.f[base]
         self.fnames = all_hdf5_keys(self.f)
 
-        if (not minibatch_div) or self.minibatch_div >= len(self.fnames):
+        if self.minibatch_div >= len(self.fnames):
             self.minibatch_div = len(self.fnames) - 1
+        if not self.minibatch_div:
+            self.minibatch_div = 1
 
         self.make_new_minibatches()
 
