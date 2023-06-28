@@ -12,7 +12,7 @@
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
     "minibatch_div": 100,
-    "supplemental_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
+    "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
