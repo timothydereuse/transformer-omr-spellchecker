@@ -1,5 +1,7 @@
 from torch.utils.data import IterableDataset, DataLoader
 from importlib import reload
+from data_management.vocabulary import Vocabulary
+from typing import Optional
 import torch
 import os
 import numpy as np
@@ -27,15 +29,16 @@ def all_hdf5_keys(obj):
 class AgnosticOMRDataset(IterableDataset):
     def __init__(
         self,
-        dset_fname,
-        seq_length,
-        vocabulary,
-        base=None,
-        shuffle_files=True,
-        padding_amt=None,
-        random_offsets=True,
-        all_subsequences=False,
-        minibatch_div=False,
+        dset_fname: str,
+        seq_length: int,
+        vocabulary: Vocabulary,
+        base: Optional[str] = None,
+        shuffle_files: bool = True,
+        padding_amt: Optional[int] = None,
+        random_offsets: bool = True,
+        all_subsequences: bool = False,
+        reduce_dset_by: Optional[float] = None,
+        minibatch_div: Optional[int] = None,
     ):
         """
         @dset_fname - the file name of the processed hdf5 dataset
@@ -61,8 +64,19 @@ class AgnosticOMRDataset(IterableDataset):
         self.f = h5py.File(self.dset_fname, "r")
         if base is not None:
             self.f = self.f[base]
-        self.fnames = all_hdf5_keys(self.f)
 
+        # get all filenames from the dataset
+        self.full_fnames = all_hdf5_keys(self.f)
+        if reduce_dset_by:
+            fnames_to_keep = int(np.ceil(len(self.full_fnames) * reduce_dset_by))
+            inds = np.random.choice(
+                len(self.full_fnames), fnames_to_keep, replace=False
+            )
+            self.fnames = [self.full_fnames[i] for i in inds]
+        else:
+            self.fnames = self.full_fnames
+
+        # reduce the number of filenames
         if self.minibatch_div >= len(self.fnames):
             self.minibatch_div = len(self.fnames) - 1
         if not self.minibatch_div:
