@@ -77,11 +77,28 @@ device, num_gpus = tr_funcs.get_cuda_info()
 
 prep_model = PreparedLSTUTModel(params)
 
-dset_tr = dl.AgnosticOMRDataset(base="train", **prep_model.dset_kwargs)
-dset_vl = dl.AgnosticOMRDataset(base="validate", **prep_model.dset_kwargs)
+aug_dset_tr = dl.AgnosticOMRDataset(
+    base="train", dset_fname=params.aug_dset_path, **prep_model.dset_kwargs
+)
+aug_dset_vl = dl.AgnosticOMRDataset(
+    base="validate",
+    dset_fname=params.aug_dset_path,
+    **prep_model.dset_kwargs,
+)
+
+dset_tr = dl.AgnosticOMRDataset(
+    base="train/omr", dset_fname=params.dset_path, **prep_model.dset_kwargs
+)
+dset_vl = dl.AgnosticOMRDataset(
+    base="validate/omr",
+    dset_fname=params.dset_path,
+    **prep_model.dset_kwargs,
+)
 
 dloader = DataLoader(dset_tr, params.batch_size, pin_memory=True)
 dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
+aug_dloader = DataLoader(aug_dset_tr, params.batch_size, pin_memory=True)
+aug_dloader_val = DataLoader(aug_dset_vl, params.batch_size, pin_memory=True)
 
 if dry_run:
     import sys
@@ -97,15 +114,32 @@ start_time = time.time()
 val_losses = []
 train_losses = []
 best_model = None
+now_finetuning = not params.finetuning
+started_finetuning = 0
 tr_funcs.log_gpu_info()
 
 for epoch in range(params.num_epochs):
     epoch_start_time = time.time()
 
+    # decide what dataloader to use for this training epoch:
+    # are we finetuning? or combining all data?
+    if not params.finetuning:
+        this_epoch_dloader = [dloader, aug_dloader]
+        this_epoch_val_dloader = [dloader_val, aug_dloader_val]
+    elif params.finetuning and not now_finetuning:
+        this_epoch_dloader = aug_dloader
+        this_epoch_val_dloader = aug_dloader_val
+    elif params.finetuning and now_finetuning:
+        this_epoch_dloader = dloader
+        this_epoch_val_dloader = dloader_val
+
     # perform training epoch
     prep_model.model.train()
     train_loss, tr_exs = tr_funcs.run_epoch(
-        dloader=dloader, train=True, log_each_batch=False, **prep_model.run_epoch_kwargs
+        dloader=this_epoch_dloader,
+        train=True,
+        log_each_batch=False,
+        **prep_model.run_epoch_kwargs,
     )
     _, gpu_used, gpu_free, _ = tr_funcs.log_gpu_info()
 
@@ -115,7 +149,7 @@ for epoch in range(params.num_epochs):
     val_loss = 0.0
     with torch.no_grad():
         val_loss, val_exs = tr_funcs.run_epoch(
-            dloader=dloader_val,
+            dloader=this_epoch_val_dloader,
             train=False,
             log_each_batch=False,
             **prep_model.run_epoch_kwargs,
@@ -156,23 +190,17 @@ for epoch in range(params.num_epochs):
     if args["wandb"]:
         wandb.log(
             {
-                "epoch_s": (epoch_end_time - epoch_start_time),
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "tr_thresh": tr_thresh,
-                "tr_mcc": tr_mcc,
-                "val_mcc": val_mcc,
-                "val_norm_recall": val_norm_recall,
-                "gpu_free": gpu_free,
-                "gpu_used": gpu_used,
+                "sys/epoch_s": (epoch_end_time - epoch_start_time),
+                "tr/loss": train_loss,
+                "val/loss": val_loss,
+                "tr/thresh": tr_thresh,
+                "tr/mcc": tr_mcc,
+                "val/mcc": val_mcc,
+                "val/norm_recall": val_norm_recall,
+                "sys/gpu_free": gpu_free,
+                "sys/gpu_used": gpu_used,
             }
         )
-
-    # # save an example
-    # if args['wandb'] and (not epoch % params.save_img_every) and epoch > 0:
-    #     lines = po.plot_agnostic_results(tr_exs, v, tr_thresh, return_arrays=True)
-    #     table =  wandb.Table(data=lines, columns=['ORIG', 'INPUT', 'TARGET', 'OUTPUT', 'RAW'])
-    #     wandb.log({'examples': table})
 
     # keep snapshot of best model
     cur_model = {
@@ -183,22 +211,35 @@ for epoch in range(params.num_epochs):
         "val_losses": val_losses,
         "val_threshes": val_threshes,
     }
-    if epoch == 0 or val_losses[-1] < min(val_losses[:-1]):
+    if (len(val_losses) > 1) and (val_losses[-1] < min(val_losses[:-1])):
         best_model = copy.deepcopy(cur_model)
         m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
         torch.save(best_model, m_name)
 
-    # early stopping
     time_since_best = epoch - val_losses.index(min(val_losses))
-    if time_since_best > params.early_stopping_patience:
+    elapsed = time.time() - start_time
+    # is it time... to fine tune?
+
+    ft_1 = not now_finetuning and (time_since_best > params.early_stopping_patience)
+    ft_2 = not now_finetuning and elapsed > (params.aug_max_time_minutes * 60)
+
+    if ft_1 or ft_2:
+        print(f"done training on augmented data: epoch {epoch}. beginning to finetune")
+        now_finetuning = True
+        started_finetuning = epoch
+        prep_model.model.module.freeze_tf()
+    elif (
+        now_finetuning
+        and (time_since_best > params.early_stopping_patience)
+        and (epoch - started_finetuning > time_since_best)
+    ):
+        # early stopping
         print(
             f"stopping early at epoch {epoch} because validation score stopped increasing"
         )
         break
-
-    # stopping based on time limit defined in params file
-    elapsed = time.time() - start_time
-    if elapsed > (params.max_time_minutes * 60):
+    elif now_finetuning and elapsed > (params.max_time_minutes * 60):
+        # stopping based on time limit defined in params file
         print(f"stopping early at epoch {epoch} because of time limit")
         break
 
@@ -210,9 +251,9 @@ print(
 
 # save a final model checkpoint
 # if max_epochs reached, or early stopping condition reached, save best model
-# best_epoch = best_model['epoch']
-# m_name = (f'./trained_models/lstut_best_{params.params_id_str}.pt')
-# torch.save(best_model, m_name)
+best_epoch = best_model["epoch"]
+m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
+torch.save(best_model, m_name)
 
 #########################
 # TESTING TRAINED MODEL
@@ -220,14 +261,12 @@ print(
 
 if args["wandb"]:
     wandb.run.summary["total_training_time"] = end_time - start_time
-
 end_groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
 for end_group in end_groups:
 
     res_stats, tst_exs, test_results = tr_funcs.test_end_group(
         end_group.dloader,
-        end_group.with_targets,
         prep_model.run_epoch_kwargs,
         params.target_recalls,
     )

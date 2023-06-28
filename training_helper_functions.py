@@ -33,22 +33,41 @@ def make_test_dataloaders(params, kwargs_dict):
     # make dloaders for all test datasets identified in parameters file
 
     all_dset_groups = []
-    EndGroup = namedtuple("TestGroup", "dset dloader name with_targets")
+    EndGroup = namedtuple("TestGroup", "dset dloader name real_data")
 
     for test_set in params.test_sets:
         new_kwargs = dict(kwargs_dict)
 
-        if test_set["with_targets"]:
-            new_kwargs["dset_fname"] = params.dset_testing_path
-        else:
+        if test_set["real_data"]:
             new_kwargs["dset_fname"] = params.dset_path
+        else:
+            new_kwargs["dset_fname"] = params.aug_dset_path
 
         test_dset = dl.AgnosticOMRDataset(base=test_set["base"], **new_kwargs)
         dloader_omr = DataLoader(test_dset, params.batch_size, pin_memory=True)
         all_dset_groups.append(
-            EndGroup(test_dset, dloader_omr, test_set["base"], test_set["with_targets"])
+            EndGroup(test_dset, dloader_omr, test_set["base"], test_set["real_data"])
         )
+
     return all_dset_groups
+
+
+def get_merged_dataloaders(*itrs):
+    for dload_result in zip(itrs):
+        merged1 = []
+        merged2 = []
+        for single in dload_result:
+            merged1.append(single[0])
+            merged2.extend(single[1])
+            # merge them in
+        merged_batch = torch.concatenate(merged1, axis=0)
+        yield merged_batch, merged2
+
+
+def itr_merge(itrs):
+    for itr in itrs:
+        for v in itr:
+            yield v
 
 
 def run_epoch(
@@ -63,15 +82,14 @@ def run_epoch(
     clip_grad_norm=0.5,
     test_results=None,
     autoregressive=False,
-    batch_includes_training_data=False,
 ):
     """
     Performs a training or validation or testing epoch.
     @model: the model to use.
     @dloader: the dataloader to fetch data from.
-    @optimizer: the optimizer to use, if training. May set to None for inference.
-    @criterion: the loss function to use.
-    @device: the device on which to perform training.
+    @optimizer: the optimizer to use, if training. Set to None for inference.
+    @criterion: the loss function to use, for training and validation.
+    @device: the device on which to put the model.
     @train: if true, performs a gradient update on the model's weights. if false, treated as
             a validation run.
     @log_each_batch: if true, logs information about each batch's loss / time elapsed.
@@ -79,25 +97,27 @@ def run_epoch(
         into that TestResults object so that the results can be evaluated later.
     @autoregressive: if true, feeds the target into the model along with the input, for
         autoregressive teacher forcing.
-    @batch_includes_training_data: if true, assumes that the dataloader will return a
-        tuple of (input, target), and use the targets instead of creating synthetic
-        errored data for training.
-
     """
     num_seqs_used = 0
     total_loss = 0.0
 
-    for i, dloader_output in enumerate(dloader):
+    if type(dloader) is list:
+        merged_dloader = itr_merge(dloader)
+    else:
+        merged_dloader = dloader
+
+    for i, dloader_output in enumerate(merged_dloader):
         batch = dloader_output[0]
         batch_metadata = dloader_output[1]
 
-        if batch_includes_training_data and len(batch) == 2:
+        if type(batch) == list and len(batch) == 2:
             inp, target = batch
-        else:
+        elif type(batch) == torch.Tensor:
             batch = batch.float().cpu()
             inp, target = example_generator.add_errors_to_batch(batch)
+        else:
+            raise ValueError(f"type {type(batch)} and len {len(batch)} wrong")
 
-        # batch = batch.to(device)
         inp = inp.to(device).type(torch.long)
         target = target.to(device)
 
@@ -129,7 +149,7 @@ def run_epoch(
 
         if i == 0:
             example_dict = {
-                "orig": batch if not batch_includes_training_data else inp,
+                "orig": batch,
                 "input": inp,
                 "target": target,
                 "output": output,
@@ -143,7 +163,7 @@ def run_epoch(
     return mean_loss, example_dict
 
 
-def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_recalls):
+def test_end_group(end_dloader, run_epoch_kwargs, target_recalls):
 
     # make test_results with dummy threshes object, to fill in later
     test_results = ttm.TestResults(threshes=[], target_recalls=target_recalls)
@@ -155,7 +175,6 @@ def test_end_group(end_dloader, end_train_data_mode, run_epoch_kwargs, target_re
             train=False,
             log_each_batch=False,
             test_results=test_results,
-            batch_includes_training_data=end_train_data_mode,
             **run_epoch_kwargs,
         )
 

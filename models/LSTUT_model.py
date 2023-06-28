@@ -8,9 +8,21 @@ import time
 
 
 class LSTUT(nn.Module):
-
-    def __init__(self, vocab_size, seq_length, d_model, lstm_layers, tf_layers, tf_depth,
-                 tf_heads, hidden_dim, ff_dim, output_feats=1, positional_encoding=False, dropout=0.15):
+    def __init__(
+        self,
+        vocab_size,
+        seq_length,
+        d_model,
+        lstm_layers,
+        tf_layers,
+        tf_depth,
+        tf_heads,
+        hidden_dim,
+        ff_dim,
+        output_feats=1,
+        positional_encoding=False,
+        dropout=0.15,
+    ):
         super(LSTUT, self).__init__()
 
         self.seq_length = seq_length
@@ -27,7 +39,9 @@ class LSTUT(nn.Module):
         self.dropout = dropout
 
         if positional_encoding:
-            self.positional_encoding = PositionalEncoding(self.hidden_dim, max_len=self.seq_length + 1)
+            self.positional_encoding = PositionalEncoding(
+                self.hidden_dim, max_len=self.seq_length + 1
+            )
         else:
             self.positional_encoding = False
 
@@ -37,45 +51,72 @@ class LSTUT(nn.Module):
             self.encoder = self.make_tf_encoder()
 
         if lstm_layers > 0:
-            self.lstm1 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
-            self.lstm2 = nn.LSTM(self.d_model, self.d_model // 2, self.lstm_layers, batch_first=True, bidirectional=True)
+            self.lstm1 = nn.LSTM(
+                self.d_model,
+                self.d_model // 2,
+                self.lstm_layers,
+                batch_first=True,
+                bidirectional=True,
+            )
+            self.lstm2 = nn.LSTM(
+                self.d_model,
+                self.d_model // 2,
+                self.lstm_layers,
+                batch_first=True,
+                bidirectional=True,
+            )
 
         self.final_ff = nn.Linear(self.d_model, self.output_feats)
-        self.layer_norm = nn.LayerNorm([self.seq_length, self.d_model], elementwise_affine=False)
-        self.layer_norm2 = nn.LayerNorm([self.seq_length, self.d_model], elementwise_affine=False)
+        self.layer_norm = nn.LayerNorm(
+            [self.seq_length, self.d_model], elementwise_affine=False
+        )
+        self.layer_norm2 = nn.LayerNorm(
+            [self.seq_length, self.d_model], elementwise_affine=False
+        )
+
+    def freeze_tf(self):
+        self.initial.requires_grad_(False)
+        self.layer_norm.requires_grad_(False)
+        if self.lstm_layers > 0:
+            self.lstm1.requires_grad_(False)
+        if self.tf_layers > 0 and self.tf_depth > 0:
+            self.encoder.requires_grad_(False)
 
     def make_tf_encoder(self):
 
-        layer_kwargs = {                   
-                    'd_model': self.d_model,
-                    'd_ff': self.ff_dim,
-                    'dropout': self.dropout,
-                    'activation': 'gelu'
-                    }
+        layer_kwargs = {
+            "d_model": self.d_model,
+            "d_ff": self.ff_dim,
+            "dropout": self.dropout,
+            "activation": "gelu",
+        }
 
         # this is necessary to get the package to work in fast-transformers versions
-        # 0.2.2 and 0.4.0, which is necessary because compute canada doesn't 
+        # 0.2.2 and 0.4.0, which is necessary because compute canada doesn't
         # play nice with 0.4.0 and my own laptop doesn't play nice with 0.2.2
         # for some reason. i hate this :(
         try:
             att_builder = AttentionBuilder.from_kwargs(query_dimensions=self.hidden_dim)
         except ValueError:
             att_builder = AttentionBuilder()
-            layer_kwargs['n_heads'] = self.tf_heads
+            layer_kwargs["n_heads"] = self.tf_heads
 
         encoder = TransformerEncoder(
             [
                 TransformerEncoderLayer(
-                    AttentionLayer(att_builder.get('linear'),
+                    AttentionLayer(
+                        att_builder.get("linear"),
                         d_model=self.d_model,
                         n_heads=self.tf_heads,
                         d_keys=self.hidden_dim,
                         d_values=self.hidden_dim,
                     ),
-                    **layer_kwargs
+                    **layer_kwargs,
                 )
                 for _ in range(self.tf_layers)
-            ], None)
+            ],
+            None,
+        )
         return encoder
 
     def forward(self, src):
@@ -105,7 +146,7 @@ class LSTUT(nn.Module):
         return x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     batch_size = 10
     seq_length = 128
@@ -126,10 +167,11 @@ if __name__ == '__main__':
         hidden_dim=64,
         ff_dim=128,
         positional_encoding=False,
-        vocab_size=vocab_size)
+        vocab_size=vocab_size,
+    )
 
     n_params = sum(p.numel() for p in model.parameters())
-    print(f'created model with n_params={n_params}')
+    print(f"created model with n_params={n_params}")
 
     res = model(X)
 
@@ -164,12 +206,12 @@ if __name__ == '__main__':
     model.eval()
 
     x = AttentionLayer(
-                        AttentionBuilder.from_kwargs(query_dimensions=64).get('linear'),
-                        64,
-                        4,
-                        d_keys=32,
-                        d_values=32,
-                    )
+        AttentionBuilder.from_kwargs(query_dimensions=64).get("linear"),
+        64,
+        4,
+        d_keys=32,
+        d_values=32,
+    )
 
     # def make_tf_encoder(self):
 

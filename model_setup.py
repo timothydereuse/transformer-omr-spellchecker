@@ -42,7 +42,6 @@ class PreparedLSTUTModel:
             print(f"successfully loaded given model checkpoint.")
 
         self.dset_kwargs = {
-            "dset_fname": params.dset_path,
             "seq_length": params.seq_length,
             "padding_amt": params.padding_amt,
             "minibatch_div": params.minibatch_div,
