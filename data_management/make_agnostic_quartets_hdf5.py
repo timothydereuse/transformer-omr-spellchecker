@@ -6,7 +6,7 @@ import h5py
 import data_management.semantic_to_agnostic as sta
 import data_management.vocabulary as vocab
 
-test_proportion = 0.1
+test_proportion = 0.15
 validate_proportion = 0.1
 beat_multiplier = 48
 num_transpositions_per_file = 4
@@ -57,21 +57,46 @@ def make_hdf5(
     with h5py.File(dset_path, "a") as f:
         f.attrs["beat_multiplier"] = beat_multiplier
 
-        if train_val_test_split:
+        if train_val_test_split and not split_by_keys:
             train_grp = f.create_group("train")
             test_grp = f.create_group("test")
             validate_grp = f.create_group("validate")
-        elif split_by_keys:
+        elif split_by_keys and not train_val_test_split:
             grps = {k: f.create_group(k) for k in keys}
+        elif train_val_test_split and split_by_keys:
+            train_grp = f.create_group("train")
+            test_grp = f.create_group("test")
+            validate_grp = f.create_group("validate")
+            for g in [train_grp, test_grp, validate_grp]:
+                grps = {k: g.create_group(k) for k in keys}
+
+    # get all possible fnames
+    all_fnames = set()
+    for k in keys:
+        fnames = os.listdir(os.path.join(quartets_root, k))
+        fnames = ["".join(x.split(".")[:-1]) for x in fnames]
+        all_fnames.update(fnames)
+    all_fnames = list(all_fnames)
+    np.random.shuffle(all_fnames)
+
+    # assign each filename to one of test, train, or validate
+    split_test = int(np.round(test_proportion * len(all_fnames)))
+    split_val = int(np.round(validate_proportion * len(all_fnames)) + split_test)
+    split_classifier = {}
+    for i, fn in enumerate(all_fnames):
+        if i <= split_test:
+            split_classifier[fn] = "test"
+        elif i <= split_val:
+            split_classifier[fn] = "validate"
+        else:
+            split_classifier[fn] = "train"
 
     for k in keys:
         files = os.listdir(os.path.join(quartets_root, k))
         np.random.shuffle(files)
 
-        split_test = int(np.round(test_proportion * len(files)))
-        split_validate = int(np.round(validate_proportion * len(files)) + split_test)
-
         for i, fname in enumerate(files):
+            noext_fname = "".join(fname.split(".")[:-1])
             print(f"parsing {k}/{fname}...")
 
             fpath = os.path.join(quartets_root, k, fname)
@@ -103,22 +128,21 @@ def make_hdf5(
             agnostic_vecs = [v.words_to_vec(x) for x in agnostics]
             arrs = [np.array(x) for x in agnostic_vecs]
 
+            spl_name = split_classifier[noext_fname]
             with h5py.File(dset_path, "a") as f:
-                if not train_val_test_split:
-                    selected_subgrp = f
-                elif i <= split_test:
-                    selected_subgrp = f["test"]
-                elif i <= split_validate:
-                    selected_subgrp = f["validate"]
-                else:
-                    selected_subgrp = f["train"]
 
-                if split_by_keys:
+                if not train_val_test_split and not split_by_keys:
+                    selected_subgrp = f
+                elif not train_val_test_split and split_by_keys:
                     selected_subgrp = f[k]
+                elif train_val_test_split and not split_by_keys:
+                    selected_subgrp = f[spl_name]
+                else:
+                    selected_subgrp = f[spl_name][k]
 
                 for i, arr in enumerate(arrs):
                     tpose = transpositions[i]
-                    name = rf"{k}-{fname}-tposed.{tpose}"
+                    name = f"{noext_fname}-tposed.{tpose}"
                     selected_subgrp.create_dataset(
                         name=name, data=arr, compression="gzip"
                     )

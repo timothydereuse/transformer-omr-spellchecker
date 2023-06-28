@@ -77,35 +77,32 @@ make_hdf5(
     ["correct_quartets", "omr_quartets", "onepass_quartets"],
     v=v,
     quartets_root=paired_quartets_root,
-    train_val_test_split=False,
+    train_val_test_split=True,
     split_by_keys=True,
     transpose=False,
     interleave=interleave,
 )
 
-with h5py.File(paired_dset_path, "r") as f:
-    correct_fnames = sorted(list(f["correct_quartets"].keys()))
-    error_fnames = sorted(list(f["omr_quartets"].keys()))
-    # this is awful. but i want to go to bed
-    error_onepass_fnames = sorted(list(f["onepass_quartets"].keys()))
-    correct_onepass_fnames = [
-        "correct_" + x.split("onepass_")[1] for x in error_onepass_fnames
-    ]
+# with h5py.File(paired_dset_path, "r") as f:
+#     correct_fnames = sorted(list(f[].keys()))
+#     error_fnames = sorted(list(f["train/omr_quartets"].keys()))
 
-    res = []
-    for pair in [
-        (correct_fnames, "correct_quartets"),
-        (error_fnames, "omr_quartets"),
-        (correct_onepass_fnames, "correct_quartets"),
-        (error_onepass_fnames, "onepass_quartets"),
-    ]:
-        fnames, k = pair
-        res.append([f[k][x][:].astype(np.uint16) for x in fnames])
+#     res = []
+#     for pair in [
+#         (correct_fnames, "correct_quartets"),
+#         (error_fnames, "omr_quartets"),
+#         (correct_onepass_fnames, "correct_quartets"),
+#         (error_onepass_fnames, "onepass_quartets"),
+#     ]:
+#         fnames, k = pair
+#         res.append([f[k][x][:].astype(np.uint16) for x in fnames])
 
-    correct_dset, error_dset, error_onepass_dset, correct_onepass_dset = res
+#     correct_dset, error_dset, error_onepass_dset, correct_onepass_dset = res
 
+correct_path = "train/correct_quartets"
+error_path = "train/omr_quartets"
 
-X, Y = get_training_samples(correct_dset, error_dset, correct_fnames, bands=0.1)
+X, Y = get_training_samples(correct_path, error_path, paired_dset_path, bands=0.1)
 print("training samples successfully acquired")
 X = np.array(X).reshape(-1, 1)
 Y = np.array(Y)
@@ -125,9 +122,13 @@ err_gen.save_models(error_generator_fname)
 
 err_gen = ErrorGenerator(models_fpath=error_generator_fname)
 # now, make .h5 file of test sequences
-pms = [
-    (correct_onepass_dset, error_onepass_dset, error_onepass_fnames, "onepass"),
-    (correct_dset, error_dset, error_fnames, "omr"),
-]
+pms = []
+for splt in ["train", "test", "validate"]:
+    pms.append((f"{splt}/correct_quartets", f"{splt}/omr_quartets", f"{splt}/omr"))
+    pms.append(
+        (f"{splt}/correct_quartets", f"{splt}/onepass_quartets", f"{splt}/onepass")
+    )
 
-make_supervised_examples(pms, supervised_targets_fname, err_gen, bands=0.15)
+make_supervised_examples(
+    pms, paired_dset_path, supervised_targets_fname, err_gen=err_gen, bands=0.15
+)

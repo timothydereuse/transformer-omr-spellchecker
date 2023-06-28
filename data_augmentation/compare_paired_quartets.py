@@ -8,21 +8,30 @@ from data_management.vocabulary import Vocabulary
 
 
 def get_training_samples(
-    correct_dset: np.array,
-    error_dset: np.array,
-    correct_fnames: list[str],
+    correct_path: str,
+    error_path: str,
+    paired_dset_path: str,
     bands: float = 0.10,
 ) -> tuple[list, list]:
-    # error_notes = {x: [] for x in ["replace_mod", "insert_mod"]}
+
+    # get all names from target dataset path
+    with h5py.File(paired_dset_path, "r") as f:
+        target_dset = f[correct_path]
+        target_names = list(target_dset.keys())
 
     # training samples for logistic regression (MaxEnt Markov Model) for creating errors
     X = []
     Y = []
-    for ind in range(len(correct_dset)):
+    for fname in target_names:
 
-        print(f"aligning {correct_fnames[ind]}...")
-        correct_seq = [x for x in correct_dset[ind]]
-        error_seq = [x for x in error_dset[ind]]
+        with h5py.File(paired_dset_path, "r") as f:
+            print(correct_path, fname, error_path)
+            correct_seq = list(f[correct_path][fname][:])
+            error_seq = list(f[error_path][fname][:])
+
+        print(f"aligning {fname}...")
+        # correct_seq = [x for x in correct_dset[ind]]
+        # error_seq = [x for x in error_dset[ind]]
         correct_align, error_align, r, pt, score = align.perform_alignment(
             correct_seq,
             error_seq,
@@ -71,27 +80,40 @@ def get_training_samples(
 
 
 def make_supervised_examples(
-    pms: tuple, supervised_targets_fname: str, err_gen: elgr.ErrorGenerator, bands=0.5
+    pms: tuple[str, str, str],
+    paired_dset_path: str,
+    supervised_targets_fname: str,
+    err_gen: elgr.ErrorGenerator,
+    bands=0.5,
 ):
     for t in pms:
-        correct_dset, target_dset, target_dset_fnames, category = t
+        correct_path, target_path, location = t
 
+        # get all names from target dataset path
+        with h5py.File(paired_dset_path, "r") as f:
+            target_dset = f[target_path]
+            target_names = list(target_dset.keys())
+
+        # create group in location
         with h5py.File(supervised_targets_fname, "a") as f:
-            f.create_group(category)
+            f.create_group(location)
 
-        for ind in range(len(correct_dset)):
-            print(f"making training sequence for {target_dset_fnames[ind]}...")
+        for fname in target_names:
+            print(f"making training sequence for {fname}, into {location}...")
 
-            correct_seq = correct_dset[ind]
-            error_seq = target_dset[ind]
+            with h5py.File(paired_dset_path, "r") as f:
+                correct_seq = f[correct_path][fname][:]
+                error_seq = f[target_path][fname][:]
+
+            # correct_seq = correct_dset[ind]
+            # error_seq = target_dset[ind]
 
             err, Y = err_gen.add_errors_to_seq(correct_seq, given_err_seq=error_seq)
             arr = np.stack([err, Y])
 
             with h5py.File(supervised_targets_fname, "a") as f:
-                name = target_dset_fnames[ind]
-                g = f[category]
-                dset = g.create_dataset(name=name, data=arr, compression="gzip")
+                g = f[location]
+                dset = g.create_dataset(name=fname, data=arr, compression="gzip")
 
 
 def get_raw_probs(error_generator: elgr.ErrorGenerator, v: Vocabulary):

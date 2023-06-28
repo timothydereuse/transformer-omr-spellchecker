@@ -256,8 +256,8 @@ if __name__ == "__main__":
 
     seq1 = "The Needleman–Wunsch algorithm is an algorithm used in bioinformatics to align protein or nucleotides sequences. It was an early application of dynamic programming to compare biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
     seq2 = "The Needleman–Wunsch algorithm is an algorithm used to align protein or nucleotide sequences. It was one of the first applications of dynamic programming to the comparison of biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
-    match_weights = [4, -2]
-    gap_penalties = [-4, -4, -1, -1]
+    match_weights = [2, -2]
+    gap_penalties = [-2, -2, -1, -1]
 
     seq1 = list([ord(x) for x in seq1])
     seq2 = list([ord(x) for x in seq2])
@@ -279,33 +279,39 @@ if __name__ == "__main__":
 
     # changing everything to numba's typed list, since python untyped lists will be deprecated
 
-    i = 25
-    for i in range(4, 24):
-        print(i, correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
-        a, b, align_record, pt, score = perform_alignment(
-            list(correct_dset[i]),
-            list(error_dset[i]),
-            match_weights,
-            gap_penalties,
-            bands=0.05,
-            verbose=False,
-        )
-        # print("".join(align_record))
-        print(1 - (align_record.count("O") / len(align_record)))
+    import h5py
 
-        for position in range(len(align_record)):
-            r = align_record[position]
-            ar = a[position]
-            br = b[position]
+    fname = "sq_in_C_major_Op1_No1__Saint-Georges_Joseph_Bologne-tposed.None"
+    with h5py.File("./processed_datasets/paired_quartets_bymeasure.h5") as f:
+        correct_seq = f["train/correct_quartets"][fname][:]
+        error_seq = f["train/omr_quartets"][fname][:]
 
-            if r == "+":
-                # assert br == "_", (position, r, ar, br)
-                if type(br) is str:
-                    print(position, r, ar, br)
-            if r == "-":
-                # assert ar == "_", (position, r, ar, br)
-                if type(ar) is str:
-                    print(position, r, ar, br)
+    # print(i, correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
+    a, b, align_record, pt, score = perform_alignment(
+        correct_seq,
+        error_seq,
+        match_weights,
+        gap_penalties,
+        bands=0.05,
+        verbose=False,
+    )
+
+    # print("".join(align_record))
+    print(1 - (align_record.count("O") / len(align_record)))
+
+    # for position in range(len(align_record)):
+    #     r = align_record[position]
+    #     ar = a[position]
+    #     br = b[position]
+
+    #     if r == "+":
+    #         # assert br == "_", (position, r, ar, br)
+    #         if type(br) is str:
+    #             print(position, r, ar, br)
+    #     if r == "-":
+    #         # assert ar == "_", (position, r, ar, br)
+    #         if type(ar) is str:
+    #             print(position, r, ar, br)
 
     list(zip(align_record, a, b))
 
