@@ -4,8 +4,8 @@
     "early_stopping_patience": 5,
     "num_examples_to_save": 10,
     "save_model_every": 4,
-    "save_img_every": 2,
     "max_time_minutes": 560,
+    "aug_max_time_minutes": 3,
     "seq_length": 512,
     "padding_amt": 64,
     "lr": 0.0001,
@@ -16,9 +16,10 @@
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
+    "finetuning": true,
     "error_gen_smoothing": 2,
     "simple_errors": false,
-    "errors_parallel": 1,
+    "errors_parallel": 3,
     "simple_error_rate": 0.1,
     "target_recalls": [
         0.8,
@@ -46,16 +47,16 @@
     },
     "test_sets": [
         {
-            "base": "omr",
-            "with_targets": true
+            "base": "test/omr",
+            "real_data": true
         },
         {
-            "base": "onepass",
-            "with_targets": true
+            "base": "test/onepass",
+            "real_data": true
         },
         {
             "base": "test",
-            "with_targets": false
+            "real_data": false
         }
     ],
     "param_sweep": [

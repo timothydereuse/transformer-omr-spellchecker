@@ -4,22 +4,22 @@
     "early_stopping_patience": 20,
     "num_examples_to_save": 20,
     "save_model_every": 4,
-    "save_img_every": 1,
     "max_time_minutes": 100,
+    "aug_max_time_minutes": 3,
     "seq_length": 128,
     "padding_amt": 16,
     "lr": 0.0005,
     "batch_size": 512,
     "clip_gradient_norm": 0.5,
-    "num_feats": 4,
     "minibatch_div": 4,
-    "dset_path": "processed_datasets/all_string_quartets_agnostic_interleaved.h5",
-    "dset_path": "processed_datasets/supervised_omr_targets_interleaved.h5",
-    "error_model": "processed_datasets/quartet_omr_error_models_interleaved.joblib",
+    "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
+    "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
+    "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
+    "finetuning": true,
     "error_gen_smoothing": 2,
     "simple_errors": false,
-    "errors_parallel": 1,
+    "errors_parallel": 3,
     "simple_error_rate": 0.05,
     "target_recalls": [
         0.8,
@@ -48,16 +48,16 @@
     },
     "test_sets": [
         {
-            "base": "omr",
-            "with_targets": true
+            "base": "test/omr",
+            "real_data": true
         },
         {
-            "base": "onepass",
-            "with_targets": true
+            "base": "test/onepass",
+            "real_data": true
         },
         {
             "base": "test",
-            "with_targets": false
+            "real_data": false
         }
     ],
     "param_sweep": {

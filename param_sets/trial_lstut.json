@@ -4,7 +4,6 @@
     "early_stopping_patience": 4,
     "num_examples_to_save": 3,
     "save_model_every": 100,
-    "save_img_every": 1,
     "max_time_minutes": 6,
     "aug_max_time_minutes": 3,
     "seq_length": 64,
@@ -20,7 +19,7 @@
     "finetuning": true,
     "error_gen_smoothing": 0,
     "simple_errors": false,
-    "errors_parallel": 1,
+    "errors_parallel": 3,
     "simple_error_rate": 0.05,
     "target_recalls": [
         0.8,
