@@ -65,11 +65,16 @@ class PreparedLSTUTModel:
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #             optimizer=self.optimizer, **params.scheduler_settings)
 
-        self.scheduler = torch.optim.lr_scheduler.CyclicLR(
-            mode="triangular2",
-            cycle_momentum=False,
-            base_lr=params.lr,
-            optimizer=self.optimizer,
+        # self.scheduler = torch.optim.lr_scheduler.CyclicLR(
+        #     mode="triangular2",
+        #     cycle_momentum=False,
+        #     base_lr=params.lr,
+        #     optimizer=self.optimizer,
+        #     **params.scheduler_settings,
+        # )
+
+        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            self.optimizer,
             **params.scheduler_settings,
         )
 

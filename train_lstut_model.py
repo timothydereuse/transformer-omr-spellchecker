@@ -78,7 +78,10 @@ device, num_gpus = tr_funcs.get_cuda_info()
 prep_model = PreparedLSTUTModel(params)
 
 aug_dset_tr = dl.AgnosticOMRDataset(
-    base="train", dset_fname=params.aug_dset_path, **prep_model.dset_kwargs
+    base="train",
+    dset_fname=params.aug_dset_path,
+    reduce_dset_by=params.reduce_aug_data,
+    **prep_model.dset_kwargs,
 )
 aug_dset_vl = dl.AgnosticOMRDataset(
     base="validate",
@@ -115,7 +118,8 @@ val_losses = []
 train_losses = []
 best_model = None
 now_finetuning = not params.finetuning
-started_finetuning = 0
+epoch_started_finetuning = 0
+time_started_finetuning = start_time
 tr_funcs.log_gpu_info()
 
 for epoch in range(params.num_epochs):
@@ -221,24 +225,34 @@ for epoch in range(params.num_epochs):
     # is it time... to fine tune?
 
     ft_1 = not now_finetuning and (time_since_best > params.early_stopping_patience)
-    ft_2 = not now_finetuning and elapsed > (params.aug_max_time_minutes * 60)
+    ft_2 = not now_finetuning and elapsed > (params.aug_max_time_hours * 3600)
 
-    if ft_1 or ft_2:
-        print(f"done training on augmented data: epoch {epoch}. beginning to finetune")
+    if ft_1:
+        print(
+            f"done training on augmented data: epoch {epoch} (time limit). beginning to finetune"
+        )
         now_finetuning = True
-        started_finetuning = epoch
+        epoch_started_finetuning = epoch
         prep_model.model.module.freeze_tf()
+        time_started_finetuning = elapsed
+    elif ft_2:
+        print(
+            f"done training on augmented data: epoch {epoch} (validation score stopped increasing)."
+            " beginning to finetune"
+        )
+        now_finetuning = True
+        epoch_started_finetuning = epoch
+        prep_model.model.module.freeze_tf()
+        time_started_finetuning = elapsed
     elif (
         now_finetuning
         and (time_since_best > params.early_stopping_patience)
-        and (epoch - started_finetuning > time_since_best)
+        and (epoch - epoch_started_finetuning > time_since_best)
     ):
         # early stopping
-        print(
-            f"stopping early at epoch {epoch} because validation score stopped increasing"
-        )
+        print(f"stopping early at epoch {epoch}: validation score stopped increasing")
         break
-    elif now_finetuning and elapsed > (params.max_time_minutes * 60):
+    elif now_finetuning and elapsed > (params.max_time_hours * 3600):
         # stopping based on time limit defined in params file
         print(f"stopping early at epoch {epoch} because of time limit")
         break
