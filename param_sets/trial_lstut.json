@@ -31,14 +31,14 @@
     "lstut_settings": {
         "output_feats": 1,
         "lstm_layers": 2,
-        "d_model": 32,
+        "d_model": 40,
         "tf_layers": 1,
         "tf_heads": 2,
         "tf_depth": 1,
         "hidden_dim": 16,
         "ff_dim": 20,
         "dropout": 0.1,
-        "positional_encoding": false
+        "positional_encoding": true
     },
     "scheduler_settings": {
         "max_lr": 0.003,
