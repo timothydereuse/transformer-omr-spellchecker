@@ -161,7 +161,7 @@ for epoch in range(params.num_epochs):
 
     val_losses.append(val_loss)
     train_losses.append(train_loss)
-    prep_model.scheduler.step()
+    # prep_model.scheduler.step()
 
     # get thresholds that maximize f1 and match required recall scores
     sig_val_output = torch.sigmoid(val_exs["output"])

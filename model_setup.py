@@ -81,6 +81,7 @@ class PreparedLSTUTModel:
         self.run_epoch_kwargs = {
             "model": self.model,
             "optimizer": self.optimizer,
+            "scheduler": self.scheduler,
             "criterion": self.criterion,
             "device": self.device,
             "example_generator": self.error_generator,

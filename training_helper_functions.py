@@ -73,9 +73,10 @@ def itr_merge(itrs):
 def run_epoch(
     model,
     dloader,
-    optimizer,
     criterion,
     example_generator,
+    optimizer=None,
+    scheduler=None,
     device="cpu",
     train=True,
     log_each_batch=False,
@@ -88,6 +89,7 @@ def run_epoch(
     @model: the model to use.
     @dloader: the dataloader to fetch data from.
     @optimizer: the optimizer to use, if training. Set to None for inference.
+    @scheduler: LR scheduler
     @criterion: the loss function to use, for training and validation.
     @device: the device on which to put the model.
     @train: if true, performs a gradient update on the model's weights. if false, treated as
@@ -138,6 +140,7 @@ def run_epoch(
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
             optimizer.step()
+            scheduler.step()
 
         batch_loss = loss.sum().item()
         total_loss += batch_loss
