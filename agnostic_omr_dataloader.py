@@ -90,6 +90,16 @@ class AgnosticOMRDataset(IterableDataset):
         )
         self.target_padding_seq = np.zeros(self.padding_amt, dtype=np.float32)
 
+    def estimate_num_batches(self, batch_size):
+        # estimate the total number of batches in an epoch without actually producing them,
+        # for a given batch size
+        all_sizes = [self.f[x].shape[-1] for x in self.fnames]
+        total_elements = sum(all_sizes) + (self.padding_amt * len(self.fnames))
+        num_batches = np.ceil(
+            total_elements / (self.seq_length * batch_size * self.minibatch_div)
+        )
+        return num_batches
+
     def make_new_minibatches(self):
 
         if self.shuffle_files:

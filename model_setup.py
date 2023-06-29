@@ -75,6 +75,7 @@ class PreparedLSTUTModel:
 
         self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
             self.optimizer,
+            epochs=params.num_epochs,
             **params.scheduler_settings,
         )
 

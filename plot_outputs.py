@@ -13,7 +13,10 @@ def plot_agnostic_results(exs, vocabulary, thresh, ind=-1, return_arrays=False):
     output = (sig_output.detach().cpu().numpy() > thresh).astype("int")
     sig_output_round = torch.round(sig_output * 1e3) / 1e3
 
-    orig = exs["orig"][ind].detach().cpu().numpy().astype("int")
+    if type(exs["orig"]) is list and len(exs["orig"]) == 2:
+        orig = exs["orig"][0][ind].detach().cpu().numpy().astype("int")
+    else:
+        orig = exs["orig"][ind].detach().cpu().numpy().astype("int")
     input = exs["input"][ind].detach().cpu().numpy().astype("int")
 
     input_words = vocabulary.vec_to_words(input)

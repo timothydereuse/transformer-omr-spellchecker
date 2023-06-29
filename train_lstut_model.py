@@ -1,4 +1,4 @@
-import time, logging, argparse, copy
+import time, logging, argparse, copy, datetime
 import numpy as np
 import torch, wandb
 import wandb_logging
@@ -233,7 +233,7 @@ for epoch in range(params.num_epochs):
         )
         now_finetuning = True
         epoch_started_finetuning = epoch
-        prep_model.model.module.freeze_tf()
+        # prep_model.model.module.freeze_tf()
         time_started_finetuning = elapsed
     elif ft_2:
         print(
@@ -242,7 +242,7 @@ for epoch in range(params.num_epochs):
         )
         now_finetuning = True
         epoch_started_finetuning = epoch
-        prep_model.model.module.freeze_tf()
+        # prep_model.model.module.freeze_tf()
         time_started_finetuning = elapsed
     elif (
         now_finetuning
@@ -258,10 +258,23 @@ for epoch in range(params.num_epochs):
         break
 
 end_time = time.time()
+total_training_time = datetime.timedelta(seconds=end_time - start_time)
+aug_time = datetime.timedelta(seconds=time_started_finetuning - start_time)
+ft_time = datetime.timedelta(seconds=end_time - time_started_finetuning)
 print(
     f"Training over at epoch at epoch {epoch}.\n"
-    f"Total training time: {end_time - start_time} s."
+    f"Total training time: {str(total_training_time)}\n"
+    f"Time training on augmented data: {str(aug_time)}\n"
+    f"Time fine-tuning: {str(ft_time)}"
 )
+if args["wandb"]:
+    wandb.log(
+        {
+            "total_training_time": str(total_training_time),
+            "time_training_aug": str(aug_time),
+            "time_training_ft": str(ft_time),
+        }
+    )
 
 # save a final model checkpoint
 # if max_epochs reached, or early stopping condition reached, save best model
@@ -273,8 +286,7 @@ torch.save(best_model, m_name)
 # TESTING TRAINED MODEL
 #########################
 
-if args["wandb"]:
-    wandb.run.summary["total_training_time"] = end_time - start_time
+
 end_groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
 for end_group in end_groups:

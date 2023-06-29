@@ -140,7 +140,11 @@ def run_epoch(
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
             optimizer.step()
-            scheduler.step()
+            if (
+                scheduler.state_dict()["last_epoch"]
+                < scheduler.state_dict()["total_steps"]
+            ):
+                scheduler.step()
 
         batch_loss = loss.sum().item()
         total_loss += batch_loss
