@@ -1,18 +1,18 @@
 {
-    "params_name": "onegpu_lstut",
+    "params_name": "onegpu_lstm",
     "num_epochs": 500,
     "early_stopping_patience": 50,
     "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 4,
-    "aug_max_time_hours": 2,
-    "seq_length": 256,
+    "max_time_hours": 3,
+    "aug_max_time_hours": 1,
+    "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
-    "batch_size": 384,
+    "batch_size": 64,
     "clip_gradient_norm": 0.5,
-    "reduce_aug_data": 0.2,
-    "minibatch_div": 2,
+    "minibatch_div": 4,
+    "reduce_aug_data": 0.1,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
@@ -31,22 +31,21 @@
     ],
     "use_mcc_loss": false,
     "lstut_settings": {
-        "d_model": 128,
+        "d_model": 64,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 1,
-        "tf_heads": 6,
-        "tf_depth": 4,
-        "hidden_dim": 64,
-        "ff_dim": 1024,
+        "tf_layers": 0,
+        "tf_heads": 0,
+        "tf_depth": 0,
+        "hidden_dim": 32,
+        "ff_dim": 256,
         "dropout": 0.2,
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "max_lr": 0.001,
-        "steps_per_epoch": 25,
-        "verbose": true,
-        "pct_start": 0.2
+        "max_lr": 0.003,
+        "steps_per_epoch": 500,
+        "verbose": true
     },
     "test_sets": [
         {
@@ -64,10 +63,12 @@
     ],
     "param_sweep": [
         {
-            "finetuning": false
+            "simple_errors": true,
+            "simple_error_rate": 0.1
         },
         {
-            "finetuning": true
+            "simple_errors": true,
+            "simple_error_rate": 0.27
         }
     ]
 }

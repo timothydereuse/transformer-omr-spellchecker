@@ -4,13 +4,14 @@
     "early_stopping_patience": 5,
     "num_examples_to_save": 10,
     "save_model_every": 4,
-    "max_time_minutes": 560,
-    "aug_max_time_minutes": 3,
+    "max_time_hours": 0.6,
+    "aug_max_time_hours": 0.25,
     "seq_length": 512,
     "padding_amt": 64,
     "lr": 0.0001,
     "batch_size": 256,
     "clip_gradient_norm": 0.5,
+    "reduce_aug_data": 0,
     "minibatch_div": 10,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
@@ -40,9 +41,9 @@
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "factor": 0.25,
-        "patience": 5,
-        "threshold": 0.001,
+        "max_lr": 0.003,
+        "steps_per_epoch": 40,
+        "pct_start": 0.2,
         "verbose": true
     },
     "test_sets": [
