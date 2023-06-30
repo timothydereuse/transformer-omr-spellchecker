@@ -1,6 +1,6 @@
 {
     "params_name": "onegpu_lstut",
-    "num_epochs": 500,
+    "num_epochs": 35,
     "early_stopping_patience": 50,
     "num_examples_to_save": 5,
     "save_model_every": 4,
@@ -44,7 +44,7 @@
     },
     "scheduler_settings": {
         "max_lr": 0.001,
-        "steps_per_epoch": 25,
+        "steps_per_epoch": 30,
         "verbose": true,
         "pct_start": 0.2
     },
