@@ -1,24 +1,24 @@
 {
     "params_name": "lstut_mark2",
-    "num_epochs": 500,
+    "num_epochs": 100,
     "early_stopping_patience": 50,
     "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 600,
-    "aug_max_time_hours": 3,
+    "max_time_hours": 10,
+    "aug_max_time_hours": 5,
     "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
     "batch_size": 192,
     "clip_gradient_norm": 0.5,
-    "reduce_aug_data": 0.1,
-    "minibatch_div": 16,
+    "reduce_aug_data": 0.5,
+    "minibatch_div": 2,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
     "finetuning": true,
-    "error_gen_smoothing": 1,
+    "error_gen_smoothing": 0.1,
     "simple_errors": false,
     "errors_parallel": 3,
     "simple_error_rate": 0.2,
@@ -43,8 +43,8 @@
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "max_lr": 0.0004,
-        "steps_per_epoch": 8000,
+        "max_lr": 0.002,
+        "steps_per_epoch": 20,
         "verbose": false
     },
     "test_sets": [
@@ -63,12 +63,12 @@
     ],
     "param_sweep": [
         {
-            "simple_errors": true,
-            "simple_error_rate": 0.1
+            "scheduler_settings.max_lr": 0.004,
+            "scheduler_settings.steps_per_epoch": 20
         },
         {
-            "simple_errors": true,
-            "simple_error_rate": 0.27
+            "scheduler_settings.max_lr": 0.001,
+            "scheduler_settings.steps_per_epoch": 20
         }
     ]
 }

@@ -1,6 +1,6 @@
 {
     "params_name": "LSTUT_TRIAL",
-    "num_epochs": 6,
+    "num_epochs": 10,
     "early_stopping_patience": 4,
     "num_examples_to_save": 3,
     "save_model_every": 100,
@@ -17,7 +17,7 @@
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
-    "finetuning": false,
+    "finetuning": true,
     "error_gen_smoothing": 0,
     "simple_errors": false,
     "errors_parallel": 1,
