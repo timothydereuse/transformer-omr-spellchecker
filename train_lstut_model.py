@@ -218,7 +218,7 @@ for epoch in range(params.num_epochs):
         "val_losses": val_losses,
         "val_threshes": val_threshes,
     }
-    if (len(val_losses) > 1) and (val_losses[-1] < min(val_losses[:-1])):
+    if len(val_losses) > 1 and val_losses[-1] < min(val_losses[:-1]) or not best_model:
         best_model = copy.deepcopy(cur_model)
         m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
         torch.save(best_model, m_name)
