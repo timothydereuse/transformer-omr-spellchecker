@@ -237,7 +237,7 @@ for epoch in range(params.num_epochs):
         now_finetuning = True
         epoch_started_finetuning = epoch
         # prep_model.model.module.freeze_tf()
-        time_started_finetuning = elapsed
+        time_started_finetuning = time.time()
     elif ft_2:
         print(
             f"done training on augmented data: epoch {epoch} (validation score stopped increasing)."
@@ -246,7 +246,7 @@ for epoch in range(params.num_epochs):
         now_finetuning = True
         epoch_started_finetuning = epoch
         # prep_model.model.module.freeze_tf()
-        time_started_finetuning = elapsed
+        time_started_finetuning = time.time()
     elif (
         now_finetuning
         and (time_since_best > params.early_stopping_patience)
@@ -261,9 +261,9 @@ for epoch in range(params.num_epochs):
         break
 
 end_time = time.time()
-total_training_time = datetime.timedelta(seconds=end_time - start_time)
-aug_time = datetime.timedelta(seconds=time_started_finetuning - start_time)
-ft_time = datetime.timedelta(seconds=end_time - time_started_finetuning)
+total_training_time = end_time - start_time
+aug_time = time_started_finetuning - start_time
+ft_time = end_time - time_started_finetuning
 print(
     f"Training over at epoch at epoch {epoch}.\n"
     f"Total training time: {str(total_training_time)}\n"
@@ -273,9 +273,9 @@ print(
 if args["wandb"]:
     wandb.log(
         {
-            "total_training_time": str(total_training_time),
-            "time_training_aug": str(aug_time),
-            "time_training_ft": str(ft_time),
+            "total_training_time": total_training_time,
+            "time_training_aug": aug_time,
+            "time_training_ft": ft_time,
         }
     )
 
