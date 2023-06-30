@@ -177,6 +177,7 @@ for epoch in range(params.num_epochs):
         sig_val_output.cpu(), val_exs["target"].cpu(), params.target_recalls
     )
 
+    last_lr = prep_model.scheduler.get_last_lr()
     epoch_end_time = time.time()
     print(
         f"epoch {epoch:3d} | "
@@ -189,6 +190,7 @@ for epoch in range(params.num_epochs):
         f"val/norm_recall {val_norm_recall:1.6f} | "
         f"sys/gpu_free        {gpu_free:1.6f} | "
         f"sys/gpu_used        {gpu_used:1.6f} | "
+        f"sys/current_lr        {last_lr:1.9f} | "
     )
 
     if args["wandb"]:
@@ -203,6 +205,7 @@ for epoch in range(params.num_epochs):
                 "val/norm_recall": val_norm_recall,
                 "sys/gpu_free": gpu_free,
                 "sys/gpu_used": gpu_used,
+                "sys/current_lr": last_lr,
             }
         )
 
