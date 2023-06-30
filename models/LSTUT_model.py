@@ -40,7 +40,7 @@ class LSTUT(nn.Module):
 
         if positional_encoding:
             self.positional_encoding = PositionalEncoding(
-                self.hidden_dim, max_len=self.seq_length + 1
+                self.d_model, max_len=self.seq_length + 1
             )
         else:
             self.positional_encoding = False
