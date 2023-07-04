@@ -43,7 +43,7 @@
     },
     "scheduler_settings": {
         "max_lr": 0.003,
-        "steps_per_epoch": 40,
+        "total_steps": 40,
         "pct_start": 0.2,
         "verbose": true
     },

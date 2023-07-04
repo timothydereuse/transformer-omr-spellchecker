@@ -9,7 +9,7 @@
     "seq_length": 64,
     "padding_amt": 16,
     "lr": 0.00001,
-    "batch_size": 64,
+    "batch_size": 32,
     "clip_gradient_norm": 0.5,
     "reduce_aug_data": 0.1,
     "minibatch_div": 100,
@@ -30,20 +30,19 @@
     "use_mcc_loss": false,
     "lstut_settings": {
         "output_feats": 1,
-        "lstm_layers": 2,
-        "d_model": 40,
+        "lstm_layers": 1,
+        "d_model": 16,
         "tf_layers": 1,
         "tf_heads": 2,
         "tf_depth": 1,
-        "hidden_dim": 16,
-        "ff_dim": 20,
+        "hidden_dim": 8,
+        "ff_dim": 8,
         "dropout": 0.1,
         "positional_encoding": true
     },
     "scheduler_settings": {
         "max_lr": 0.003,
-        "steps_per_epoch": 5,
-        "pct_start": 0.2,
+        "total_steps": 5,
         "verbose": true
     },
     "test_sets": [

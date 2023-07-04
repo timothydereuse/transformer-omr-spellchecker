@@ -42,7 +42,7 @@
     },
     "scheduler_settings": {
         "max_lr": 0.1,
-        "steps_per_epoch": 8,
+        "total_steps": 8,
         "verbose": true
     },
     "test_sets": [
