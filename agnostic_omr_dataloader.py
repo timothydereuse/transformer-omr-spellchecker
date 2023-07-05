@@ -79,7 +79,7 @@ class AgnosticOMRDataset(IterableDataset):
         # reduce the number of filenames
         if self.minibatch_div >= len(self.fnames):
             self.minibatch_div = len(self.fnames) - 1
-        if not self.minibatch_div:
+        if not self.minibatch_div or self.minibatch_div < 1:
             self.minibatch_div = 1
 
         self.make_new_minibatches()
