@@ -103,6 +103,18 @@ dloader_val = DataLoader(dset_vl, params.batch_size, pin_memory=True)
 aug_dloader = DataLoader(aug_dset_tr, params.batch_size, pin_memory=True)
 aug_dloader_val = DataLoader(aug_dset_vl, params.batch_size, pin_memory=True)
 
+aug_batches = aug_dset_tr.estimate_num_batches(params.batch_size)
+tr_batches = dset_tr.estimate_num_batches(params.batch_size)
+if params.finetuning:
+    estimated_num_steps = (aug_batches * params.aug_max_epochs) + tr_batches * (
+        params.num_epochs - params.aug_max_epochs
+    )
+else:
+    estimated_num_steps = (aug_batches + tr_batches) * params.aug_max_epochs
+
+prep_model.add_scheduler(estimated_num_steps, params.scheduler_settings)
+print(f"estimated_num_steps: {estimated_num_steps}")
+
 if dry_run:
     import sys
 
@@ -178,6 +190,7 @@ for epoch in range(params.num_epochs):
     )
 
     last_lr = prep_model.scheduler.get_last_lr()[0]
+    step_count = prep_model.scheduler.state_dict()["last_epoch"]
     epoch_end_time = time.time()
     print(
         f"epoch {epoch:3d} | "
@@ -191,6 +204,7 @@ for epoch in range(params.num_epochs):
         f"sys/gpu_free    {gpu_free:1.6f} | "
         f"sys/gpu_used    {gpu_used:1.6f} | "
         f"sys/current_lr  {last_lr:1.9f} | "
+        f"sys/step_count  {step_count:5} | "
     )
 
     if args["wandb"]:
@@ -206,6 +220,7 @@ for epoch in range(params.num_epochs):
                 "sys/gpu_free": gpu_free,
                 "sys/gpu_used": gpu_used,
                 "sys/current_lr": last_lr,
+                "sys/step_count": step_count,
             }
         )
 
@@ -227,12 +242,13 @@ for epoch in range(params.num_epochs):
     elapsed = time.time() - start_time
     # is it time... to fine tune?
 
+    # two possible conditions for starting to finetune
     ft_1 = not now_finetuning and (time_since_best > params.early_stopping_patience)
-    ft_2 = not now_finetuning and elapsed > (params.aug_max_time_hours * 3600)
+    ft_2 = not now_finetuning and epoch > params.aug_max_epochs
 
     if ft_1:
         print(
-            f"done training on augmented data: epoch {epoch} (time limit). beginning to finetune"
+            f"done training on augmented data: epoch {epoch} reached (aug epochs limit). beginning to finetune"
         )
         now_finetuning = True
         epoch_started_finetuning = epoch

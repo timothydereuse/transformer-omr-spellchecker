@@ -93,11 +93,10 @@ class AgnosticOMRDataset(IterableDataset):
     def estimate_num_batches(self, batch_size):
         # estimate the total number of batches in an epoch without actually producing them,
         # for a given batch size
-        all_sizes = [self.f[x].shape[-1] for x in self.fnames]
-        total_elements = sum(all_sizes) + (self.padding_amt * len(self.fnames))
-        num_batches = np.ceil(
-            total_elements / (self.seq_length * batch_size * self.minibatch_div)
-        )
+        all_sizes = np.array([self.f[x].shape[-1] for x in self.fnames])
+        all_sizes_padded = all_sizes + (self.padding_amt * 2)
+        num_examples = np.sum(np.ceil(all_sizes_padded / self.seq_length))
+        num_batches = np.ceil(num_examples / (batch_size * self.minibatch_div))
         return num_batches
 
     def make_new_minibatches(self):

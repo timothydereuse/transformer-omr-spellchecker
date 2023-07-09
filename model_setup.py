@@ -65,17 +65,10 @@ class PreparedLSTUTModel:
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #             optimizer=self.optimizer, **params.scheduler_settings)
 
-        # self.scheduler = torch.optim.lr_scheduler.CyclicLR(
-        #     mode="triangular2",
-        #     cycle_momentum=False,
-        #     base_lr=params.lr,
-        #     optimizer=self.optimizer,
-        #     **params.scheduler_settings,
-        # )
-
-        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            self.optimizer,
-            epochs=params.num_epochs,
+        self.scheduler = torch.optim.lr_scheduler.CyclicLR(
+            mode="triangular2",
+            cycle_momentum=False,
+            optimizer=self.optimizer,
             **params.scheduler_settings,
         )
 
@@ -87,3 +80,16 @@ class PreparedLSTUTModel:
             "device": self.device,
             "example_generator": self.error_generator,
         }
+
+    def add_scheduler(self, estimated_num_steps, settings, total_cycles=10):
+
+        settings["step_size_up"] = int(estimated_num_steps / total_cycles)
+
+        self.scheduler = torch.optim.lr_scheduler.CyclicLR(
+            mode="triangular2",
+            cycle_momentum=False,
+            optimizer=self.optimizer,
+            **settings,
+        )
+
+        self.run_epoch_kwargs["scheduler"] = self.scheduler
