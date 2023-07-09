@@ -5,7 +5,7 @@
     "num_examples_to_save": 10,
     "save_model_every": 4,
     "max_time_hours": 0.6,
-    "aug_max_time_hours": 0.25,
+    "aug_max_epochs": 0.25,
     "seq_length": 512,
     "padding_amt": 64,
     "lr": 0.0001,
@@ -42,7 +42,7 @@
     },
     "scheduler_settings": {
         "max_lr": 0.003,
-        "total_steps": 40,
+        "steps_per_epoch": 40,
         "pct_start": 0.2,
         "verbose": true
     },

@@ -5,7 +5,7 @@
     "num_examples_to_save": 2,
     "save_model_every": 4,
     "max_time_hours": 2,
-    "aug_max_time_hours": 1,
+    "aug_max_epochs": 1,
     "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
@@ -44,7 +44,7 @@
     },
     "scheduler_settings": {
         "max_lr": 0.1,
-        "total_steps": 32,
+        "steps_per_epoch": 32,
         "verbose": false
     },
     "test_sets": [
@@ -79,7 +79,7 @@
         },
         {
             "finetuning": true,
-            "aug_max_time_hours": 2
+            "aug_max_epochs": 2
         },
         {
             "use_mcc_loss": true,

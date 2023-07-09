@@ -5,14 +5,14 @@
     "num_examples_to_save": 3,
     "save_model_every": 100,
     "max_time_hours": 0.083,
-    "aug_max_time_hours": 0.043,
+    "aug_max_epochs": 4,
     "seq_length": 64,
     "padding_amt": 16,
     "lr": 0.00001,
-    "batch_size": 32,
+    "batch_size": 16,
     "clip_gradient_norm": 0.5,
     "reduce_aug_data": 0.1,
-    "minibatch_div": 100,
+    "minibatch_div": 80,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
@@ -41,9 +41,10 @@
         "positional_encoding": true
     },
     "scheduler_settings": {
-        "max_lr": 0.003,
-        "total_steps": 5,
-        "verbose": true
+        "base_lr": 0.00005,
+        "max_lr": 0.005,
+        "step_size_up": 10,
+        "verbose": false
     },
     "test_sets": [
         {

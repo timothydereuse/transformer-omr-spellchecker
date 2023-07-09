@@ -1,11 +1,11 @@
 {
-    "params_name": "lstut_seq_sweep",
-    "num_epochs": 200,
-    "early_stopping_patience": 10,
+    "params_name": "lstut_seq_sweep_cyclicLR",
+    "num_epochs": 150,
+    "early_stopping_patience": 20,
     "num_examples_to_save": 5,
     "save_model_every": 4,
     "max_time_hours": 12,
-    "aug_max_time_hours": 10,
+    "aug_max_epochs": 40,
     "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
@@ -42,8 +42,9 @@
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "max_lr": 0.004,
-        "total_steps": 3000,
+        "base_lr": 0.00005,
+        "max_lr": 0.005,
+        "step_size_up": 200,
         "verbose": false
     },
     "test_sets": [
@@ -61,6 +62,9 @@
         }
     ],
     "param_sweep": [
+        {
+            "finetuning": false
+        },
         {
             "seq_length": 64,
             "batch_size": 1536
@@ -82,20 +86,14 @@
             "batch_size": 96
         },
         {
-            "seq_length": 32,
-            "batch_size": 3072
-        },
-        {
             "seq_length": 2048,
-            "batch_size": 24,
-            "max_time_hours": 20,
-            "aug_max_time_hours": 18
+            "batch_size": 32,
+            "max_time_hours": 20
         },
         {
             "seq_length": 4096,
-            "batch_size": 12,
-            "max_time_hours": 20,
-            "aug_max_time_hours": 18
+            "batch_size": 16,
+            "max_time_hours": 20
         }
     ]
 }
