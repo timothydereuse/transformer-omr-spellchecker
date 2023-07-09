@@ -248,7 +248,8 @@ for epoch in range(params.num_epochs):
 
     if ft_1:
         print(
-            f"done training on augmented data: epoch {epoch} reached (aug epochs limit). beginning to finetune"
+            f"done training on augmented data: epoch {epoch} (validation score stopped increasing). "
+            " beginning to finetune"
         )
         now_finetuning = True
         epoch_started_finetuning = epoch
@@ -256,8 +257,7 @@ for epoch in range(params.num_epochs):
         time_started_finetuning = time.time()
     elif ft_2:
         print(
-            f"done training on augmented data: epoch {epoch} (validation score stopped increasing)."
-            " beginning to finetune"
+            f"done training on augmented data: epoch {epoch} reached (aug epochs limit). beginning to finetune."
         )
         now_finetuning = True
         epoch_started_finetuning = epoch
