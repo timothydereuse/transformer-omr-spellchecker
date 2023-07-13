@@ -4,7 +4,7 @@
     "early_stopping_patience": 4,
     "num_examples_to_save": 2,
     "save_model_every": 4,
-    "max_time_hours": 2,
+    "max_time_hours": 3,
     "aug_max_epochs": 5,
     "seq_length": 512,
     "padding_amt": 32,
