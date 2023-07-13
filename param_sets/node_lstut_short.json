@@ -65,19 +65,8 @@
     ],
     "param_sweep": [
         {
-            "finetuning": true
-        },
-        {
-            "finetuning": false
-        },
-        {
-            "lstut_settings.positional_encoding": true,
-            "lstut_settings.tf_layers": 2,
-            "lstut_settings.tf_depth": 1,
-            "lstut_settings.d_model": 512,
-            "lstut_settings.tf_heads": 8,
-            "lstut_settings.lstm_layers": 0,
-            "lstut_settings.ff_dim": 1024
+            "lstut_settings.tf_layers": 1,
+            "lstut_settings.tf_depth": 4
         },
         {
             "finetuning": true,
