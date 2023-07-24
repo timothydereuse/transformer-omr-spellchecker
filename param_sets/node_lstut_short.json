@@ -1,5 +1,5 @@
 {
-    "params_name": "lstut_node_sweep_short",
+    "params_name": "lstutnode_short_test3",
     "num_epochs": 20,
     "early_stopping_patience": 4,
     "num_examples_to_save": 2,
@@ -9,7 +9,7 @@
     "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
-    "batch_size": 96,
+    "batch_size": 192,
     "clip_gradient_norm": 0.5,
     "reduce_aug_data": 0.4,
     "minibatch_div": 2,
@@ -46,7 +46,7 @@
         "base_lr": 0.0001,
         "max_lr": 0.005,
         "step_size_up": 200,
-        "gamma": 0.999,
+        "gamma": 0.995,
         "verbose": false
     },
     "test_sets": [
@@ -65,8 +65,8 @@
     ],
     "param_sweep": [
         {
-            "lstut_settings.tf_layers": 1,
-            "lstut_settings.tf_depth": 4
+            "lstut_settings.tf_layers": 6,
+            "lstut_settings.tf_depth": 1
         },
         {
             "finetuning": true,
