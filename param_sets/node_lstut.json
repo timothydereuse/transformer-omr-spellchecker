@@ -30,22 +30,22 @@
     ],
     "use_mcc_loss": false,
     "lstut_settings": {
-        "d_model": 256,
+        "d_model": 512,
         "output_feats": 1,
         "lstm_layers": 1,
-        "tf_layers": 2,
+        "tf_layers": 1,
         "tf_heads": 12,
-        "tf_depth": 4,
+        "tf_depth": 6,
         "hidden_dim": 64,
-        "ff_dim": 2048,
+        "ff_dim": 1024,
         "dropout": 0.2,
-        "positional_encoding": false
+        "positional_encoding": true
     },
     "scheduler_settings": {
         "base_lr": 0.0001,
         "max_lr": 0.005,
-        "step_size_up": 200,
-        "gamma": 0.999,
+        "step_size_up": 170,
+        "gamma": 0.995,
         "verbose": false
     },
     "test_sets": [
@@ -63,6 +63,14 @@
         }
     ],
     "param_sweep": [
+        {
+            "lstut_settings.tf_layers": 1,
+            "lstut_settings.tf_depth": 6
+        },
+        {
+            "lstut_settings.tf_layers": 6,
+            "lstut_settings.tf_depth": 1
+        },
         {
             "seq_length": 64,
             "batch_size": 1536

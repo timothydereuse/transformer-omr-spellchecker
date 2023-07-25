@@ -1,29 +1,28 @@
 {
-    "params_name": "onegpu_lstut",
-    "num_epochs": 35,
-    "early_stopping_patience": 50,
+    "params_name": "lstut_small_long",
+    "num_epochs": 150,
+    "early_stopping_patience": 15,
     "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 4,
-    "aug_max_epochs": 2,
-    "seq_length": 256,
+    "max_time_hours": 24,
+    "aug_max_epochs": 40,
+    "seq_length": 512,
     "padding_amt": 32,
     "lr": 0.0001,
-    "batch_size": 384,
+    "batch_size": 48,
     "clip_gradient_norm": 0.5,
-    "reduce_aug_data": 0.2,
+    "reduce_aug_data": 0.5,
     "minibatch_div": 2,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
-    "finetuning": false,
-    "error_gen_smoothing": 0.5,
+    "finetuning": true,
+    "error_gen_smoothing": 0.1,
     "simple_errors": false,
     "errors_parallel": 3,
     "simple_error_rate": 0.2,
     "target_recalls": [
-        0.8,
         0.9,
         0.95,
         0.975,
@@ -31,22 +30,23 @@
     ],
     "use_mcc_loss": false,
     "lstut_settings": {
-        "d_model": 128,
+        "d_model": 512,
         "output_feats": 1,
         "lstm_layers": 1,
         "tf_layers": 1,
-        "tf_heads": 6,
-        "tf_depth": 4,
+        "tf_heads": 12,
+        "tf_depth": 6,
         "hidden_dim": 64,
         "ff_dim": 1024,
         "dropout": 0.2,
-        "positional_encoding": false
+        "positional_encoding": true
     },
     "scheduler_settings": {
-        "max_lr": 0.001,
-        "steps_per_epoch": 30,
-        "verbose": true,
-        "pct_start": 0.2
+        "base_lr": 0.0001,
+        "max_lr": 0.005,
+        "step_size_up": 800,
+        "gamma": 0.995,
+        "verbose": false
     },
     "test_sets": [
         {
@@ -64,10 +64,42 @@
     ],
     "param_sweep": [
         {
-            "finetuning": false
+            "lstut_settings.tf_layers": 1,
+            "lstut_settings.tf_depth": 6
         },
         {
-            "finetuning": true
+            "lstut_settings.tf_layers": 6,
+            "lstut_settings.tf_depth": 1
+        },
+        {
+            "seq_length": 64,
+            "batch_size": 1536
+        },
+        {
+            "seq_length": 128,
+            "batch_size": 768
+        },
+        {
+            "seq_length": 256,
+            "batch_size": 384
+        },
+        {
+            "seq_length": 512,
+            "batch_size": 192
+        },
+        {
+            "seq_length": 1024,
+            "batch_size": 96
+        },
+        {
+            "seq_length": 2048,
+            "batch_size": 32,
+            "max_time_hours": 12
+        },
+        {
+            "seq_length": 4096,
+            "batch_size": 16,
+            "max_time_hours": 12
         }
     ]
 }
