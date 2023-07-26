@@ -44,7 +44,6 @@
         "base_lr": 0.00005,
         "max_lr": 0.005,
         "step_size_up": 10,
-        "gamma": 0.9,
         "verbose": false
     },
     "test_sets": [

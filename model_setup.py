@@ -86,7 +86,7 @@ class PreparedLSTUTModel:
         settings["step_size_up"] = int(estimated_num_steps / total_cycles)
 
         self.scheduler = torch.optim.lr_scheduler.CyclicLR(
-            mode="exp_range",
+            mode="triangular2",
             cycle_momentum=False,
             optimizer=self.optimizer,
             **settings,
