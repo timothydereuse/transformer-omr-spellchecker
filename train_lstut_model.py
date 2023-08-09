@@ -127,6 +127,7 @@ if dry_run:
 print("beginning training")
 start_time = time.time()
 val_losses = []
+val_norm_recalls = []
 train_losses = []
 best_model = None
 now_finetuning = not params.finetuning
@@ -185,6 +186,7 @@ for epoch in range(params.num_epochs):
     val_norm_recall = ttm.normalized_recall(
         sig_val_output.cpu(), val_exs["target"].cpu()
     )
+    val_norm_recalls.append(val_norm_recall)
     val_threshes = ttm.find_thresh_for_given_recalls(
         sig_val_output.cpu(), val_exs["target"].cpu(), params.target_recalls
     )
@@ -231,20 +233,31 @@ for epoch in range(params.num_epochs):
         "optimizer_state_dict": prep_model.optimizer.state_dict(),
         "scheduler_state_dict": prep_model.scheduler.state_dict(),
         "val_losses": val_losses,
+        "val_norm_recalls": val_norm_recalls,
         "val_threshes": val_threshes,
     }
-    if len(val_losses) > 1 and val_losses[-1] < min(val_losses[:-1]) or not best_model:
+    if (
+        len(val_norm_recalls) > 1 and val_norm_recalls[-1] < min(val_norm_recalls[:-1])
+    ) or not best_model:
         best_model = copy.deepcopy(cur_model)
         m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
         torch.save(best_model, m_name)
 
-    time_since_best = epoch - val_losses.index(min(val_losses))
+    # when was the best epoch? if we're finetuning, only consider epochs after we started finetuning
+    if now_finetuning:
+        best_epoch = (
+            np.argmin(val_norm_recalls[epoch_started_finetuning:])
+            + epoch_started_finetuning
+        )
+    else:
+        best_epoch = np.argmin(val_norm_recalls)
+    time_since_best = epoch - best_epoch
     elapsed = time.time() - start_time
     # is it time... to fine tune?
 
     # two possible conditions for starting to finetune
     ft_1 = not now_finetuning and (time_since_best > params.early_stopping_patience)
-    ft_2 = not now_finetuning and epoch > params.aug_max_epochs
+    ft_2 = not now_finetuning and (epoch > params.aug_max_epochs)
 
     if ft_1:
         print(
@@ -263,11 +276,7 @@ for epoch in range(params.num_epochs):
         epoch_started_finetuning = epoch
         # prep_model.model.module.freeze_tf()
         time_started_finetuning = time.time()
-    elif (
-        now_finetuning
-        and (time_since_best > params.early_stopping_patience)
-        and (epoch - epoch_started_finetuning > time_since_best)
-    ):
+    elif now_finetuning and (time_since_best > params.early_stopping_patience):
         # early stopping
         print(f"stopping early at epoch {epoch}: validation score stopped increasing")
         break
@@ -304,7 +313,6 @@ torch.save(best_model, m_name)
 #########################
 # TESTING TRAINED MODEL
 #########################
-
 
 end_groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 

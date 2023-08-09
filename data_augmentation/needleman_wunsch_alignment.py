@@ -23,6 +23,8 @@ def create_matrix(
     len_a = len(seq_a)
     len_b = len(seq_b)
 
+    int32min = np.iinfo(np.int16).min
+
     mat = np.zeros((len_a, len_b), dtype=np.int32)
     y_mat = np.zeros((len_a, len_b), dtype=np.int32)
     x_mat = np.zeros((len_a, len_b), dtype=np.int32)
@@ -33,12 +35,12 @@ def create_matrix(
     # establish boundary conditions
     for i in range(len_a):
         mat[i][0] = gap_extend_x * i
-        x_mat[i][0] = -np.inf
         y_mat[i][0] = gap_extend_x * i
+        x_mat[i][0] = int32min
     for j in range(len_b):
         mat[0][j] = gap_extend_y * j
         x_mat[0][j] = gap_extend_y * j
-        y_mat[0][j] = -np.inf
+        y_mat[0][j] = int32min
 
     biggest_seq_length = max(len_a, len_b)
 
@@ -71,7 +73,7 @@ def create_matrix(
             y_mat_vals = np.array(
                 [
                     mat[i][j - 1] + gap_open_y + gap_extend_y,
-                    x_mat[i][j - 1] + gap_open_y + gap_extend_y,
+                    int32min,  # x_mat[i][j - 1] + gap_open_y + gap_extend_y,
                     y_mat[i][j - 1] + gap_extend_y,
                 ]
             )
@@ -84,14 +86,14 @@ def create_matrix(
                 [
                     mat[i - 1][j] + gap_open_x + gap_extend_x,
                     x_mat[i - 1][j] + gap_extend_x,
-                    y_mat[i - 1][j] + gap_open_x + gap_extend_x,
+                    int32min,  # y_mat[i - 1][j] + gap_open_x + gap_extend_x,
                 ]
             )
 
             x_mat[i][j] = np.max(x_mat_vals)
             x_mat_ptr[i][j] = np.argmax(x_mat_vals)
 
-    return mat_ptr, x_mat_ptr, y_mat_ptr, mat[-1][-1]
+    return mat_ptr, x_mat_ptr, y_mat_ptr, (mat, x_mat, y_mat)
 
 
 def perform_alignment(
@@ -254,16 +256,25 @@ def perform_alignment(
 
 if __name__ == "__main__":
 
-    seq1 = "The Needleman–Wunsch algorithm is an algorithm used in bioinformatics to align protein or nucleotides sequences. It was an early application of dynamic programming to compare biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
-    seq2 = "The Needleman–Wunsch algorithm is an algorithm used to align protein or nucleotide sequences. It was one of the first applications of dynamic programming to the comparison of biological sequences. The algorithm was developed by Saul B. Needleman and Christian D. Wunsch and published in 1970."
-    match_weights = [2, -2]
-    gap_penalties = [-2, -2, -1, -1]
+    seq1 = "AAAC"
+    seq2 = "ABABAC"
+    match_weights = [0, -4]
+    gap_penalties = [-4, -4, -3, -3]
 
     seq1 = list([ord(x) for x in seq1])
     seq2 = list([ord(x) for x in seq2])
 
+    transcript_numba = numbaList(seq1)
+    ocr_numba = numbaList(seq2)
+    match_weights = numbaList(match_weights)
+    gap_penalties = numbaList(gap_penalties)
+    mat_ptr, x_mat_ptr, y_mat_ptr, mat = create_matrix(
+        transcript_numba, ocr_numba, match_weights, gap_penalties, bands=1.0
+    )
+    mat, x_mat, y_mat = mat
+
     a, b, align_record, pt, score = perform_alignment(
-        seq1, seq2, match_weights, gap_penalties, bands=0.7, verbose=True
+        seq1, seq2, match_weights, gap_penalties, bands=1.0, verbose=True
     )
 
     sa = ""
@@ -281,23 +292,23 @@ if __name__ == "__main__":
 
     import h5py
 
-    fname = "sq_in_C_major_Op1_No1__Saint-Georges_Joseph_Bologne-tposed.None"
-    with h5py.File("./processed_datasets/paired_quartets_bymeasure.h5") as f:
-        correct_seq = f["train/correct_quartets"][fname][:]
-        error_seq = f["train/omr_quartets"][fname][:]
+    # fname = "sq_in_C_major_Op1_No1__Saint-Georges_Joseph_Bologne-tposed.None"
+    # with h5py.File("./processed_datasets/paired_quartets_bymeasure.h5") as f:
+    #     correct_seq = f["train/correct_quartets"][fname][:]
+    #     error_seq = f["train/omr_quartets"][fname][:]
 
-    # print(i, correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
-    a, b, align_record, pt, score = perform_alignment(
-        correct_seq,
-        error_seq,
-        match_weights,
-        gap_penalties,
-        bands=0.05,
-        verbose=False,
-    )
+    # # print(i, correct_fnames[i], correct_dset[i].shape, error_dset[i].shape)
+    # a, b, align_record, pt, score = perform_alignment(
+    #     correct_seq,
+    #     error_seq,
+    #     match_weights,
+    #     gap_penalties,
+    #     bands=0.05,
+    #     verbose=False,
+    # )
 
-    # print("".join(align_record))
-    print(1 - (align_record.count("O") / len(align_record)))
+    # # print("".join(align_record))
+    # print(1 - (align_record.count("O") / len(align_record)))
 
     # for position in range(len(align_record)):
     #     r = align_record[position]
@@ -313,15 +324,7 @@ if __name__ == "__main__":
     #         if type(ar) is str:
     #             print(position, r, ar, br)
 
-    list(zip(align_record, a, b))
-
-    # transcript_numba = numbaList(list(correct_dset[i]))
-    # ocr_numba = numbaList((error_dset[i]))
-    # match_weights = numbaList(match_weights)
-    # gap_penalties = numbaList(gap_penalties)
-    # mat_ptr, x_mat_ptr, y_mat_ptr, mat = create_matrix(
-    #     transcript_numba, ocr_numba, match_weights, gap_penalties, bands=0.05
-    # )
+    # list(zip(align_record, a, b))
 
     # pt = np.concatenate([np.array(pt), [pt[-1]]])
     # lines = []
