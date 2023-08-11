@@ -4,7 +4,7 @@
     "early_stopping_patience": 15,
     "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 12,
+    "max_time_hours": 10,
     "aug_max_epochs": 30,
     "seq_length": 512,
     "padding_amt": 32,
@@ -37,7 +37,7 @@
         "tf_heads": 12,
         "tf_depth": 6,
         "hidden_dim": 64,
-        "ff_dim": 1024,
+        "ff_dim": 2048,
         "dropout": 0.2,
         "positional_encoding": true
     },

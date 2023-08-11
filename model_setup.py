@@ -81,7 +81,7 @@ class PreparedLSTUTModel:
             "example_generator": self.error_generator,
         }
 
-    def add_scheduler(self, estimated_num_steps, settings, total_cycles=10):
+    def add_scheduler(self, estimated_num_steps, settings, total_cycles=15):
 
         settings["step_size_up"] = int(estimated_num_steps / total_cycles)
 

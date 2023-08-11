@@ -237,7 +237,7 @@ for epoch in range(params.num_epochs):
         "val_threshes": val_threshes,
     }
     if (
-        len(val_norm_recalls) > 1 and val_norm_recalls[-1] < min(val_norm_recalls[:-1])
+        len(val_norm_recalls) > 1 and val_norm_recalls[-1] > max(val_norm_recalls[:-1])
     ) or not best_model:
         best_model = copy.deepcopy(cur_model)
         m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
@@ -246,11 +246,11 @@ for epoch in range(params.num_epochs):
     # when was the best epoch? if we're finetuning, only consider epochs after we started finetuning
     if now_finetuning:
         best_epoch = (
-            np.argmin(val_norm_recalls[epoch_started_finetuning:])
+            np.argmax(val_norm_recalls[epoch_started_finetuning:])
             + epoch_started_finetuning
         )
     else:
-        best_epoch = np.argmin(val_norm_recalls)
+        best_epoch = np.argmax(val_norm_recalls)
     time_since_best = epoch - best_epoch
     elapsed = time.time() - start_time
     # is it time... to fine tune?
@@ -309,6 +309,11 @@ if args["wandb"]:
 best_epoch = best_model["epoch"]
 m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
 torch.save(best_model, m_name)
+print(
+    f"best model found at {best_epoch} out of {epoch}.\n"
+    f"fine-tuning started at epoch {time_started_finetuning} and lasted for {epoch - time_started_finetuning} epochs."
+)
+
 
 #########################
 # TESTING TRAINED MODEL
