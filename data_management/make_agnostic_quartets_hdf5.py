@@ -6,10 +6,10 @@ import h5py
 import data_management.semantic_to_agnostic as sta
 import data_management.vocabulary as vocab
 
-test_proportion = 0.15
+test_proportion = 0.2
 validate_proportion = 0.1
 beat_multiplier = 48
-num_transpositions_per_file = 4
+num_transpositions_per_file = 2
 possible_transpositions = ["m2", "M2", "m3", "M3", "P4", "a4"]
 possible_transpositions = possible_transpositions + [
     "-" + x for x in possible_transpositions

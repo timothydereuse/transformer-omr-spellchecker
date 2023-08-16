@@ -29,8 +29,6 @@ build_vocab(
         "paired_omr_correct/omr_quartets",
         "paired_omr_correct/onepass_quartets",
         "musescore_misc",
-        "jsb_choral_krn",
-        "jsb_fakes_mxl",
         "musescore_misc_pd",
         "ABC",
         "kernscores",
@@ -46,8 +44,6 @@ v = Vocabulary(load_from_file=vocab_name)
 make_hdf5(
     all_quartets_dset_path,
     [
-        "jsb_fakes_mxl",
-        "jsb_choral_krn",
         "musescore_misc",
         "musescore_misc_pd",
         "ABC",
