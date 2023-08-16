@@ -1,6 +1,6 @@
 {
     "params_name": "lstut_node",
-    "num_epochs": 128,
+    "num_epochs": 96,
     "early_stopping_patience": 15,
     "num_examples_to_save": 5,
     "save_model_every": 4,
@@ -11,7 +11,7 @@
     "lr": 0.0001,
     "batch_size": 192,
     "clip_gradient_norm": 0.5,
-    "reduce_aug_data": 0.5,
+    "reduce_aug_data": 0,
     "minibatch_div": -1,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",

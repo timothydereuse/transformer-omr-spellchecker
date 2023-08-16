@@ -127,9 +127,11 @@ if dry_run:
 print("beginning training")
 start_time = time.time()
 val_losses = []
-val_norm_recalls = []
+val_mccs = []
 train_losses = []
 best_model = None
+best_epoch = -1
+best_val_score = 0
 now_finetuning = not params.finetuning
 epoch_started_finetuning = 0
 time_started_finetuning = start_time
@@ -186,7 +188,7 @@ for epoch in range(params.num_epochs):
     val_norm_recall = ttm.normalized_recall(
         sig_val_output.cpu(), val_exs["target"].cpu()
     )
-    val_norm_recalls.append(val_norm_recall)
+    val_mccs.append(val_mcc)
     val_threshes = ttm.find_thresh_for_given_recalls(
         sig_val_output.cpu(), val_exs["target"].cpu(), params.target_recalls
     )
@@ -233,47 +235,38 @@ for epoch in range(params.num_epochs):
         "optimizer_state_dict": prep_model.optimizer.state_dict(),
         "scheduler_state_dict": prep_model.scheduler.state_dict(),
         "val_losses": val_losses,
-        "val_norm_recalls": val_norm_recalls,
+        "val_mccs": val_mccs,
         "val_threshes": val_threshes,
     }
-    if (
-        len(val_norm_recalls) > 1 and val_norm_recalls[-1] > max(val_norm_recalls[:-1])
-    ) or not best_model:
+    if (val_mcc > best_val_score) or not best_model:
+        best_val_score = val_mcc
+        best_epoch = epoch
         best_model = copy.deepcopy(cur_model)
         m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
         torch.save(best_model, m_name)
 
     # when was the best epoch? if we're finetuning, only consider epochs after we started finetuning
-    if now_finetuning:
-        best_epoch = (
-            np.argmax(val_norm_recalls[epoch_started_finetuning:])
-            + epoch_started_finetuning
-        )
-    else:
-        best_epoch = np.argmax(val_norm_recalls)
     time_since_best = epoch - best_epoch
     elapsed = time.time() - start_time
     # is it time... to fine tune?
 
     # two possible conditions for starting to finetune
-    ft_1 = not now_finetuning and (time_since_best > params.early_stopping_patience)
-    ft_2 = not now_finetuning and (epoch > params.aug_max_epochs)
+    ft_1 = not now_finetuning and (time_since_best >= params.early_stopping_patience)
+    ft_2 = not now_finetuning and (epoch >= params.aug_max_epochs)
 
-    if ft_1:
+    if ft_1 or ft_2:
+        expl_string = (
+            "(validation score stopped increasing)" if ft_1 else "(aug epochs limit)"
+        )
         print(
-            f"done training on augmented data: epoch {epoch} (validation score stopped increasing). "
+            f"done training on augmented data: epoch {epoch} {expl_string} "
             " beginning to finetune"
         )
         now_finetuning = True
         epoch_started_finetuning = epoch
-        # prep_model.model.module.freeze_tf()
-        time_started_finetuning = time.time()
-    elif ft_2:
-        print(
-            f"done training on augmented data: epoch {epoch} reached (aug epochs limit). beginning to finetune."
-        )
-        now_finetuning = True
-        epoch_started_finetuning = epoch
+        best_epoch = epoch + 1
+        best_model = None
+        best_val_score = 0
         # prep_model.model.module.freeze_tf()
         time_started_finetuning = time.time()
     elif now_finetuning and (time_since_best > params.early_stopping_patience):
@@ -311,7 +304,7 @@ m_name = f"./trained_models/lstut_best_{params.params_id_str}.pt"
 torch.save(best_model, m_name)
 print(
     f"best model found at {best_epoch} out of {epoch}.\n"
-    f"fine-tuning started at epoch {time_started_finetuning} and lasted for {epoch - time_started_finetuning} epochs."
+    f"fine-tuning started at epoch {epoch_started_finetuning} and lasted for {epoch - epoch_started_finetuning} epochs."
 )
 
 
