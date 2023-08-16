@@ -67,7 +67,7 @@ class AgnosticOMRDataset(IterableDataset):
 
         # get all filenames from the dataset
         self.full_fnames = all_hdf5_keys(self.f)
-        if reduce_dset_by > 0:
+        if reduce_dset_by and reduce_dset_by > 0:
             fnames_to_keep = int(np.ceil(len(self.full_fnames) * reduce_dset_by))
             inds = np.random.choice(
                 len(self.full_fnames), fnames_to_keep, replace=False
