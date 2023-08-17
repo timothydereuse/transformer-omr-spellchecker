@@ -1,5 +1,5 @@
 {
-    "params_name": "lstut_node",
+    "params_name": "lstut_seqlen",
     "num_epochs": 96,
     "early_stopping_patience": 15,
     "num_examples_to_save": 5,
@@ -62,9 +62,6 @@
         }
     ],
     "param_sweep": [
-        {
-            "finetuning": false
-        },
         {
             "seq_length": 64,
             "batch_size": 1536
