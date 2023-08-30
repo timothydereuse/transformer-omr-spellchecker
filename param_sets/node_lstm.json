@@ -1,50 +1,51 @@
 {
-    "params_name": "NODE_LSTM_FINAL",
-    "num_epochs": 151,
-    "early_stopping_patience": 5,
-    "num_examples_to_save": 10,
+    "params_name": "lstut_seqlen",
+    "num_epochs": 96,
+    "early_stopping_patience": 15,
+    "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 0.6,
-    "aug_max_epochs": 0.25,
+    "max_time_hours": 8,
+    "aug_max_epochs": 30,
     "seq_length": 512,
-    "padding_amt": 64,
+    "padding_amt": 32,
     "lr": 0.0001,
-    "batch_size": 256,
+    "batch_size": 192,
     "clip_gradient_norm": 0.5,
     "reduce_aug_data": 0,
-    "minibatch_div": 10,
+    "minibatch_div": -1,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
     "finetuning": true,
-    "error_gen_smoothing": 2,
+    "error_gen_smoothing": 0.1,
     "simple_errors": false,
     "errors_parallel": 3,
-    "simple_error_rate": 0.1,
+    "simple_error_rate": 0.2,
     "target_recalls": [
-        0.8,
         0.9,
         0.95,
+        0.975,
         0.99
     ],
+    "use_mcc_loss": false,
     "lstut_settings": {
-        "d_model": 256,
+        "d_model": 512,
         "output_feats": 1,
-        "lstm_layers": 2,
+        "lstm_layers": 1,
         "tf_layers": 0,
         "tf_heads": 1,
         "tf_depth": 0,
-        "hidden_dim": 512,
-        "ff_dim": 128,
-        "dropout": 0.1,
+        "hidden_dim": 64,
+        "ff_dim": 1048,
+        "dropout": 0.2,
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "max_lr": 0.003,
-        "steps_per_epoch": 40,
-        "pct_start": 0.2,
-        "verbose": true
+        "base_lr": 0.0001,
+        "max_lr": 0.005,
+        "step_size_up": 150,
+        "verbose": false
     },
     "test_sets": [
         {
@@ -62,15 +63,34 @@
     ],
     "param_sweep": [
         {
-            "batch_size": 128,
-            "seq_length": 512
+            "seq_length": 64,
+            "batch_size": 1536
         },
         {
-            "batch_size": 1024,
-            "seq_length": 128
+            "seq_length": 128,
+            "batch_size": 768
         },
         {
-            "lr": 0.005
+            "seq_length": 256,
+            "batch_size": 384
+        },
+        {
+            "seq_length": 512,
+            "batch_size": 192
+        },
+        {
+            "seq_length": 1024,
+            "batch_size": 96
+        },
+        {
+            "seq_length": 2048,
+            "batch_size": 32,
+            "max_time_hours": 12
+        },
+        {
+            "seq_length": 4096,
+            "batch_size": 16,
+            "max_time_hours": 12
         }
     ]
 }
