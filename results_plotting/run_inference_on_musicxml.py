@@ -24,10 +24,22 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style="
         if not prediction:
             continue
 
+        # print(
+        #     record.part_idx,
+        #     len(all_measures),
+        #     record.measure_idx,
+        #     len(all_measures[record.part_idx]),
+        #     record.event_idx,
+        #     len(all_measures[record.part_idx][record.measure_idx]),
+        # )
+
         # get the single m21 element referred to by this token
-        selected_element = all_measures[record.part_idx][record.measure_idx][
-            record.event_idx
-        ]
+        try:
+            selected_element = all_measures[record.part_idx][record.measure_idx][
+                record.event_idx
+            ]
+        except IndexError:
+            continue
         token_type = record.music_element.split(".")[0]
 
         # how do we handle chords? if it's a chord, then record.chord_idx will be non-zero:
@@ -172,31 +184,23 @@ def run_inference_and_color_streams(
 
 
 if __name__ == "__main__":
-    model_path = (
-        "trained_models\lstut_best_LSTUT_TRIAL_0_(2023.01.10.17.06)_1-1-1-11-1-32-32.pt"
-    )
-    saved_model_info = torch.load(model_path)
+    model_path = r"C:\Users\tim\Documents\transformer-midi-error-correction\trained_models\lstut_best_lstut_seq_sweep_cyclicLR_1_(2023.07.09.09.19)_lstm256-1-tf212-4-64-2048.pt"
+    saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
 
     threshold = saved_model_info["val_threshes"][1]
 
-    params = model_params.Params("./param_sets/trial_lstut.json", False, 0)
+    params = model_params.Params("./param_sets/node_lstut.json", False, 1)
     device, num_gpus = tr_funcs.get_cuda_info()
 
     prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
     groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
 
     errored_files = [
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_1_omr.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_2_omr.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_3_omr.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C0\1_op12_4_omr.musicxml",
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\omr_quartets\mendelssohn_1_op12_1.musicxml",
     ]
 
     correct_files = [
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_1_aligned.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_2_aligned.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_3_aligned.musicxml",
-        r"C:\Users\tim\Documents\felix_quartets_got_annotated\1_op12\C3\1_op12_4_aligned.musicxml",
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\mendelssohn_1_op12_1.musicxml"
     ]
 
     parsed_correct = [m21.converter.parse(fpath) for fpath in correct_files]
@@ -215,4 +219,4 @@ if __name__ == "__main__":
         error_generator=prep_model.error_generator,
     )
 
-    # output_streams[2].write('musicxml', fp='./test2.musicxml')
+    out1[0].write("musicxml", fp="./test2.musicxml")
