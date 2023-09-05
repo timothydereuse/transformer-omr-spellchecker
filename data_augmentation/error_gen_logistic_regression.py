@@ -29,12 +29,14 @@ class ErrorGenerator(object):
         simple_error_rate: float = 0.05,
         parallel: int = 1,
         simple: bool = False,
-        models_fpath: Optional[str] = None,
+        oscillator_aug: bool = True,
+        error_models_fpath: Optional[str] = None,
         labeled_data: Optional[tuple[list, list]] = None,
     ):
         self.smoothing = smoothing
         self.simple_error_rate = simple_error_rate
         self.simple = simple
+        self.oscillator_aug = oscillator_aug
         self.parallel = parallel
         self.bands = 0.5
         self.match_weights = [1, -1]
@@ -58,7 +60,7 @@ class ErrorGenerator(object):
         )  # smooth edges of error runs with how big a filter?
 
         if labeled_data is None:
-            models = load(models_fpath)
+            models = load(error_models_fpath)
             self.enc = models["one_hot_encoder"]
             self.enc_labels = models["labels_encoder"]
             self.regression = models["logistic_regression"]
@@ -169,7 +171,7 @@ class ErrorGenerator(object):
         smooth_ind = int(np.median(np.argmax(predictions, 1)))
 
         # induces contiguous runs of errors to be more common:
-        oscillator = self.make_oscillator(len(seq))
+        oscillator = self.make_oscillator(len(seq)) if self.oscillator_aug else 0
 
         predictions_remainder = np.delete(predictions, smooth_ind, 1)
         predictions_smooth_ind = predictions[:, smooth_ind]

@@ -15,13 +15,16 @@
     "minibatch_div": 2,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
-    "error_model": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
     "finetuning": true,
-    "error_gen_smoothing": 0.1,
-    "simple_errors": false,
-    "errors_parallel": 3,
-    "simple_error_rate": 0.2,
+    "error_gen_settings": {
+        "smoothing": 0.1,
+        "simple": false,
+        "simple_error_rate": 0.2,
+        "parallel": 3,
+        "oscillator_aug": true,
+        "error_models_fpath": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib"
+    },
     "target_recalls": [
         0.9,
         0.95,

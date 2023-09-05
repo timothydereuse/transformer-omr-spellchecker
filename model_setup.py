@@ -18,13 +18,16 @@ class PreparedLSTUTModel:
 
         self.v = vocab.Vocabulary(load_from_file=params.saved_vocabulary)
 
-        self.error_generator = err_gen.ErrorGenerator(
-            simple=params.simple_errors,
-            smoothing=params.error_gen_smoothing,
-            simple_error_rate=params.simple_error_rate,
-            parallel=params.errors_parallel,
-            models_fpath=params.error_model,
-        )
+        # self.error_generator = err_gen.ErrorGenerator(
+        #     simple=params.simple_errors,
+        #     smoothing=params.error_gen_smoothing,
+        #     simple_error_rate=params.simple_error_rate,
+        #     oscillator_aug=params.oscillator_aug,
+        #     parallel=params.errors_parallel,
+        #     models_fpath=params.error_model,
+        # )
+
+        self.error_generator = err_gen.ErrorGenerator(**params.error_gen_settings)
 
         self.lstut_settings = params.lstut_settings
         self.lstut_settings["vocab_size"] = self.v.num_words
@@ -49,9 +52,9 @@ class PreparedLSTUTModel:
         }
 
         self.class_ratio = (
-            (2 / params.simple_error_rate)
-            if params.simple_errors
-            else max(1, params.error_gen_smoothing + 1)
+            (2 / params.error_gen_settings["simple_error_rate"])
+            if params.error_gen_settings["simple"]
+            else max(1, params.error_gen_settings["smoothing"] + 1)
         )
 
         if not params.use_mcc_loss:
