@@ -69,10 +69,13 @@
             "aug_max_epochs": 0
         },
         {
-            "simple_errors": true
+            "error_gen_settings.simple": true
         },
         {
-            "error_gen_smoothing": 2
+            "error_gen_settings.oscillator_aug": false
+        },
+        {
+            "error_gen_settings.smoothing": 2
         }
     ]
 }
