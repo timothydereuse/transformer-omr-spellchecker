@@ -274,9 +274,22 @@ def m21_part_to_agnostic(part, part_idx, restate_clefs_keysigs=False):
 
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
+                pos_mod = 0
+                if current_clef.name == "bass":
+                    pos_mod = -2
+                elif current_clef.name == "alto":
+                    pos_mod = -1
+                l_line = m21.clef.TrebleClef().lowestLine
+
                 for p in e.alteredPitches:
-                    position = (p.diatonicNoteNum - current_clef.lowestLine) % 8
+                    position = p.diatonicNoteNum - l_line + pos_mod
                     sb.add_record(f"accid.{p.accidental.name}.pos{position}")
+                # handle the case if we're switching to C Major or A Minor - courtesy naturals
+                # some music does more complicated stuff than this but I don't want to cover it
+                if len(e.alteredPitches) == 0:
+                    for p in current_key_sig.alteredPitches:
+                        position = p.diatonicNoteNum - l_line + pos_mod
+                        sb.add_record(f"accid.natural.pos{position}")
                 current_key_sig = e
 
             # case if the current m21 element is a Time Signature
@@ -444,8 +457,7 @@ if __name__ == "__main__":
     from collections import Counter
 
     files = [
-        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\omr_quartets\String_Quartet_in_C_minor_D.703__Franz_Schubert_-_Quartettsatz.musicxml",
-        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\String_Quartet_in_C_minor_D.703__Franz_Schubert_-_Quartettsatz.mxl",
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\Haydn_Joseph_-sq_in_G_major_Op.64_No.4_Hob.III66.mxl"
     ]
 
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
