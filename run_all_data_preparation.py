@@ -116,7 +116,7 @@ downsample = np.random.choice(num_samples, new_num_samples, replace=False)
 err_gen = ErrorGenerator(labeled_data=[X[downsample], Y[downsample]])
 err_gen.save_models(error_generator_fname)
 
-err_gen = ErrorGenerator(models_fpath=error_generator_fname)
+err_gen = ErrorGenerator(error_models_fpath=error_generator_fname)
 # now, make .h5 file of test sequences
 pms = []
 for splt in ["train", "test", "validate"]:

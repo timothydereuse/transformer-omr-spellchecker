@@ -64,7 +64,7 @@ class ErrorGenerator(object):
             self.enc = models["one_hot_encoder"]
             self.enc_labels = models["labels_encoder"]
             self.regression = models["logistic_regression"]
-        elif models_fpath is None:
+        elif error_models_fpath is None:
             print("no model supplied. training new model:")
             X, Y = labeled_data
             self.enc = preprocessing.OneHotEncoder(sparse=True, handle_unknown="ignore")
@@ -366,7 +366,7 @@ if __name__ == "__main__":
             break
 
     print("creating error generator")
-    e = ErrorGenerator(smoothing=2, parallel=1, models_fpath=model_fpath)
+    e = ErrorGenerator(smoothing=2, parallel=1, error_models_fpath=model_fpath)
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
