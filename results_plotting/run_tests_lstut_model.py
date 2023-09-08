@@ -23,3 +23,18 @@ if __name__ == "__main__":
 
         res_string = tr_funcs.get_nice_results_string(g.name, res_stats)
         print(res_string)
+
+        precision, recalls, threshes = test_results.make_pr_curve()
+
+        import pandas as pd
+        import numpy as np
+
+        # df = pd.DataFrame(
+        #     data={
+        #         "precision": precision,
+        #         "recall": recalls,
+        #         "threshes": np.concatenate([threshes, [threshes[-1]]]),
+        #     }
+        # )
+
+        # df.to_csv("./results_csv/PR_curve.csv")
