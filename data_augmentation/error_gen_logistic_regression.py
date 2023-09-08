@@ -242,16 +242,11 @@ class ErrorGenerator(object):
         inp: npt.NDArray,
         given_err_seq: Optional[npt.NDArray] = None,
         bands: Optional[float] = None,
+        match_original_dim: bool = True,
     ) -> tuple[npt.NDArray, npt.NDArray]:
         inp = inp.astype("float32")
 
         seq_len = inp.shape[0]
-        # X_out = np.zeros(inp.shape)
-        # Y_out = np.zeros((inp.shape[0], inp.shape[1]))
-        # inp = inp.numpy()
-
-        Y_out = np.zeros(seq_len, dtype="float32")
-        pad_seq = np.zeros(inp.shape, dtype="float32")
 
         # for n in range(X_out.shape[0]):
         orig_seq = list(inp)
@@ -277,8 +272,10 @@ class ErrorGenerator(object):
             bands=bands_amt,
         )
 
+        Y_out = np.zeros(len(err_seq), dtype="float32")
+        pad_seq = np.zeros(inp.shape, dtype="float32")
+
         # put 'deletion' markers in front of entries in alignment record r that record deletions
-        res = np.zeros(seq_len)
         i = 0
 
         # iterate through the record of operations to make the training data targets:
@@ -295,7 +292,11 @@ class ErrorGenerator(object):
                 # advance to the next sequence place
                 i += 1
 
-        padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
+        if match_original_dim:
+            padded_seq = np.concatenate([err_seq, pad_seq], 0)[:seq_len]
+            Y_out = np.concatenate([Y_out, pad_seq], 0)[:seq_len]
+        else:
+            padded_seq = err_seq
 
         return padded_seq, Y_out
 

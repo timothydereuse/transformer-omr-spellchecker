@@ -196,7 +196,7 @@ def resolve_chord(e, current_clef):
     return end_list, end_tracker, tuplet
 
 
-def m21_part_to_agnostic(part, part_idx):
+def m21_part_to_agnostic(part, part_idx, restate_clefs_keysigs=False):
 
     sb = SequenceBuilder()
     sb.part_idx = part_idx
@@ -275,7 +275,7 @@ def m21_part_to_agnostic(part, part_idx):
             # case if the current m21 element is a Key Signature
             elif type(e) == m21.key.KeySignature:
                 for p in e.alteredPitches:
-                    position = (p.diatonicNoteNum - current_clef.lowestLine) % 12
+                    position = (p.diatonicNoteNum - current_clef.lowestLine) % 8
                     sb.add_record(f"accid.{p.accidental.name}.pos{position}")
                 current_key_sig = e
 
@@ -291,11 +291,13 @@ def m21_part_to_agnostic(part, part_idx):
 
             # case where the current m21 element is a systemLayout
             # (must check to be sure it actually makes a new system)
-            elif type(e) == m21.layout.SystemLayout and e.isNew:
+            elif (
+                type(e) == m21.layout.SystemLayout and e.isNew and restate_clefs_keysigs
+            ):
                 # restate clef and key signature
                 glyphs = [f"lineBreak", f"clef.{current_clef.name}"]
                 for p in current_key_sig.alteredPitches:
-                    position = p.diatonicNoteNum - current_clef.lowestLine - 12
+                    position = p.diatonicNoteNum - current_clef.lowestLine
                     glyphs.append(f"accid.{p.accidental.name}.{position}")
                 for g in glyphs:
                     sb.add_record(g)
