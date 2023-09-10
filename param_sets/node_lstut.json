@@ -94,6 +94,10 @@
             "seq_length": 4096,
             "batch_size": 16,
             "max_time_hours": 12
+        },
+        {
+            "lstut_settings.lstm_layers": 0,
+            "lstut_settings.positional_encoding": true
         }
     ]
 }

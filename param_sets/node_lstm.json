@@ -88,12 +88,16 @@
         {
             "seq_length": 2048,
             "batch_size": 32,
-            "max_time_hours": 12
+            "max_time_hours": 16
         },
         {
             "seq_length": 4096,
             "batch_size": 16,
-            "max_time_hours": 12
+            "max_time_hours": 16
+        },
+        {
+            "lstut_settings.lstm_layers": 1,
+            "lstut_settings.positional_encoding": true
         }
     ]
 }

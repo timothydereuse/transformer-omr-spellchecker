@@ -76,6 +76,10 @@
         },
         {
             "error_gen_settings.smoothing": 2
+        },
+        {
+            "aug_max_epochs": 10000,
+            "early_stopping_patience": 150
         }
     ]
 }

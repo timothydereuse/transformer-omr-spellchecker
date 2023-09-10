@@ -272,7 +272,7 @@ for epoch in range(params.num_epochs):
         # early stopping
         print(f"stopping early at epoch {epoch}: validation score stopped increasing")
         break
-    elif now_finetuning and elapsed > (params.max_time_hours * 3600):
+    elif elapsed > (params.max_time_hours * 3600):
         # stopping based on time limit defined in params file
         print(f"stopping early at epoch {epoch} because of time limit")
         break
