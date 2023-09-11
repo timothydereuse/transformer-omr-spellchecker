@@ -80,6 +80,9 @@
         {
             "aug_max_epochs": 10000,
             "early_stopping_patience": 150
+        },
+        {
+            "finetuning": false
         }
     ]
 }
