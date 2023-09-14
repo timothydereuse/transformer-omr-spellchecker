@@ -7,10 +7,11 @@ import music21 as m21
 import model_params
 import verovio
 import os
+import pickle
 
 verovio_options = {
     "pageHeight": 1000,
-    "pageWidth": 2450,
+    "pageWidth": 2150,
     "scale": 25,
     "header": "none",
     "footer": "none",
@@ -24,10 +25,26 @@ verovio_options = {
     "systemMaxPerPage": 1,
     "spacingLinear": 0.25,
     "spacingNonLinear": 0.57,
+    "adjustPageHeight": True,
+    # "adjustPageWidth": True,
 }
 
 
-def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style="red"):
+def get_all_sub_files_with_ext(output_folder, ext):
+    path_pairs = []
+    for folder_name in os.listdir(output_folder):
+        if not os.path.isdir(os.path.join(output_folder, folder_name)):
+            continue
+        folder_path = os.path.join(output_folder, folder_name)
+        file_names = os.listdir(folder_path)
+        xml_files = [x for x in file_names if ext in x]
+        if len(xml_files) == 0:
+            continue
+        path_pairs.append((folder_path, os.path.join(folder_path, xml_files[0])))
+    return path_pairs
+
+
+def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style):
     # given a music21 stream, a list of agnostic tokens, a list of predictions
     # on those tokens, and a color, assign that color to all objects in the
     # music21 stream where the prediction on its associated token is true.
@@ -88,6 +105,8 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style="
             selected_element.style.color = color_style
         elif token_type == "note" and type(selected_element) == m21.note.Note:
             selected_element.style.color = color_style
+        elif isinstance(selected_element, m21.clef.Clef):
+            pass
         else:
             selected_element.style.color = color_style
 
@@ -116,21 +135,14 @@ def run_agnostic_through_model(agnostic_rec, model, seq_length, vocab):
     return unwrapped_pred
 
 
-def run_inference_and_color_stream(
+def run_inference_and_align(
     errored_stream,
     model,
     v,
-    threshold,
     sequence_length,
     correct_stream=None,
-    colors=None,
     error_generator=None,
 ):
-
-    if not colors:
-        true_pos_color, false_pos_color, false_neg_color = ("red", "gray", "blue")
-    else:
-        true_pos_color, false_pos_color, false_neg_color = colors
 
     print("    converting stream to agnostic...")
     if not correct_stream:
@@ -146,44 +158,70 @@ def run_inference_and_color_stream(
     agnostic_rec_errored = sta.m21_streams_to_agnostic([errored_stream])[0]
 
     print("    running stream through model")
-    this_stream = errored_stream
     predictions = run_agnostic_through_model(
         agnostic_rec_errored, model, sequence_length, v
     )
 
+    sigmoid = lambda x: 1 / (1 + np.exp(-x))
+
     # threshold predictions of model
-    thresh_pred = (predictions > threshold).numpy().astype("bool")
+    sig_outputs = sigmoid(predictions)
 
     if not ground_truth_mode:
-        colored_stream = assign_color_to_stream(
-            this_stream, agnostic_rec_errored, thresh_pred, color_style=true_pos_color
+        return agnostic_rec_errored, sig_outputs, None
+
+    # process further if we need to compare with ground truth
+    print("    aligning with ground truth...")
+
+    vectorized_errored = v.words_to_vec([x.music_element for x in agnostic_rec_errored])
+    vectorized_correct = v.words_to_vec([x.music_element for x in agnostic_rec_correct])
+
+    # get targets (ground truth)
+    _, targets = error_generator.add_errors_to_seq(
+        vectorized_correct,
+        given_err_seq=vectorized_errored,
+        bands=0.15,
+        match_original_dim=False,
+    )
+    targets = targets.astype("bool")
+
+    return agnostic_rec_errored, sig_outputs, targets
+
+
+def evaluate_and_color_stream(
+    errored_stream,
+    agnostic_rec_errored,
+    sig_outputs,
+    threshold,
+    targets=None,
+    colors=None,
+):
+
+    if not colors:
+        true_pos_color, false_pos_color, false_neg_color = (
+            "#EAB704",
+            "#D20712",
+            "#1A63EA",
         )
     else:
-        # process further if we need to compare with ground truth
-        print("    aligning with ground truth...")
+        true_pos_color, false_pos_color, false_neg_color = colors
 
-        vectorized_errored = v.words_to_vec(
-            [x.music_element for x in agnostic_rec_errored]
+    if targets is None:
+        thresh_pred = (sig_outputs > threshold).numpy().astype("bool")
+        colored_stream = assign_color_to_stream(
+            errored_stream,
+            agnostic_rec_errored,
+            thresh_pred,
+            color_style=true_pos_color,
         )
-        vectorized_correct = v.words_to_vec(
-            [x.music_element for x in agnostic_rec_correct]
-        )
-
-        # get targets (ground truth)
-        _, targets = error_generator.add_errors_to_seq(
-            vectorized_correct,
-            given_err_seq=vectorized_errored,
-            bands=0.15,
-            match_original_dim=False,
-        )
-        targets = targets.astype("bool")
-
+    else:
+        thresh_pred = (sig_outputs > threshold).numpy().astype("bool")
         true_positive = np.logical_and(targets, thresh_pred)
         false_positive = np.logical_and(np.logical_not(targets), thresh_pred)
         false_negative = np.logical_and(targets, np.logical_not(thresh_pred))
 
         colored_stream = assign_color_to_stream(
-            this_stream,
+            errored_stream,
             agnostic_rec_errored,
             false_negative,
             color_style=false_neg_color,
@@ -216,26 +254,33 @@ def parse_filter_stream(fpath):
             el.activeSite.remove(el)
         if hasattr(el, "lyric"):
             el.lyric = None
+        if type(el) == m21.stream.base.Part:
+            el.partName = None
+            el.partAbbreviation = None
+            el.coreElementsChanged()
+    pa.coreElementsChanged()
     return pa
 
 
 if __name__ == "__main__":
-    model_path = r"trained_models\lstut_best_lstut_seqlen_4_(2023.08.18.23.07)_lstm512-1-tf112-6-64-2048.pt"
-    saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
 
-    threshold = saved_model_info["val_threshes"][1]
-
-    params = model_params.Params("./param_sets/node_lstut.json", False, 4)
-    device, num_gpus = tr_funcs.get_cuda_info()
-
-    prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
-    groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
-
+    recompute_inference = False
+    recompute_coloring = True
+    model_path = r"trained_models\lstut_best_lstut_seqlen_4_(2023.09.08.17.53)_lstm512-1-tf112-6-64-2048.pt"
     paired_quartets_root = (
         r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct"
     )
-    output_folder = r"C:\Users\tim\Documents\tex\dissertation\error_detection_svg"
+    output_folder = r"C:\Users\tim\Documents\datasets\quartets_results_svg"
 
+    # basic model setup
+    saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
+    threshold = saved_model_info["val_threshes"][0]
+    params = model_params.Params("./param_sets/node_lstut.json", False, 4)
+    device, num_gpus = tr_funcs.get_cuda_info()
+    prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
+    groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
+
+    # getting quartet paths and pairing them up
     correct_quart_path = os.path.join(paired_quartets_root, "correct_quartets")
     omr_quart_path = os.path.join(paired_quartets_root, "omr_quartets")
     score_fnames = os.listdir(correct_quart_path)
@@ -249,17 +294,24 @@ if __name__ == "__main__":
         sorted(score_fnames, reverse=True), sorted(omr_fnames, reverse=True)
     )
     paired_score_fnames = list(paired_score_fnames)
-    paired_score_fnames = [paired_score_fnames[4]]
+    paired_score_fnames = paired_score_fnames[4:6]
 
     for cor_score, omr_score in paired_score_fnames:
 
         score_name = "".join(cor_score.split(".")[:-1])
         score_folder_path = os.path.join(output_folder, score_name)
+        pkl_fp = os.path.join(score_folder_path, "inference_results.pkl")
         xml_fp = os.path.join(score_folder_path, "colored_score.musicxml")
-        if os.path.isfile(xml_fp):
-            continue
+
         if not os.path.exists(score_folder_path):
             os.makedirs(score_folder_path)
+
+        if (
+            os.path.isfile(pkl_fp)
+            and os.path.isfile(xml_fp)
+            and not (recompute_coloring or recompute_inference)
+        ):
+            continue
 
         print(f"parsing {cor_score}...")
         cor_path = os.path.join(paired_quartets_root, "correct_quartets", cor_score)
@@ -267,23 +319,33 @@ if __name__ == "__main__":
         err_fpath = os.path.join(paired_quartets_root, "omr_quartets", omr_score)
         parsed_errored = parse_filter_stream(err_fpath)
 
-        # out2 = run_inference_and_color_stream(
-        #     parsed_errored[3],
-        #     prep_model.model,
-        #     prep_model.v,
-        #     threshold,
-        #     sequence_length=params.seq_length,
-        # )
+        if os.path.isfile(pkl_fp) or recompute_inference:
+            print(f"    using precomputed results at {pkl_fp}")
+            with open(pkl_fp, "rb") as f:
+                res = pickle.load(f)
+                agnostic_rec_errored, sig_outputs, targets = res
+        else:
+            agnostic_rec_errored, sig_outputs, targets = run_inference_and_align(
+                parsed_errored,
+                prep_model.model,
+                prep_model.v,
+                sequence_length=params.seq_length,
+                correct_stream=parsed_correct,
+                error_generator=prep_model.error_generator,
+            )
+            with open(pkl_fp, "wb") as f:
+                pickle.dump((agnostic_rec_errored, sig_outputs, targets), f)
 
-        colored_score = run_inference_and_color_stream(
+        if os.path.isfile(xml_fp) and not recompute_coloring:
+            print(f"    using precomputed colored score at {xml_fp}")
+            continue
+
+        colored_score = evaluate_and_color_stream(
             parsed_errored,
-            prep_model.model,
-            prep_model.v,
+            agnostic_rec_errored,
+            sig_outputs,
             threshold,
-            sequence_length=params.seq_length,
-            correct_stream=parsed_correct,
-            colors=None,
-            error_generator=prep_model.error_generator,
+            targets=targets,
         )
 
         try:
@@ -292,23 +354,15 @@ if __name__ == "__main__":
             print(f"failed to export {xml_fp}, skipping")
             continue
 
-    xml_paths = []
-    for folder_name in os.listdir(output_folder):
-        if not os.path.isdir(os.path.join(output_folder, folder_name)):
-            continue
-        folder_path = os.path.join(output_folder, folder_name)
-        file_names = os.listdir(folder_path)
-        xml_files = [x for x in file_names if "mxl" or "musicxml" in x]
-        if len(xml_files) == 0:
-            continue
-        xml_paths.append((folder_path, os.path.join(folder_path, xml_files[0])))
+    xml_paths = get_all_sub_files_with_ext(output_folder, "xml")
+    xml_paths = [xml_paths[49]]
 
     tk = verovio.toolkit()
     tk.setOptions(verovio_options)
+    verovio.enableLog(verovio.LOG_ERROR)
 
-    xml_paths = [xml_paths[49]]
     for folder_path, xml_path in xml_paths[::-1]:
-        print(f"processing {xml_path}")
+        print(f"rendering svg to {xml_path}...")
 
         tk.loadFile(xml_path)
         tk.redoLayout()
@@ -317,6 +371,7 @@ if __name__ == "__main__":
         for i in range(1, pages + 1):
             page_path = os.path.join(folder_path, f"page_{i}.svg")
             tk.renderToSVGFile(page_path, i)
+
 
 assert False
 cor_score, omr_score = paired_score_fnames[0]
@@ -344,27 +399,27 @@ targets = targets.astype("bool")
 
 import csv
 
-rows = []
-out_string = ""
-for i in range(300):
-    cor = []
-    measure_entries = [x for x in agnostic_rec_correct if x.measure_idx == i]
-    for el in measure_entries:
-        cor.append([el.music_element, el.measure_idx, el.event_idx])
-    err = []
-    measure_entries = [
-        (j, x) for j, x in enumerate(agnostic_rec_errored) if x.measure_idx == i
-    ]
-    for j, el in measure_entries:
-        err.append([el.music_element, el.measure_idx, el.event_idx, targets[j]])
-    if len(err) < len(cor):
-        for _ in range(len(cor) - len(err)):
-            err.append(["-", "-", "-", "-"])
-    elif len(cor) < len(err):
-        for _ in range(len(err) - len(cor)):
-            cor.append(["-", "-", "-"])
-    with open("compare_agnostic2.csv", "a", newline="") as csvfile:
-        wr = csv.writer(csvfile, delimiter=",")
-        wr.writerow([f"measure {i}", "-", "-", "-", "-", "-", "-"])
-        for c, e in zip(cor, err):
-            wr.writerow(c + e)
+# rows = []
+# out_string = ""
+# for i in range(300):
+#     cor = []
+#     measure_entries = [x for x in agnostic_rec_correct if x.measure_idx == i]
+#     for el in measure_entries:
+#         cor.append([el.music_element, el.measure_idx, el.event_idx])
+#     err = []
+#     measure_entries = [
+#         (j, x) for j, x in enumerate(agnostic_rec_errored) if x.measure_idx == i
+#     ]
+#     for j, el in measure_entries:
+#         err.append([el.music_element, el.measure_idx, el.event_idx, targets[j]])
+#     if len(err) < len(cor):
+#         for _ in range(len(cor) - len(err)):
+#             err.append(["-", "-", "-", "-"])
+#     elif len(cor) < len(err):
+#         for _ in range(len(err) - len(cor)):
+#             cor.append(["-", "-", "-"])
+#     with open("compare_agnostic2.csv", "a", newline="") as csvfile:
+#         wr = csv.writer(csvfile, delimiter=",")
+#         wr.writerow([f"measure {i}", "-", "-", "-", "-", "-", "-"])
+#         for c, e in zip(cor, err):
+#             wr.writerow(c + e)

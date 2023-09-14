@@ -4,10 +4,10 @@ import model_params
 import torch
 
 if __name__ == "__main__":
-    model_path = "trained_models\lstut_best_lstut_seqlen_4_(2023.08.18.23.07)_lstm512-1-tf112-6-64-2048.pt"
+    model_path = r"trained_models\lstut_best_lstut_seqlen_1_(2023.09.09.12.00)_lstm512-1-tf112-6-64-2048.pt"
     saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
 
-    params = model_params.Params("./param_sets/node_lstut.json", False, 4)
+    params = model_params.Params("./param_sets/node_lstut.json", False, 1)
     device, num_gpus = tr_funcs.get_cuda_info()
 
     prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
@@ -16,9 +16,7 @@ if __name__ == "__main__":
     groups = [groups[0]]
     for g in groups:
         res_stats, tst_exs, test_results = tr_funcs.test_end_group(
-            g.dloader,
-            prep_model.run_epoch_kwargs,
-            params.target_recalls,
+            g.dloader, prep_model.run_epoch_kwargs, params.target_recalls, verbose=True
         )
 
         res_string = tr_funcs.get_nice_results_string(g.name, res_stats)
@@ -29,12 +27,12 @@ if __name__ == "__main__":
         import pandas as pd
         import numpy as np
 
-        # df = pd.DataFrame(
-        #     data={
-        #         "precision": precision,
-        #         "recall": recalls,
-        #         "threshes": np.concatenate([threshes, [threshes[-1]]]),
-        #     }
-        # )
+        df = pd.DataFrame(
+            data={
+                "precision": precision,
+                "recall": recalls,
+                "threshes": np.concatenate([threshes, [threshes[-1]]]),
+            }
+        )
 
-        # df.to_csv("./results_csv/PR_curve.csv")
+        df.to_csv("./results_csv/64_PR_curve.csv")
