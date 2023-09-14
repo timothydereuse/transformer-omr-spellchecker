@@ -171,7 +171,7 @@ class ErrorGenerator(object):
         smooth_ind = int(np.median(np.argmax(predictions, 1)))
 
         # induces contiguous runs of errors to be more common:
-        oscillator = self.make_oscillator(len(seq)) if self.oscillator_aug else 0
+        oscillator = self.make_oscillator(len(seq)) if self.oscillator_aug else 0.5
 
         predictions_remainder = np.delete(predictions, smooth_ind, 1)
         predictions_smooth_ind = predictions[:, smooth_ind]
@@ -348,9 +348,9 @@ if __name__ == "__main__":
     from data_management.vocabulary import Vocabulary
     from data_augmentation.compare_paired_quartets import get_raw_probs
 
-    dset_path = r"./processed_datasets/all_string_quartets_big_agnostic_bymeasure.h5"
-    model_fpath = r"./processed_datasets/quartet_omr_error_models_big_bymeasure.joblib"
-    v = Vocabulary(load_from_file="./data_management/vocab_big.txt")
+    dset_path = r"./processed_datasets/all_quartets_bymeasure.h5"
+    model_fpath = r"./processed_datasets/paired_quartets_error_model_bymeasure.joblib"
+    v = Vocabulary(load_from_file="./processed_datasets/vocab_big.txt")
 
     seq_len = 256
     proportion = 0.2
@@ -366,19 +366,20 @@ if __name__ == "__main__":
             break
 
     print("creating error generator")
-    e = ErrorGenerator(smoothing=2, parallel=1, error_models_fpath=model_fpath)
+    e = ErrorGenerator(
+        smoothing=0.8, parallel=1, error_models_fpath=model_fpath, oscillator_aug=True
+    )
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
     simple_error = e.get_simple_synthetic_error_sequence(batch[0].numpy())
     print("adding errors to entire batch...")
-    for i in range(1):
-        print(i)
+    for i in range(2):
         # e.simple = True
         # X, Y = e.add_errors_to_batch(batch.numpy())
         # print(X.shape, Y.shape)
         e.simple = False
         X, Y = e.add_errors_to_batch(batch.numpy())
-        print(X.shape, Y.shape)
+        print(i, Y.mean())
 
     import matplotlib.pyplot as plt
 
