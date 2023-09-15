@@ -42,7 +42,7 @@
         "hidden_dim": 64,
         "ff_dim": 2048,
         "dropout": 0.2,
-        "positional_encoding": false
+        "positional_encoding": true
     },
     "scheduler_settings": {
         "base_lr": 0.0001,
@@ -94,7 +94,8 @@
             "seq_length": 4096,
             "batch_size": 17,
             "max_time_hours": 12,
-            "aug_max_epochs": 15
+            "aug_max_epochs": 15,
+            "lstut_settings.positional_encoding": false
         },
         {
             "lstut_settings.lstm_layers": 0,

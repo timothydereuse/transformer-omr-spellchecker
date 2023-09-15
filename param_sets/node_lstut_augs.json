@@ -20,9 +20,9 @@
     "error_gen_settings": {
         "smoothing": 0.1,
         "simple": false,
-        "simple_error_rate": 0.2,
+        "simple_error_rate": 0.23,
         "parallel": 3,
-        "oscillator_aug": false,
+        "oscillator_aug": true,
         "error_models_fpath": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib"
     },
     "target_recalls": [
@@ -75,11 +75,12 @@
             "error_gen_settings.oscillator_aug": false
         },
         {
-            "error_gen_settings.smoothing": 2
+            "error_gen_settings.smoothing": 3
         },
         {
             "aug_max_epochs": 10000,
-            "early_stopping_patience": 150
+            "early_stopping_patience": 150,
+            "num_epochs": 59
         },
         {
             "finetuning": false

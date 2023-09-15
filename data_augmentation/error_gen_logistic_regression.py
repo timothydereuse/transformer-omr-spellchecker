@@ -367,7 +367,7 @@ if __name__ == "__main__":
 
     print("creating error generator")
     e = ErrorGenerator(
-        smoothing=0.8, parallel=1, error_models_fpath=model_fpath, oscillator_aug=True
+        smoothing=2, parallel=1, error_models_fpath=model_fpath, oscillator_aug=True
     )
 
     synth_error = e.get_synthetic_error_sequence(batch[0].numpy())
