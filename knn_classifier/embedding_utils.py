@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+
 def rolling_window(a, window, pad=2):
 
     pad_amt = window // 2
@@ -22,12 +23,14 @@ class CBOWTrainingDataGenerator(object):
         middle = (seq_len // 2) + 1
 
         targets = batch[:, middle]
-        inputs = torch.cat((batch[:, :middle], batch[:, middle + 1:]), 1)
+        inputs = torch.cat((batch[:, :middle], batch[:, middle + 1 :]), 1)
 
         return (inputs.long()), (targets.long())
 
-EMBED_DIMENSION = 300 
+
+EMBED_DIMENSION = 15
 EMBED_MAX_NORM = 1
+
 
 class CBOW_Model(nn.Module):
     def __init__(self, vocab_size):

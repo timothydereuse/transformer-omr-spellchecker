@@ -11,13 +11,13 @@ import pickle
 
 verovio_options = {
     "pageHeight": 1000,
-    "pageWidth": 2150,
+    "pageWidth": 1750,
     "scale": 25,
     "header": "none",
     "footer": "none",
     "outputIndentTab": 0,
     "pageMarginBottom": 0,
-    "pageMarginLeft": 10,
+    "pageMarginLeft": 25,
     "pageMarginRight": 0,
     "pageMarginTop": 0,
     "font": "Leland",
@@ -212,7 +212,7 @@ def evaluate_and_color_stream(
             errored_stream,
             agnostic_rec_errored,
             thresh_pred,
-            color_style=true_pos_color,
+            color_style=false_pos_color,
         )
     else:
         thresh_pred = (sig_outputs > threshold).numpy().astype("bool")
@@ -262,24 +262,7 @@ def parse_filter_stream(fpath):
     return pa
 
 
-if __name__ == "__main__":
-
-    recompute_inference = False
-    recompute_coloring = True
-    model_path = r"trained_models\lstut_best_lstut_seqlen_4_(2023.09.08.17.53)_lstm512-1-tf112-6-64-2048.pt"
-    paired_quartets_root = (
-        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct"
-    )
-    output_folder = r"C:\Users\tim\Documents\datasets\quartets_results_svg"
-
-    # basic model setup
-    saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
-    threshold = saved_model_info["val_threshes"][0]
-    params = model_params.Params("./param_sets/node_lstut.json", False, 4)
-    device, num_gpus = tr_funcs.get_cuda_info()
-    prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
-    groups = tr_funcs.make_test_dataloaders(params, prep_model.dset_kwargs)
-
+def get_paired_score_fnames(paired_quartets_root):
     # getting quartet paths and pairing them up
     correct_quart_path = os.path.join(paired_quartets_root, "correct_quartets")
     omr_quart_path = os.path.join(paired_quartets_root, "omr_quartets")
@@ -294,7 +277,72 @@ if __name__ == "__main__":
         sorted(score_fnames, reverse=True), sorted(omr_fnames, reverse=True)
     )
     paired_score_fnames = list(paired_score_fnames)
-    paired_score_fnames = paired_score_fnames[4:6]
+    return paired_score_fnames
+
+
+def end_to_end_inference(input_file, output_folder, prep_model, params, threshold, tk):
+
+    print(f"parsing f{input_file}...")
+    parsed_errored = parse_filter_stream(input_file)
+
+    print(f"    running through model...")
+    agnostic_rec_errored, sig_outputs, _ = run_inference_and_align(
+        parsed_errored,
+        prep_model.model,
+        prep_model.v,
+        sequence_length=params.seq_length,
+    )
+
+    print(f"    coloring score model...")
+    colored_score = evaluate_and_color_stream(
+        parsed_errored,
+        agnostic_rec_errored,
+        sig_outputs,
+        threshold,
+    )
+
+    xml_fp = os.path.join(output_folder, "colored_score.musicxml")
+    colored_score.write("musicxml", fp=xml_fp)
+
+    print(f"rendering svg to {xml_fp}...")
+
+    tk.loadFile(xml_fp)
+    tk.redoLayout()
+    pages = tk.getPageCount()
+
+    for i in range(1, pages + 1):
+        page_path = os.path.join(output_folder, f"page_{i}.svg")
+        tk.renderToSVGFile(page_path, i)
+
+
+if __name__ == "__main__":
+
+    recompute_inference = False
+    recompute_coloring = False
+    model_path = r"trained_models\lstut_best_lstut_seqlen_4_(2023.09.08.17.53)_lstm512-1-tf112-6-64-2048.pt"
+    paired_quartets_root = (
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct"
+    )
+    output_folder = r"C:\Users\tim\Documents\datasets\quartets_results_svg"
+
+    # verovio setup
+    tk = verovio.toolkit()
+    tk.setOptions(verovio_options)
+    verovio.enableLog(verovio.LOG_ERROR)
+
+    # basic model setup
+    saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
+    threshold = saved_model_info["val_threshes"][0]
+    params = model_params.Params("./param_sets/node_lstut.json", False, 4)
+    prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
+
+    fpath = r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\mendelssohn_5_op44iii_3.musicxml"
+    outfile = r"C:\Users\tim\Documents\tex\dissertation\results\correctfelix"
+    end_to_end_inference(fpath, outfile, prep_model, params, threshold, tk)
+    assert False
+
+    paired_score_fnames = get_paired_score_fnames(paired_quartets_root)
+    # paired_score_fnames = paired_score_fnames[4:6]
 
     for cor_score, omr_score in paired_score_fnames:
 
@@ -355,11 +403,6 @@ if __name__ == "__main__":
             continue
 
     xml_paths = get_all_sub_files_with_ext(output_folder, "xml")
-    xml_paths = [xml_paths[49]]
-
-    tk = verovio.toolkit()
-    tk.setOptions(verovio_options)
-    verovio.enableLog(verovio.LOG_ERROR)
 
     for folder_path, xml_path in xml_paths[::-1]:
         print(f"rendering svg to {xml_path}...")

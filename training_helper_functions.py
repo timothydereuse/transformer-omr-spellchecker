@@ -166,17 +166,19 @@ def run_epoch(
     return mean_loss, example_dict
 
 
-def test_end_group(end_dloader, run_epoch_kwargs, target_recalls):
+def test_end_group(end_dloader, run_epoch_kwargs, target_recalls, verbose=None):
 
     # make test_results with dummy threshes object, to fill in later
     test_results = ttm.TestResults(threshes=[], target_recalls=target_recalls)
+
+    if verbose is not None:
+        run_epoch_kwargs["log_each_batch"] = verbose
 
     # run single epoch over test set
     with torch.no_grad():
         tst_loss, tst_exs = run_epoch(
             dloader=end_dloader,
             train=False,
-            log_each_batch=False,
             test_results=test_results,
             **run_epoch_kwargs,
         )

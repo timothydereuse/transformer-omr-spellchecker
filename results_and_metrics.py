@@ -165,10 +165,17 @@ class TestResults(object):
         self.targets = np.array([])
         self.results_dict = {"t_pos": [], "t_neg": [], "f_pos": [], "f_neg": []}
 
+    def update_threshes_for_given_recalls(self):
+        self.threshes = find_thresh_for_given_recalls(
+            self.outputs, self.targets, self.target_recalls
+        )
+
     def update(self, output, target):
 
-        output = output.cpu().detach().numpy()
-        target = target.cpu().detach().numpy()
+        if type(output) == torch.Tensor:
+            output = output.cpu().detach().numpy()
+        if type(target) == torch.Tensor:
+            target = target.cpu().detach().numpy()
 
         self.outputs = np.concatenate([self.outputs, output.reshape(-1)])
         self.targets = np.concatenate([self.targets, target.reshape(-1).astype(int)])
