@@ -1,18 +1,18 @@
 {
-    "params_name": "onegpu_lstm",
-    "num_epochs": 500,
-    "early_stopping_patience": 50,
+    "params_name": "lstut_seqlen",
+    "num_epochs": 96,
+    "early_stopping_patience": 15,
     "num_examples_to_save": 5,
     "save_model_every": 4,
-    "max_time_hours": 3,
-    "aug_max_epochs": 1,
+    "max_time_hours": 8,
+    "aug_max_epochs": 30,
     "seq_length": 512,
-    "padding_amt": 32,
+    "padding_amt": 4,
     "lr": 0.0001,
-    "batch_size": 64,
+    "batch_size": 48,
     "clip_gradient_norm": 0.5,
-    "minibatch_div": 4,
-    "reduce_aug_data": 0.1,
+    "reduce_aug_data": 0,
+    "minibatch_div": -1,
     "aug_dset_path": "./processed_datasets/all_quartets_bymeasure.h5",
     "dset_path": "processed_datasets/supervised_omr_targets_bymeasure.h5",
     "saved_vocabulary": "./processed_datasets/vocab_big.txt",
@@ -26,7 +26,6 @@
         "error_models_fpath": "./processed_datasets/paired_quartets_error_model_bymeasure.joblib"
     },
     "target_recalls": [
-        0.8,
         0.9,
         0.95,
         0.975,
@@ -34,21 +33,22 @@
     ],
     "use_mcc_loss": false,
     "lstut_settings": {
-        "d_model": 64,
+        "d_model": 512,
         "output_feats": 1,
         "lstm_layers": 1,
         "tf_layers": 0,
-        "tf_heads": 0,
+        "tf_heads": 1,
         "tf_depth": 0,
-        "hidden_dim": 32,
-        "ff_dim": 256,
+        "hidden_dim": 64,
+        "ff_dim": 1048,
         "dropout": 0.2,
         "positional_encoding": false
     },
     "scheduler_settings": {
-        "max_lr": 0.003,
-        "steps_per_epoch": 500,
-        "verbose": true
+        "base_lr": 0.0001,
+        "max_lr": 0.005,
+        "step_size_up": 150,
+        "verbose": false
     },
     "test_sets": [
         {
@@ -66,12 +66,24 @@
     ],
     "param_sweep": [
         {
-            "simple_errors": true,
-            "simple_error_rate": 0.1
+            "seq_length": 4,
+            "batch_size": 6144
         },
         {
-            "simple_errors": true,
-            "simple_error_rate": 0.27
+            "seq_length": 8,
+            "batch_size": 3072
+        },
+        {
+            "seq_length": 16,
+            "batch_size": 1536
+        },
+        {
+            "seq_length": 32,
+            "batch_size": 768
+        },
+        {
+            "seq_length": 64,
+            "batch_size": 384
         }
     ]
 }
