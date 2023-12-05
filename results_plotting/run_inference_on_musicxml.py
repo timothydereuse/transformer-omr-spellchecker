@@ -51,7 +51,6 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style):
 
     parts = list(this_stream.getElementsByClass(m21.stream.Part))
     all_measures = [list(x.getElementsByClass(m21.stream.Measure)) for x in parts]
-    num_tokens = len(agnostic_rec)
 
     # for every note predicted incorrect, find the element of the m21 stream
     # that corresponds to it
@@ -59,6 +58,10 @@ def assign_color_to_stream(this_stream, agnostic_rec, predictions, color_style):
 
         # change nothing if this token is predicted correct
         if not prediction:
+            continue
+
+        # if it's a wedge marker, do nothing
+        if record.music_element == ">":
             continue
 
         # print(
@@ -318,7 +321,7 @@ def end_to_end_inference(input_file, output_folder, prep_model, params, threshol
 if __name__ == "__main__":
 
     recompute_inference = False
-    recompute_coloring = False
+    recompute_coloring = True
     model_path = r"trained_models\lstut_best_lstut_seqlen_4_(2023.09.08.17.53)_lstm512-1-tf112-6-64-2048.pt"
     paired_quartets_root = (
         r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct"
@@ -339,7 +342,6 @@ if __name__ == "__main__":
     fpath = r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\mendelssohn_5_op44iii_3.musicxml"
     outfile = r"C:\Users\tim\Documents\tex\dissertation\results\correctfelix"
     end_to_end_inference(fpath, outfile, prep_model, params, threshold, tk)
-    assert False
 
     paired_score_fnames = get_paired_score_fnames(paired_quartets_root)
     # paired_score_fnames = paired_score_fnames[4:6]
@@ -414,55 +416,3 @@ if __name__ == "__main__":
         for i in range(1, pages + 1):
             page_path = os.path.join(folder_path, f"page_{i}.svg")
             tk.renderToSVGFile(page_path, i)
-
-
-assert False
-cor_score, omr_score = paired_score_fnames[0]
-
-print(f"parsing {cor_score}...")
-cor_path = os.path.join(paired_quartets_root, "correct_quartets", cor_score)
-correct_stream = parse_filter_stream(cor_path)
-err_fpath = os.path.join(paired_quartets_root, "omr_quartets", omr_score)
-errored_stream = parse_filter_stream(err_fpath)
-
-v = prep_model.v
-error_generator = prep_model.error_generator
-
-agnostic_rec_correct = sta.m21_streams_to_agnostic([correct_stream])[0]
-agnostic_rec_errored = sta.m21_streams_to_agnostic([errored_stream])[0]
-vectorized_errored = v.words_to_vec([x.music_element for x in agnostic_rec_errored])
-vectorized_correct = v.words_to_vec([x.music_element for x in agnostic_rec_correct])
-
-# get targets (ground truth)
-err_resid, targets = error_generator.add_errors_to_seq(
-    vectorized_correct, vectorized_errored, bands=0.15
-)
-targets = targets.astype("bool")
-
-
-import csv
-
-# rows = []
-# out_string = ""
-# for i in range(300):
-#     cor = []
-#     measure_entries = [x for x in agnostic_rec_correct if x.measure_idx == i]
-#     for el in measure_entries:
-#         cor.append([el.music_element, el.measure_idx, el.event_idx])
-#     err = []
-#     measure_entries = [
-#         (j, x) for j, x in enumerate(agnostic_rec_errored) if x.measure_idx == i
-#     ]
-#     for j, el in measure_entries:
-#         err.append([el.music_element, el.measure_idx, el.event_idx, targets[j]])
-#     if len(err) < len(cor):
-#         for _ in range(len(cor) - len(err)):
-#             err.append(["-", "-", "-", "-"])
-#     elif len(cor) < len(err):
-#         for _ in range(len(err) - len(cor)):
-#             cor.append(["-", "-", "-"])
-#     with open("compare_agnostic2.csv", "a", newline="") as csvfile:
-#         wr = csv.writer(csvfile, delimiter=",")
-#         wr.writerow([f"measure {i}", "-", "-", "-", "-", "-", "-"])
-#         for c, e in zip(cor, err):
-#             wr.writerow(c + e)

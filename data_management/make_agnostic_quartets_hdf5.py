@@ -127,7 +127,7 @@ def make_hdf5(
             ]
             agnostic_vecs = [v.words_to_vec(x) for x in agnostics]
             arrs = [np.array(x) for x in agnostic_vecs]
-
+            res.extend(arrs)
             spl_name = split_classifier[noext_fname]
             with h5py.File(dset_path, "a") as f:
 

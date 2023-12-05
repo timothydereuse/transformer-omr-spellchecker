@@ -245,6 +245,9 @@ class TestResults(object):
     def average_precision(self):
         return average_precision_score(self.targets, self.outputs)
 
+    def normalized_recall(self):
+        return normalized_recall(self.targets, self.outputs)
+
 
 if __name__ == "__main__":
     num_trials = 100

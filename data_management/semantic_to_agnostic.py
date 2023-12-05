@@ -457,13 +457,13 @@ if __name__ == "__main__":
     from collections import Counter
 
     files = [
-        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\Haydn_Joseph_-sq_in_G_major_Op.64_No.4_Hob.III66.mxl"
+        r"C:\Users\tim\Documents\datasets\just_quartets\paired_omr_correct\correct_quartets\sq_Teresa_Carreo.mxl"
     ]
 
     # xml_dir = r"C:\Users\tim\Documents\datasets\just_quartets\musescore_misc"
     # files = [os.path.join(xml_dir, x) for x in os.listdir(xml_dir)]
 
-    # files = [r"C:\Users\tim\Desktop\Untitled.mxl"]
+    # files = [r"C:\Users\tim\Desktop\agnosticwrapexample1.mxl"]
 
     all_tokens = Counter()
 
@@ -486,4 +486,9 @@ if __name__ == "__main__":
         all_tokens.update([x.music_element for x in agnostic])
 
         # els = [x.music_element for x in agnostic]
-        # asdf = [print(f'\\cellcolorLBLBLBWhiteRBRBRB  \\textttLBLBLB{x}RBRBRB \\\\') for x in els]
+        # asdf = [
+        #     print(
+        #         f"\\textttLBLBLB{x}RBRBRB & \\textttLBLBLB{x}RBRBRB & \\textttLBLBLBSAMERBRBRB \\\\"
+        #     )
+        #     for x in els
+        # ]

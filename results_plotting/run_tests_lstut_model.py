@@ -4,10 +4,10 @@ import model_params
 import torch
 
 if __name__ == "__main__":
-    model_path = r"trained_models\lstut_best_lstut_seqlen_1_(2023.09.09.12.00)_lstm512-1-tf112-6-64-2048.pt"
+    model_path = r"trained_models\lstut_best_lstut_seqlen_8_(2023.09.10.03.59)_lstm512-1-tf112-6-64-2048_UT.pt"
     saved_model_info = torch.load(model_path, map_location=torch.device("cpu"))
 
-    params = model_params.Params("./param_sets/node_lstut.json", False, 1)
+    params = model_params.Params("./param_sets/node_lstut.json", False, 8)
     device, num_gpus = tr_funcs.get_cuda_info()
 
     prep_model = PreparedLSTUTModel(params, saved_model_info["model_state_dict"])
@@ -35,4 +35,14 @@ if __name__ == "__main__":
             }
         )
 
-        df.to_csv("./results_csv/64_PR_curve.csv")
+        df.to_csv("./results_csv/UT_PR_curve.csv")
+
+# groups[0].dset.seq_length = 512
+# total_tokens = 0
+# total_errors = 0
+# total_correct = 0
+# for x in groups[0].dset:
+#     total_tokens += x[0][0].shape[0]
+#     total_errors += np.count_nonzero(x[0][1])
+#     total_correct += np.count_nonzero(x[0][1] == 0)
+# print(total_tokens, total_correct, total_errors)
